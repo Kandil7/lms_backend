@@ -11,6 +11,7 @@ This folder contains detailed technical documentation for the LMS backend.
 5. `docs/05-database-and-data-model-ar.md`
 6. `docs/06-background-jobs-and-ops-ar.md`
 7. `docs/07-testing-and-quality-ar.md`
+8. `docs/08-demo-branch-ar.md`
 
 ## Existing Full Technical Guide (English)
 

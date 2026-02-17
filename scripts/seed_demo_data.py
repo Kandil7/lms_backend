@@ -25,19 +25,19 @@ from app.modules.users.repositories.user_repository import UserRepository
 
 DEMO_USERS = {
     "admin": {
-        "email": "admin@lms.local",
+        "email": "admin.demo@example.com",
         "password": "AdminPass123",
         "full_name": "Demo Admin",
         "role": "admin",
     },
     "instructor": {
-        "email": "instructor@lms.local",
+        "email": "instructor.demo@example.com",
         "password": "InstructorPass123",
         "full_name": "Demo Instructor",
         "role": "instructor",
     },
     "student": {
-        "email": "student@lms.local",
+        "email": "student.demo@example.com",
         "password": "StudentPass123",
         "full_name": "Demo Student",
         "role": "student",

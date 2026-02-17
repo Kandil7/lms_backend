@@ -70,6 +70,24 @@ Useful flags:
 - `-SeedDemoData`
 - `-FollowLogs`
 
+## Demo Branch Quick Start
+For a full running demo environment with seeded data:
+
+```powershell
+.\scripts\run_demo.ps1
+```
+
+or
+
+```bat
+scripts\run_demo.bat
+```
+
+Demo credentials:
+- `admin.demo@example.com / AdminPass123`
+- `instructor.demo@example.com / InstructorPass123`
+- `student.demo@example.com / StudentPass123`
+
 Services included in `docker-compose.yml`:
 - `api`
 - `db`
@@ -95,9 +113,9 @@ Options:
 - `--skip-attempt`: skip creating/submitting demo quiz attempt.
 
 Default demo credentials:
-- `admin@lms.local / AdminPass123`
-- `instructor@lms.local / InstructorPass123`
-- `student@lms.local / StudentPass123`
+- `admin.demo@example.com / AdminPass123`
+- `instructor.demo@example.com / InstructorPass123`
+- `student.demo@example.com / StudentPass123`
 
 ## Postman Collection
 Generate Postman artifacts from OpenAPI:
