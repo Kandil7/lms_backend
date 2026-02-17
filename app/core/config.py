@@ -1,8 +1,10 @@
 from functools import lru_cache
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+
+CsvList = Annotated[list[str], NoDecode]
 
 
 class Settings(BaseSettings):
@@ -29,19 +31,28 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
-    CORS_ORIGINS: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
-    TRUSTED_HOSTS: list[str] = Field(default_factory=lambda: ["localhost", "127.0.0.1", "testserver"])
+    CORS_ORIGINS: CsvList = Field(default_factory=lambda: ["http://localhost:3000"])
+    TRUSTED_HOSTS: CsvList = Field(default_factory=lambda: ["localhost", "127.0.0.1", "testserver"])
 
     REDIS_URL: str = "redis://localhost:6379/0"
     CELERY_BROKER_URL: str = "redis://localhost:6379/1"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
+    RATE_LIMIT_USE_REDIS: bool = True
+    RATE_LIMIT_REQUESTS_PER_MINUTE: int = 100
+    RATE_LIMIT_WINDOW_SECONDS: int = 60
+    RATE_LIMIT_REDIS_PREFIX: str = "ratelimit"
+    RATE_LIMIT_EXCLUDED_PATHS: CsvList = Field(
+        default_factory=lambda: ["/", "/docs", "/redoc", "/openapi.json", "/api/v1/health"]
+    )
 
     UPLOAD_DIR: str = "uploads"
     CERTIFICATES_DIR: str = "certificates"
     MAX_UPLOAD_MB: int = 100
-    ALLOWED_UPLOAD_EXTENSIONS: list[str] = Field(
+    ALLOWED_UPLOAD_EXTENSIONS: CsvList = Field(
         default_factory=lambda: ["mp4", "avi", "mov", "pdf", "doc", "docx", "jpg", "jpeg", "png"]
     )
+    FILE_STORAGE_PROVIDER: Literal["local", "s3"] = "local"
+    FILE_DOWNLOAD_URL_EXPIRE_SECONDS: int = 900
 
     AWS_ACCESS_KEY_ID: str | None = None
     AWS_SECRET_ACCESS_KEY: str | None = None
@@ -69,6 +80,13 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [item.strip().lower() for item in value.split(",") if item.strip()]
         return [item.lower() for item in value]
+
+    @field_validator("RATE_LIMIT_EXCLUDED_PATHS", mode="before")
+    @classmethod
+    def parse_rate_limit_excluded_paths(cls, value: str | list[str]) -> list[str]:
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
 
     @property
     def MAX_UPLOAD_BYTES(self) -> int:

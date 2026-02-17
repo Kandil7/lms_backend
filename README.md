@@ -48,10 +48,57 @@ Docs: `http://localhost:8000/docs`
 docker compose up --build
 ```
 
+Services included in `docker-compose.yml`:
+- `api`
+- `db`
+- `redis`
+- `celery-worker`
+- `celery-beat`
+
 ## Tests
 ```bash
 pytest -q
 ```
+
+## Demo Data Seed
+Use this script to create demo users, one published course, lessons, enrollment, quiz, and a graded attempt.
+
+```bash
+python scripts/seed_demo_data.py
+```
+
+Options:
+- `--create-tables`: create tables before seeding.
+- `--reset-passwords`: reset passwords for existing demo users.
+- `--skip-attempt`: skip creating/submitting demo quiz attempt.
+
+Default demo credentials:
+- `admin@lms.local / AdminPass123`
+- `instructor@lms.local / InstructorPass123`
+- `student@lms.local / StudentPass123`
+
+## Postman Collection
+Generate Postman artifacts from OpenAPI:
+
+```bash
+python scripts/generate_postman_collection.py
+```
+
+Generated files:
+- `postman/LMS Backend.postman_collection.json`
+- `postman/LMS Backend.postman_environment.json`
+
+## Production Hardening
+- CI pipeline: `.github/workflows/ci.yml` runs compile checks + tests on Python 3.11 and 3.12.
+- Rate limiting supports Redis with in-memory fallback.
+- File storage is pluggable (`local` or `s3`).
+
+Important environment flags:
+- `RATE_LIMIT_USE_REDIS=true`
+- `RATE_LIMIT_REQUESTS_PER_MINUTE=100`
+- `RATE_LIMIT_WINDOW_SECONDS=60`
+- `FILE_STORAGE_PROVIDER=local` (or `s3`)
+- `FILE_DOWNLOAD_URL_EXPIRE_SECONDS=900`
 
 ## Branch Strategy
 - `main`: stable releases.

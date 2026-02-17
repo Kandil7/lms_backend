@@ -11,7 +11,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from app.api.v1.api import api_router
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
-from app.core.middleware import InMemoryRateLimitMiddleware, RequestLoggingMiddleware
+from app.core.middleware import RateLimitMiddleware, RequestLoggingMiddleware
 
 logging.basicConfig(
     level=logging.DEBUG if settings.DEBUG else logging.INFO,
@@ -43,7 +43,15 @@ app.add_middleware(
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.TRUSTED_HOSTS)
 app.add_middleware(RequestLoggingMiddleware)
-app.add_middleware(InMemoryRateLimitMiddleware)
+app.add_middleware(
+    RateLimitMiddleware,
+    limit=settings.RATE_LIMIT_REQUESTS_PER_MINUTE,
+    period_seconds=settings.RATE_LIMIT_WINDOW_SECONDS,
+    use_redis=settings.RATE_LIMIT_USE_REDIS,
+    redis_url=settings.REDIS_URL,
+    key_prefix=settings.RATE_LIMIT_REDIS_PREFIX,
+    excluded_paths=settings.RATE_LIMIT_EXCLUDED_PATHS,
+)
 
 register_exception_handlers(app)
 
