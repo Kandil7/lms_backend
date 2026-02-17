@@ -53,6 +53,11 @@ PowerShell one-command startup (Windows):
 .\scripts\run_project.ps1
 ```
 
+Batch one-command startup (Windows):
+```bat
+scripts\run_project.bat
+```
+
 Useful flags:
 - `-NoBuild`
 - `-NoMigrate`
