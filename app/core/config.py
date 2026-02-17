@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
     CELERY_BROKER_URL: str = "redis://localhost:6379/1"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
+    RATE_LIMIT_USE_REDIS: bool = True
+    RATE_LIMIT_REQUESTS_PER_MINUTE: int = 100
+    RATE_LIMIT_WINDOW_SECONDS: int = 60
+    RATE_LIMIT_REDIS_PREFIX: str = "ratelimit"
+    RATE_LIMIT_EXCLUDED_PATHS: list[str] = Field(
+        default_factory=lambda: ["/", "/docs", "/redoc", "/openapi.json", "/api/v1/health"]
+    )
 
     UPLOAD_DIR: str = "uploads"
     CERTIFICATES_DIR: str = "certificates"
@@ -69,6 +76,13 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [item.strip().lower() for item in value.split(",") if item.strip()]
         return [item.lower() for item in value]
+
+    @field_validator("RATE_LIMIT_EXCLUDED_PATHS", mode="before")
+    @classmethod
+    def parse_rate_limit_excluded_paths(cls, value: str | list[str]) -> list[str]:
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
 
     @property
     def MAX_UPLOAD_BYTES(self) -> int:
