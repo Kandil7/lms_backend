@@ -12,6 +12,8 @@ This folder contains detailed technical documentation for the LMS backend.
 6. `docs/06-background-jobs-and-ops-ar.md`
 7. `docs/07-testing-and-quality-ar.md`
 8. `docs/08-demo-branch-ar.md`
+9. `docs/09-project-deep-dive-ar.md`
+10. `docs/10-client-app-implementation-plan-ar.md`
 
 ## Existing Full Technical Guide (English)
 
@@ -27,3 +29,5 @@ The docs cover:
 - database model and migrations
 - celery/background jobs
 - testing, quality workflow, and production checklist
+- deep-dive walkthrough of the current backend implementation
+- full client application implementation plan (architecture + phases + delivery workflow)

@@ -5,7 +5,7 @@ Production-oriented LMS backend built as a modular monolith with FastAPI.
 ## Documentation
 - Full technical documentation: `docs/FULL_PROJECT_DOCUMENTATION.md`
 - Documentation index: `docs/README.md`
-- Arabic detailed docs set: `docs/01-overview-ar.md` -> `docs/07-testing-and-quality-ar.md`
+- Arabic detailed docs set: `docs/01-overview-ar.md` -> `docs/10-client-app-implementation-plan-ar.md`
 
 ## Architecture
 - `app/core`: config, database, security, dependencies, middleware.
