@@ -21,7 +21,7 @@ services:
   celery-worker:
     build: .
     container_name: lms-celery-worker
-    command: celery -A app.tasks.celery_app.celery_app worker --loglevel=info --queues=emails,progress,certificates
+    command: celery -A app.tasks.celery_app.celery_app worker --loglevel=info --queues=emails,progress,certificates --uid=nobody
     env_file:
       - .env
     environment:
@@ -38,7 +38,7 @@ services:
   celery-beat:
     build: .
     container_name: lms-celery-beat
-    command: celery -A app.tasks.celery_app.celery_app beat --loglevel=info
+    command: celery -A app.tasks.celery_app.celery_app beat --loglevel=info --uid=nobody --schedule=/tmp/celerybeat-schedule
     env_file:
       - .env
     environment:
