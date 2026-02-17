@@ -116,7 +116,10 @@ class AttemptService:
         max_score = self.quiz_repo.total_points(quiz.id)
         percentage = self.attempt_repo.calculate_percentage(total_score, max_score)
         passed = percentage >= Decimal(str(quiz.passing_score))
-        time_taken = int((now - attempt.started_at).total_seconds()) if attempt.started_at else None
+        started_at = attempt.started_at
+        if started_at and started_at.tzinfo is None:
+            started_at = started_at.replace(tzinfo=UTC)
+        time_taken = int((now - started_at).total_seconds()) if started_at else None
 
         attempt = self.attempt_repo.update(
             attempt,

@@ -1,41 +1,65 @@
 # LMS Backend
 
-Modular monolith LMS backend built with FastAPI + SQLAlchemy.
+Production-oriented LMS backend built as a modular monolith with FastAPI.
 
-## Stack
-- FastAPI
-- PostgreSQL (SQLAlchemy ORM + Alembic)
-- Redis (cache / queues)
-- Celery for background tasks
+## Architecture
+- `app/core`: config, database, security, dependencies, middleware.
+- `app/modules/*`: vertical modules with `models/schemas/repositories/services/routers`.
+- `app/api/v1/api.py`: router aggregation and API prefix wiring.
+- `alembic`: migrations.
+- `tests`: API integration tests.
 
-## Run Locally
+## Implemented Modules
+- `auth`: registration/login/refresh/logout, refresh token revocation.
+- `users`: profile + admin user management.
+- `courses`: course and lesson CRUD with ownership checks.
+- `enrollments`: enrollment lifecycle, lesson progress aggregation, reviews.
+- `quizzes`: quiz/question authoring, attempts, grading.
+- `analytics`: student dashboard, course analytics, instructor and system overview.
+- `files`: upload/list/download with local storage backend.
+- `certificates`: automatic issuance on completion, verify/download/revoke.
+
+## Local Setup
 1. Create virtualenv and install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-2. Copy `.env.example` to `.env` and adjust values.
-3. Run API:
+2. Copy environment template:
+   ```bash
+   cp .env.example .env
+   ```
+3. Run database migrations:
+   ```bash
+   alembic upgrade head
+   ```
+4. (Optional) create admin:
+   ```bash
+   python scripts/create_admin.py
+   ```
+5. Run API:
    ```bash
    uvicorn app.main:app --reload
    ```
-4. Open docs at `http://localhost:8000/docs`.
+
+Docs: `http://localhost:8000/docs`
 
 ## Docker
 ```bash
 docker compose up --build
 ```
 
-## Migrations
+## Tests
 ```bash
-alembic revision --autogenerate -m "init"
-alembic upgrade head
+pytest -q
 ```
 
 ## Branch Strategy
-- `main`: production-ready branch.
+- `main`: stable releases.
 - `develop`: integration branch.
-- `feature/*` or `chore/*`: short-lived implementation branches.
-- Merge policy: `--no-ff` merges from feature branches into `develop`, then `develop` into `main`.
+- `feature/*` and `chore/*`: scoped implementation branches.
+- Merge style: `--no-ff` from feature branches into `develop`, then `develop` into `main`.
 
-## Current Status
-Core infrastructure is bootstrapped. Domain modules are implemented in follow-up feature branches.
+## Notes
+- Local uploads are served from `/uploads/*`.
+- Certificate files are stored in `certificates/` and downloadable through certificate endpoints.
+- First migration is provided in `alembic/versions/0001_initial_schema.py`.
