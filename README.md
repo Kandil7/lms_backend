@@ -48,6 +48,13 @@ Docs: `http://localhost:8000/docs`
 docker compose up --build
 ```
 
+Services included in `docker-compose.yml`:
+- `api`
+- `db`
+- `redis`
+- `celery-worker`
+- `celery-beat`
+
 ## Tests
 ```bash
 pytest -q
@@ -80,6 +87,18 @@ python scripts/generate_postman_collection.py
 Generated files:
 - `postman/LMS Backend.postman_collection.json`
 - `postman/LMS Backend.postman_environment.json`
+
+## Production Hardening
+- CI pipeline: `.github/workflows/ci.yml` runs compile checks + tests on Python 3.11 and 3.12.
+- Rate limiting supports Redis with in-memory fallback.
+- File storage is pluggable (`local` or `s3`).
+
+Important environment flags:
+- `RATE_LIMIT_USE_REDIS=true`
+- `RATE_LIMIT_REQUESTS_PER_MINUTE=100`
+- `RATE_LIMIT_WINDOW_SECONDS=60`
+- `FILE_STORAGE_PROVIDER=local` (or `s3`)
+- `FILE_DOWNLOAD_URL_EXPIRE_SECONDS=900`
 
 ## Branch Strategy
 - `main`: stable releases.
