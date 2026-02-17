@@ -78,6 +78,14 @@ docker compose exec -T api python scripts/seed_demo_data.py --reset-passwords
 ## 8. ملاحظات
 
 - هذا الفرع مناسب للـ demo وليس بديلاً عن إعدادات production.
+- ملفات Postman الخاصة بالديمو:
+  - `postman/LMS Backend DEMO.postman_collection.json`
+  - `postman/LMS Backend DEMO.postman_environment.json`
+  - `postman/LMS Backend DEMO.postman_runner_data.json`
+- تقدر تبدّل المستخدم في Postman عبر متغير `active_user` بقيم:
+  - `admin`
+  - `instructor`
+  - `student`
 - قبل أي Demo مهم، يفضل تشغيل:
 
 ```bash

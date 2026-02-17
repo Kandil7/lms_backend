@@ -4,6 +4,31 @@
     "description": "Demo-ready Postman collection for the LMS backend. Start with the Demo Flow folder.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const fromData = pm.iterationData.get('active_user');",
+          "const fromEnv = pm.environment.get('active_user');",
+          "const activeUser = String(fromData || fromEnv || 'student').toLowerCase();",
+          "const map = {",
+          "  admin: { emailVar: 'admin_email', passwordVar: 'admin_password', role: 'admin' },",
+          "  instructor: { emailVar: 'instructor_email', passwordVar: 'instructor_password', role: 'instructor' },",
+          "  student: { emailVar: 'student_email', passwordVar: 'student_password', role: 'student' }",
+          "};",
+          "const selected = map[activeUser] || map.student;",
+          "const email = pm.environment.get(selected.emailVar) || '';",
+          "const password = pm.environment.get(selected.passwordVar) || '';",
+          "pm.environment.set('active_user', activeUser);",
+          "pm.environment.set('email', email);",
+          "pm.environment.set('password', password);",
+          "pm.environment.set('role', selected.role);"
+        ]
+      }
+    }
+  ],
   "item": [
     {
       "name": "Demo Flow",
@@ -316,6 +341,10 @@
     },
     {
       "key": "role",
+      "value": "student"
+    },
+    {
+      "key": "active_user",
       "value": "student"
     },
     {

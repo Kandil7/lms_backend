@@ -129,6 +129,7 @@ Generated files:
 - `postman/LMS Backend.postman_environment.json`
 - `postman/LMS Backend DEMO.postman_collection.json`
 - `postman/LMS Backend DEMO.postman_environment.json`
+- `postman/LMS Backend DEMO.postman_runner_data.json`
 
 ## Production Hardening
 - CI pipeline: `.github/workflows/ci.yml` runs compile checks + tests on Python 3.11 and 3.12.

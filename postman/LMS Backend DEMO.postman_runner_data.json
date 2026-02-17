@@ -1,0 +1,29 @@
+[
+  {
+    "active_user": "admin",
+    "scenario": "admin smoke",
+    "course_id": "",
+    "enrollment_id": "",
+    "quiz_id": "",
+    "lesson_id": "",
+    "certificate_number": ""
+  },
+  {
+    "active_user": "instructor",
+    "scenario": "instructor smoke",
+    "course_id": "",
+    "enrollment_id": "",
+    "quiz_id": "",
+    "lesson_id": "",
+    "certificate_number": ""
+  },
+  {
+    "active_user": "student",
+    "scenario": "student smoke",
+    "course_id": "",
+    "enrollment_id": "",
+    "quiz_id": "",
+    "lesson_id": "",
+    "certificate_number": ""
+  }
+]
