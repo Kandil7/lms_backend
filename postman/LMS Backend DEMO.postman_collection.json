@@ -1,0 +1,378 @@
+{
+  "info": {
+    "name": "LMS Backend API DEMO",
+    "description": "Demo-ready Postman collection for the LMS backend. Start with the Demo Flow folder.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Demo Flow",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/health"
+          },
+          "response": []
+        },
+        {
+          "name": "Login as Admin (Set Tokens)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Admin login 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "if (json.tokens) {",
+                  "  pm.environment.set('access_token', json.tokens.access_token || '');",
+                  "  pm.environment.set('refresh_token', json.tokens.refresh_token || '');",
+                  "}",
+                  "if (json.user) {",
+                  "  pm.environment.set('user_id', json.user.id || '');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/v1/auth/login"
+          },
+          "response": []
+        },
+        {
+          "name": "Login as Instructor (Set Tokens)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Instructor login 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "if (json.tokens) {",
+                  "  pm.environment.set('access_token', json.tokens.access_token || '');",
+                  "  pm.environment.set('refresh_token', json.tokens.refresh_token || '');",
+                  "}",
+                  "if (json.user) {",
+                  "  pm.environment.set('instructor_id', json.user.id || '');",
+                  "  pm.environment.set('user_id', json.user.id || '');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{instructor_email}}\",\n  \"password\": \"{{instructor_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/v1/auth/login"
+          },
+          "response": []
+        },
+        {
+          "name": "Login as Student (Set Tokens)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Student login 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "if (json.tokens) {",
+                  "  pm.environment.set('access_token', json.tokens.access_token || '');",
+                  "  pm.environment.set('refresh_token', json.tokens.refresh_token || '');",
+                  "}",
+                  "if (json.user) {",
+                  "  pm.environment.set('student_id', json.user.id || '');",
+                  "  pm.environment.set('user_id', json.user.id || '');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{student_email}}\",\n  \"password\": \"{{student_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/v1/auth/login"
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Courses (Student)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/enrollments/my-courses"
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Dashboard (Student)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/analytics/my-dashboard"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"full_name\": \"Demo User\",\n  \"role\": \"{{role}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/v1/auth/register"
+          },
+          "response": []
+        },
+        {
+          "name": "Login User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/v1/auth/login"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/auth/me"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Courses",
+      "item": [
+        {
+          "name": "List Courses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/courses?page=1&page_size=20"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Course By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/courses/{{course_id}}"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Certificates",
+      "item": [
+        {
+          "name": "Verify Certificate",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/certificates/verify/{{certificate_number}}"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "refresh_token",
+      "value": ""
+    },
+    {
+      "key": "email",
+      "value": "student.demo@example.com"
+    },
+    {
+      "key": "password",
+      "value": "StudentPass123"
+    },
+    {
+      "key": "role",
+      "value": "student"
+    },
+    {
+      "key": "admin_email",
+      "value": "admin.demo@example.com"
+    },
+    {
+      "key": "admin_password",
+      "value": "AdminPass123"
+    },
+    {
+      "key": "instructor_email",
+      "value": "instructor.demo@example.com"
+    },
+    {
+      "key": "instructor_password",
+      "value": "InstructorPass123"
+    },
+    {
+      "key": "student_email",
+      "value": "student.demo@example.com"
+    },
+    {
+      "key": "student_password",
+      "value": "StudentPass123"
+    },
+    {
+      "key": "user_id",
+      "value": ""
+    },
+    {
+      "key": "student_id",
+      "value": ""
+    },
+    {
+      "key": "instructor_id",
+      "value": ""
+    },
+    {
+      "key": "course_id",
+      "value": ""
+    },
+    {
+      "key": "enrollment_id",
+      "value": ""
+    },
+    {
+      "key": "quiz_id",
+      "value": ""
+    },
+    {
+      "key": "lesson_id",
+      "value": ""
+    },
+    {
+      "key": "certificate_number",
+      "value": ""
+    }
+  ]
+}
