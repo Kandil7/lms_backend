@@ -15,6 +15,30 @@ services:
       - db
       - redis
 
+  celery-worker:
+    build: .
+    container_name: lms-celery-worker
+    command: celery -A app.tasks.celery_app.celery_app worker --loglevel=info --queues=emails,progress,certificates
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+
+  celery-beat:
+    build: .
+    container_name: lms-celery-beat
+    command: celery -A app.tasks.celery_app.celery_app beat --loglevel=info
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+
   db:
     image: postgres:16-alpine
     container_name: lms-postgres
