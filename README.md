@@ -48,6 +48,18 @@ Docs: `http://localhost:8000/docs`
 docker compose up --build
 ```
 
+PowerShell one-command startup (Windows):
+```powershell
+.\scripts\run_project.ps1
+```
+
+Useful flags:
+- `-NoBuild`
+- `-NoMigrate`
+- `-CreateAdmin`
+- `-SeedDemoData`
+- `-FollowLogs`
+
 Services included in `docker-compose.yml`:
 - `api`
 - `db`
