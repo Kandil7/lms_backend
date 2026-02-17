@@ -12,6 +12,7 @@ from app.core.permissions import Permission, Role, has_permission
 from app.core.security import TokenType, decode_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/login")
+optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/login", auto_error=False)
 
 
 def get_pagination(
@@ -39,6 +40,19 @@ def get_current_user(
         raise UnauthorizedException("Could not validate credentials")
 
     return user
+
+
+def get_current_user_optional(
+    token: str | None = Depends(optional_oauth2_scheme),
+    db: Session = Depends(get_db),
+):
+    if not token:
+        return None
+
+    try:
+        return get_current_user(token=token, db=db)
+    except UnauthorizedException:
+        return None
 
 
 def require_roles(*roles: Role) -> Callable:
