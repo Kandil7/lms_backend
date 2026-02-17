@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Course Certificate</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; color: #1f2937; }
+    .card { border: 2px solid #1f2937; padding: 32px; }
+    h1 { font-size: 32px; margin-bottom: 8px; }
+    .label { color: #4b5563; font-size: 14px; }
+    .value { font-size: 20px; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Certificate of Completion</h1>
+    <p class="label">Certificate Number</p>
+    <p class="value">{{certificate_number}}</p>
+
+    <p class="label">Awarded To</p>
+    <p class="value">{{student_name}}</p>
+
+    <p class="label">Course</p>
+    <p class="value">{{course_title}}</p>
+
+    <p class="label">Completion Date</p>
+    <p class="value">{{completion_date}}</p>
+  </div>
+</body>
+</html>
