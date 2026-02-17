@@ -53,6 +53,34 @@ docker compose up --build
 pytest -q
 ```
 
+## Demo Data Seed
+Use this script to create demo users, one published course, lessons, enrollment, quiz, and a graded attempt.
+
+```bash
+python scripts/seed_demo_data.py
+```
+
+Options:
+- `--create-tables`: create tables before seeding.
+- `--reset-passwords`: reset passwords for existing demo users.
+- `--skip-attempt`: skip creating/submitting demo quiz attempt.
+
+Default demo credentials:
+- `admin@lms.local / AdminPass123`
+- `instructor@lms.local / InstructorPass123`
+- `student@lms.local / StudentPass123`
+
+## Postman Collection
+Generate Postman artifacts from OpenAPI:
+
+```bash
+python scripts/generate_postman_collection.py
+```
+
+Generated files:
+- `postman/LMS Backend.postman_collection.json`
+- `postman/LMS Backend.postman_environment.json`
+
 ## Branch Strategy
 - `main`: stable releases.
 - `develop`: integration branch.
