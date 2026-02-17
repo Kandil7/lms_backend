@@ -94,6 +94,7 @@ class StudentAnalyticsService:
                 Enrollment.completed_lessons_count,
                 Enrollment.total_lessons_count,
                 Enrollment.total_time_spent_seconds,
+                Enrollment.enrolled_at,
             )
             .order_by(Enrollment.enrolled_at.desc())
         ).all()
