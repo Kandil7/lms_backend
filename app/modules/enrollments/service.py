@@ -113,6 +113,16 @@ class EnrollmentService:
         )
 
         self._refresh_enrollment_summary(enrollment)
+
+        if enrollment.status == "completed" and enrollment.certificate_issued_at is None:
+            try:
+                from app.modules.certificates.service import CertificateService
+
+                CertificateService(self.db).issue_for_enrollment(enrollment, commit=False)
+            except Exception:
+                # Certificate generation should not block progress completion.
+                pass
+
         self.db.commit()
         self.db.refresh(progress)
         return progress
