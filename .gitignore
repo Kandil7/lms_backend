@@ -13,8 +13,8 @@ htmlcov/
 .env
 .env.*
 !.env.example
-uploads/
-certificates/
+/uploads/
+/certificates/
 dist/
 build/
 *.egg-info/
