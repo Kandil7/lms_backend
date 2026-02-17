@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from fastapi.responses import FileResponse as FastAPIFileResponse
 from fastapi.responses import RedirectResponse
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -40,7 +41,7 @@ def download_file(
     file_id: UUID,
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> FastAPIFileResponse | RedirectResponse:
+) -> Response:
     service = FileService(db)
     uploaded_file = service.get_file_for_user(file_id, current_user)
     target_kind, target_value = service.get_download_target(uploaded_file)

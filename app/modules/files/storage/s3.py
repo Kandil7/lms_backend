@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from botocore.exceptions import BotoCoreError, ClientError
-import boto3
-
 from app.modules.files.storage.base import StorageBackend
 
 
@@ -21,6 +18,13 @@ class S3StorageBackend(StorageBackend):
         if not bucket:
             raise ValueError("AWS_S3_BUCKET is required for S3 storage provider")
 
+        try:
+            import boto3
+            from botocore.exceptions import BotoCoreError, ClientError
+        except Exception as exc:
+            raise ValueError("boto3 is required for S3 storage backend") from exc
+
+        self._boto_core_errors = (BotoCoreError, ClientError)
         self.bucket = bucket
         self.region = region
         self.bucket_url = bucket_url.rstrip("/") if bucket_url else None
@@ -41,7 +45,7 @@ class S3StorageBackend(StorageBackend):
 
         try:
             self.client.put_object(**put_kwargs)
-        except (BotoCoreError, ClientError) as exc:
+        except self._boto_core_errors as exc:
             raise ValueError(f"S3 upload failed: {exc}") from exc
 
         return key
@@ -64,5 +68,5 @@ class S3StorageBackend(StorageBackend):
                 Params={"Bucket": self.bucket, "Key": storage_path},
                 ExpiresIn=expires_seconds,
             )
-        except (BotoCoreError, ClientError):
+        except self._boto_core_errors:
             return None
