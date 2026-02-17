@@ -91,7 +91,11 @@ class AuthService:
         if not token:
             return None
 
-        if token.expires_at <= datetime.now(UTC):
+        expires_at = token.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=UTC)
+
+        if expires_at <= datetime.now(UTC):
             return None
 
         return token

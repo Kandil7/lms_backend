@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class QuestionOptionCreate(BaseModel):
-    option_id: str | None = None
+    option_id: str = Field(default_factory=lambda: str(uuid4()))
     option_text: str = Field(min_length=1)
     is_correct: bool = False
 
