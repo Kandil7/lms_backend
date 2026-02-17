@@ -48,11 +48,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if self._redis_enabled and self._redis is not None:
             try:
                 return await self._dispatch_with_redis(key, call_next, request)
-            except RedisError as exc:
-                if not self._redis_fallback_logged:
-                    logger.warning("Redis rate-limit fallback to in-memory mode: %s", exc)
-                    self._redis_fallback_logged = True
-                self._redis_enabled = False
+            except Exception as exc:
+                if self._should_fallback_to_memory(exc):
+                    if not self._redis_fallback_logged:
+                        logger.warning("Redis rate-limit fallback to in-memory mode: %s", exc)
+                        self._redis_fallback_logged = True
+                    self._redis_enabled = False
+                    self._redis = None
+                else:
+                    raise
 
         return await self._dispatch_in_memory(key, call_next, request)
 
@@ -105,6 +109,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         response.headers["X-RateLimit-Limit"] = str(self.limit)
         response.headers["X-RateLimit-Remaining"] = str(remaining)
         response.headers["X-RateLimit-Reset"] = str(reset_epoch)
+
+    @staticmethod
+    def _should_fallback_to_memory(exc: Exception) -> bool:
+        if isinstance(exc, RedisError):
+            return True
+        if isinstance(exc, RuntimeError) and "Event loop is closed" in str(exc):
+            return True
+        return False
 
     @staticmethod
     def _rate_limited_response(reset_epoch: int) -> JSONResponse:
