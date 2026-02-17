@@ -1,4 +1,5 @@
 import logging
+from enum import Enum
 
 from fastapi import APIRouter
 
@@ -17,13 +18,19 @@ def health_check() -> dict:
     }
 
 
-def _safe_include(router: APIRouter, import_path: str, *, prefix: str = "", tags: list[str] | None = None) -> None:
+def _safe_include(
+    router: APIRouter,
+    import_path: str,
+    *,
+    prefix: str = "",
+    tags: list[str | Enum] | None = None,
+) -> None:
     module_name, attr_name = import_path.rsplit(":", 1)
 
     try:
         module = __import__(module_name, fromlist=[attr_name])
         include_router = getattr(module, attr_name)
-        router.include_router(include_router, prefix=prefix, tags=tags or [])
+        router.include_router(include_router, prefix=prefix, tags=tags)
     except Exception as exc:  # pragma: no cover - startup best effort
         logger.warning("Router '%s' not loaded: %s", import_path, exc)
 
