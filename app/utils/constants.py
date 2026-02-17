@@ -1,0 +1,6 @@
+COURSE_DIFFICULTY_LEVELS = ("beginner", "intermediate", "advanced")
+LESSON_TYPES = ("video", "text", "quiz", "assignment")
+ENROLLMENT_STATUSES = ("active", "completed", "dropped", "expired")
+PROGRESS_STATUSES = ("not_started", "in_progress", "completed")
+QUIZ_TYPES = ("practice", "graded")
+QUESTION_TYPES = ("multiple_choice", "true_false", "short_answer", "essay")
