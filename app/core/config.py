@@ -49,6 +49,8 @@ class Settings(BaseSettings):
     ALLOWED_UPLOAD_EXTENSIONS: list[str] = Field(
         default_factory=lambda: ["mp4", "avi", "mov", "pdf", "doc", "docx", "jpg", "jpeg", "png"]
     )
+    FILE_STORAGE_PROVIDER: Literal["local", "s3"] = "local"
+    FILE_DOWNLOAD_URL_EXPIRE_SECONDS: int = 900
 
     AWS_ACCESS_KEY_ID: str | None = None
     AWS_SECRET_ACCESS_KEY: str | None = None
