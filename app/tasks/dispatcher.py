@@ -9,6 +9,10 @@ logger = logging.getLogger("app.tasks.dispatcher")
 
 INLINE_TASK_MAP = {
     "app.tasks.email_tasks.send_welcome_email": "app.tasks.email_tasks:send_welcome_email",
+    "app.tasks.email_tasks.send_password_reset_email": "app.tasks.email_tasks:send_password_reset_email",
+    "app.tasks.email_tasks.send_email_verification_email": "app.tasks.email_tasks:send_email_verification_email",
+    "app.tasks.email_tasks.send_mfa_login_code_email": "app.tasks.email_tasks:send_mfa_login_code_email",
+    "app.tasks.email_tasks.send_mfa_setup_code_email": "app.tasks.email_tasks:send_mfa_setup_code_email",
     "app.tasks.progress_tasks.recalculate_course_progress": "app.tasks.progress_tasks:recalculate_course_progress",
     "app.tasks.certificate_tasks.generate_certificate": "app.tasks.certificate_tasks:generate_certificate",
 }

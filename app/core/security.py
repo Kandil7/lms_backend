@@ -19,6 +19,9 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 class TokenType:
     ACCESS = "access"
     REFRESH = "refresh"
+    PASSWORD_RESET = "password_reset"
+    EMAIL_VERIFICATION = "email_verification"
+    MFA_CHALLENGE = "mfa_challenge"
 
 
 class AccessTokenBlacklist:
@@ -129,6 +132,21 @@ def create_access_token(subject: str, role: str) -> str:
 def create_refresh_token(subject: str) -> str:
     expires_delta = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     return _create_token({"sub": subject}, expires_delta, TokenType.REFRESH)
+
+
+def create_password_reset_token(subject: str) -> str:
+    expires_delta = timedelta(minutes=settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES)
+    return _create_token({"sub": subject}, expires_delta, TokenType.PASSWORD_RESET)
+
+
+def create_email_verification_token(subject: str) -> str:
+    expires_delta = timedelta(minutes=settings.EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES)
+    return _create_token({"sub": subject}, expires_delta, TokenType.EMAIL_VERIFICATION)
+
+
+def create_mfa_challenge_token(subject: str) -> str:
+    expires_delta = timedelta(minutes=settings.MFA_CHALLENGE_TOKEN_EXPIRE_MINUTES)
+    return _create_token({"sub": subject}, expires_delta, TokenType.MFA_CHALLENGE)
 
 
 def blacklist_access_token(token: str) -> None:

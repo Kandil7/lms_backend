@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import NotFoundException
+from app.core.config import settings
 from app.core.security import hash_password, verify_password
 from app.modules.users.models import User
 from app.modules.users.repositories.user_repository import UserRepository
@@ -60,13 +61,18 @@ class UserService:
         self.db.refresh(user)
         return user
 
-    def authenticate(self, email: str, password: str) -> User:
+    def authenticate(self, email: str, password: str, *, update_last_login: bool = True) -> User:
         user = self.repo.get_by_email(email)
         if not user or not verify_password(password, user.password_hash):
             raise InvalidCredentialsError("Invalid email or password")
 
         if not user.is_active:
             raise InvalidCredentialsError("User account is disabled")
+        if settings.REQUIRE_EMAIL_VERIFICATION_FOR_LOGIN and user.email_verified_at is None:
+            raise InvalidCredentialsError("Email is not verified")
+
+        if not update_last_login:
+            return user
 
         user.last_login_at = datetime.now(UTC)
         self.db.add(user)

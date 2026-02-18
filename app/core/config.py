@@ -30,11 +30,26 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 30
+    EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES: int = 1440
     ALLOW_PUBLIC_ROLE_REGISTRATION: bool = False
+    REQUIRE_EMAIL_VERIFICATION_FOR_LOGIN: bool = False
+    MFA_CHALLENGE_TOKEN_EXPIRE_MINUTES: int = 10
+    MFA_LOGIN_CODE_EXPIRE_MINUTES: int = 10
+    MFA_LOGIN_CODE_LENGTH: int = 6
     ACCESS_TOKEN_BLACKLIST_ENABLED: bool = True
     ACCESS_TOKEN_BLACKLIST_FAIL_CLOSED: bool = False
     ACCESS_TOKEN_BLACKLIST_PREFIX: str = "auth:blacklist:access"
     SECURITY_HEADERS_ENABLED: bool = True
+
+    FRONTEND_BASE_URL: str = "http://localhost:3000"
+    EMAIL_FROM: str = "no-reply@lms.local"
+    SMTP_HOST: str | None = None
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str | None = None
+    SMTP_PASSWORD: str | None = None
+    SMTP_USE_TLS: bool = True
+    SMTP_USE_SSL: bool = False
 
     CACHE_ENABLED: bool = True
     CACHE_KEY_PREFIX: str = "app:cache"

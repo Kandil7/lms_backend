@@ -36,7 +36,9 @@ class UserResponse(BaseModel):
     full_name: str
     role: str
     is_active: bool
+    mfa_enabled: bool = False
     created_at: datetime
+    email_verified_at: datetime | None = None
 
 
 class UserListResponse(BaseModel):
