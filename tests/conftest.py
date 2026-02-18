@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 os.environ.setdefault("ALLOW_PUBLIC_ROLE_REGISTRATION", "true")
 
 from app.core.database import Base, get_db
+from app.core.cache import get_app_cache
 from app.main import app
 
 
@@ -38,6 +39,7 @@ def engine(tmp_path_factory) -> Generator[Engine, None, None]:
 def db_session(engine) -> Generator[Session, None, None]:
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    get_app_cache().delete_by_prefix("")
     TestingSessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
     db = TestingSessionLocal()

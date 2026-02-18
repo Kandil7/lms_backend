@@ -16,6 +16,8 @@ class Enrollment(Base):
         UniqueConstraint("student_id", "course_id", name="uq_enrollments_student_course"),
         Index("ix_enrollments_student_enrolled_at", "student_id", "enrolled_at"),
         Index("ix_enrollments_course_enrolled_at", "course_id", "enrolled_at"),
+        Index("ix_enrollments_course_status", "course_id", "status"),
+        Index("ix_enrollments_student_status", "student_id", "status"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)

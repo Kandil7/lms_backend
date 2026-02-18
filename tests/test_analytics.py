@@ -104,3 +104,48 @@ def test_system_overview_requires_admin(client):
     allowed = client.get("/api/v1/analytics/system/overview", headers=admin_headers)
     assert allowed.status_code == 200, allowed.text
     assert allowed.json()["total_users"] >= 2
+
+
+def test_instructor_overview_counts_courses_distinctly(client):
+    instructor = register_user(
+        client,
+        email="overview-instructor@example.com",
+        password="StrongPass123",
+        full_name="Overview Instructor",
+        role="instructor",
+    )
+    student_one = register_user(
+        client,
+        email="overview-student1@example.com",
+        password="StrongPass123",
+        full_name="Overview Student One",
+        role="student",
+    )
+    student_two = register_user(
+        client,
+        email="overview-student2@example.com",
+        password="StrongPass123",
+        full_name="Overview Student Two",
+        role="student",
+    )
+
+    instructor_headers = auth_headers(instructor["tokens"]["access_token"])
+    student_one_headers = auth_headers(student_one["tokens"]["access_token"])
+    student_two_headers = auth_headers(student_two["tokens"]["access_token"])
+
+    course_id, _ = _create_published_course_with_lesson(client, instructor_headers)
+
+    enroll_one = client.post("/api/v1/enrollments", headers=student_one_headers, json={"course_id": course_id})
+    assert enroll_one.status_code == 201, enroll_one.text
+    enroll_two = client.post("/api/v1/enrollments", headers=student_two_headers, json={"course_id": course_id})
+    assert enroll_two.status_code == 201, enroll_two.text
+
+    overview = client.get(
+        f"/api/v1/analytics/instructors/{instructor['user']['id']}/overview",
+        headers=instructor_headers,
+    )
+    assert overview.status_code == 200, overview.text
+    payload = overview.json()
+    assert payload["total_courses"] == 1
+    assert payload["published_courses"] == 1
+    assert payload["total_enrollments"] == 2

@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -25,13 +25,16 @@ def start_attempt(
     db: Session = Depends(get_db),
 ) -> AttemptStartResponse:
     attempt = AttemptService(db).start_attempt(quiz_id, current_user)
+    max_score = attempt.max_score
+    if max_score is None:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Attempt score metadata missing")
     return AttemptStartResponse(
         id=attempt.id,
         quiz_id=attempt.quiz_id,
         attempt_number=attempt.attempt_number,
         status=attempt.status,
         started_at=attempt.started_at,
-        max_score=attempt.max_score,
+        max_score=max_score,
     )
 
 
@@ -65,9 +68,10 @@ def submit_attempt(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> AttemptResultResponse:
-    attempt = AttemptService(db).submit_attempt(quiz_id, attempt_id, payload, current_user)
+    service = AttemptService(db)
+    attempt = service.submit_attempt(quiz_id, attempt_id, payload, current_user)
     result = AttemptResultResponse.model_validate(attempt)
-    result.answers = attempt.answers
+    result.answers = service.build_attempt_result_answers(quiz_id, attempt.answers)
     return result
 
 
@@ -88,7 +92,8 @@ def get_attempt_result(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> AttemptResultResponse:
-    attempt = AttemptService(db).get_attempt(quiz_id, attempt_id, current_user)
+    service = AttemptService(db)
+    attempt = service.get_attempt(quiz_id, attempt_id, current_user)
     result = AttemptResultResponse.model_validate(attempt)
-    result.answers = attempt.answers
+    result.answers = service.build_attempt_result_answers(quiz_id, attempt.answers)
     return result

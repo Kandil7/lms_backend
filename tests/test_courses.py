@@ -1,6 +1,97 @@
 from tests.helpers import auth_headers, register_user
 
 
+def test_course_list_uses_cache_for_repeated_requests(client, monkeypatch):
+    instructor = register_user(
+        client,
+        email="cache-instructor@example.com",
+        password="StrongPass123",
+        full_name="Cache Instructor",
+        role="instructor",
+    )
+    instructor_headers = auth_headers(instructor["tokens"]["access_token"])
+
+    create_response = client.post(
+        "/api/v1/courses",
+        headers=instructor_headers,
+        json={
+            "title": "Cached Course",
+            "description": "Caching list test",
+            "category": "Programming",
+            "difficulty_level": "beginner",
+        },
+    )
+    assert create_response.status_code == 201, create_response.text
+    course_id = create_response.json()["id"]
+
+    publish_response = client.post(f"/api/v1/courses/{course_id}/publish", headers=instructor_headers)
+    assert publish_response.status_code == 200, publish_response.text
+
+    first_list = client.get("/api/v1/courses")
+    assert first_list.status_code == 200, first_list.text
+    assert first_list.json()["total"] == 1
+
+    from app.modules.courses.services.course_service import CourseService
+
+    def _raise_if_called(*args, **kwargs):
+        raise RuntimeError("CourseService.list_courses should not be called on cache hit")
+
+    monkeypatch.setattr(CourseService, "list_courses", _raise_if_called)
+
+    second_list = client.get("/api/v1/courses")
+    assert second_list.status_code == 200, second_list.text
+    assert second_list.json()["total"] == 1
+
+
+def test_course_list_cache_invalidates_after_publish(client):
+    instructor = register_user(
+        client,
+        email="invalidate-instructor@example.com",
+        password="StrongPass123",
+        full_name="Invalidate Instructor",
+        role="instructor",
+    )
+    instructor_headers = auth_headers(instructor["tokens"]["access_token"])
+
+    first_course = client.post(
+        "/api/v1/courses",
+        headers=instructor_headers,
+        json={
+            "title": "First Cached Course",
+            "description": "First",
+            "category": "Programming",
+            "difficulty_level": "beginner",
+        },
+    )
+    assert first_course.status_code == 201, first_course.text
+    first_course_id = first_course.json()["id"]
+    first_publish = client.post(f"/api/v1/courses/{first_course_id}/publish", headers=instructor_headers)
+    assert first_publish.status_code == 200, first_publish.text
+
+    first_list = client.get("/api/v1/courses")
+    assert first_list.status_code == 200, first_list.text
+    assert first_list.json()["total"] == 1
+
+    second_course = client.post(
+        "/api/v1/courses",
+        headers=instructor_headers,
+        json={
+            "title": "Second Cached Course",
+            "description": "Second",
+            "category": "Programming",
+            "difficulty_level": "beginner",
+        },
+    )
+    assert second_course.status_code == 201, second_course.text
+    second_course_id = second_course.json()["id"]
+    second_publish = client.post(f"/api/v1/courses/{second_course_id}/publish", headers=instructor_headers)
+    assert second_publish.status_code == 200, second_publish.text
+
+    second_list = client.get("/api/v1/courses")
+    assert second_list.status_code == 200, second_list.text
+    assert second_list.json()["total"] == 2
+
+
 def test_instructor_can_create_publish_course_and_students_can_list(client):
     instructor = register_user(
         client,

@@ -15,6 +15,7 @@ class QuizAttempt(Base):
         CheckConstraint("status IN ('in_progress','submitted','graded')", name="ck_quiz_attempts_status"),
         UniqueConstraint("enrollment_id", "quiz_id", "attempt_number", name="uq_quiz_attempt_number"),
         Index("ix_quiz_attempts_enrollment_status_submitted_at", "enrollment_id", "status", "submitted_at"),
+        Index("ix_quiz_attempts_quiz_status_submitted_at", "quiz_id", "status", "submitted_at"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)

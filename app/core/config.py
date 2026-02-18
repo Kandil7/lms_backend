@@ -35,6 +35,14 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_BLACKLIST_PREFIX: str = "auth:blacklist:access"
     SECURITY_HEADERS_ENABLED: bool = True
 
+    CACHE_ENABLED: bool = True
+    CACHE_KEY_PREFIX: str = "app:cache"
+    CACHE_DEFAULT_TTL_SECONDS: int = 120
+    COURSE_CACHE_TTL_SECONDS: int = 120
+    LESSON_CACHE_TTL_SECONDS: int = 120
+    QUIZ_CACHE_TTL_SECONDS: int = 120
+    QUIZ_QUESTION_CACHE_TTL_SECONDS: int = 120
+
     CORS_ORIGINS: CsvList = Field(default_factory=lambda: ["http://localhost:3000"])
     TRUSTED_HOSTS: CsvList = Field(default_factory=lambda: ["localhost", "127.0.0.1", "testserver"])
 

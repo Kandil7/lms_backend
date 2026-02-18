@@ -24,8 +24,8 @@ class InstructorAnalyticsService:
 
         rows = self.db.execute(
             select(
-                func.count(Course.id),
-                func.sum(case((Course.is_published.is_(True), 1), else_=0)),
+                func.count(func.distinct(Course.id)),
+                func.count(func.distinct(case((Course.is_published.is_(True), Course.id), else_=None))),
                 func.count(Enrollment.id),
                 func.count(func.distinct(Enrollment.student_id)),
                 func.coalesce(func.avg(Enrollment.rating), 0),

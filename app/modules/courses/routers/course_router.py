@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.cache import get_app_cache
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.dependencies import get_current_user, get_current_user_optional
 from app.core.permissions import Role
@@ -12,6 +14,18 @@ from app.modules.courses.services.course_service import CourseService
 from app.utils.pagination import PageParams, paginate
 
 router = APIRouter(prefix="/courses", tags=["Courses"])
+
+
+def _viewer_scope(current_user) -> str:
+    if not current_user:
+        return "anon"
+    return f"{current_user.role}:{current_user.id}"
+
+
+def _invalidate_course_lesson_cache() -> None:
+    cache = get_app_cache()
+    cache.delete_by_prefix("courses:")
+    cache.delete_by_prefix("lessons:")
 
 
 @router.get("", response_model=CourseListResponse)
@@ -24,6 +38,16 @@ def list_courses(
     current_user=Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> CourseListResponse:
+    cache = get_app_cache()
+    scope = _viewer_scope(current_user)
+    cache_key = (
+        f"courses:list:{scope}:page={page}:page_size={page_size}:"
+        f"category={category or ''}:difficulty={difficulty_level or ''}:mine={mine}"
+    )
+    cached_payload = cache.get_json(cache_key)
+    if cached_payload is not None:
+        return CourseListResponse.model_validate(cached_payload)
+
     service = CourseService(db)
 
     payload = service.list_courses(
@@ -40,7 +64,9 @@ def list_courses(
         payload["total"],
         PageParams(page=page, page_size=page_size),
     )
-    return CourseListResponse.model_validate(result)
+    response = CourseListResponse.model_validate(result)
+    cache.set_json(cache_key, response.model_dump(mode="json"), ttl_seconds=settings.COURSE_CACHE_TTL_SECONDS)
+    return response
 
 
 @router.post("", response_model=CourseResponse, status_code=status.HTTP_201_CREATED)
@@ -60,6 +86,7 @@ def create_course(
     except IntegrityError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Course already exists") from exc
 
+    _invalidate_course_lesson_cache()
     return CourseResponse.model_validate(course)
 
 
@@ -69,8 +96,16 @@ def get_course(
     current_user=Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> CourseResponse:
+    cache = get_app_cache()
+    cache_key = f"courses:get:{_viewer_scope(current_user)}:{course_id}"
+    cached_payload = cache.get_json(cache_key)
+    if cached_payload is not None:
+        return CourseResponse.model_validate(cached_payload)
+
     course = CourseService(db).get_course(course_id, current_user)
-    return CourseResponse.model_validate(course)
+    response = CourseResponse.model_validate(course)
+    cache.set_json(cache_key, response.model_dump(mode="json"), ttl_seconds=settings.COURSE_CACHE_TTL_SECONDS)
+    return response
 
 
 @router.patch("/{course_id}", response_model=CourseResponse)
@@ -81,6 +116,7 @@ def update_course(
     db: Session = Depends(get_db),
 ) -> CourseResponse:
     course = CourseService(db).update_course(course_id, payload, current_user)
+    _invalidate_course_lesson_cache()
     return CourseResponse.model_validate(course)
 
 
@@ -91,6 +127,7 @@ def publish_course(
     db: Session = Depends(get_db),
 ) -> CourseResponse:
     course = CourseService(db).publish_course(course_id, current_user)
+    _invalidate_course_lesson_cache()
     return CourseResponse.model_validate(course)
 
 
@@ -101,3 +138,4 @@ def delete_course(
     db: Session = Depends(get_db),
 ) -> None:
     CourseService(db).delete_course(course_id, current_user)
+    _invalidate_course_lesson_cache()

@@ -70,6 +70,36 @@ def test_refresh_token_cannot_be_reused(client):
     assert rotated_refresh_response.status_code == 200
 
 
+def test_refresh_rejects_mismatched_access_token(client):
+    user_one = register_user(
+        client,
+        email="refresh-mismatch-one@example.com",
+        password="StrongPass123",
+        full_name="Refresh Mismatch One",
+        role="student",
+    )
+    user_two = register_user(
+        client,
+        email="refresh-mismatch-two@example.com",
+        password="StrongPass123",
+        full_name="Refresh Mismatch Two",
+        role="student",
+    )
+
+    mismatched_response = client.post(
+        "/api/v1/auth/refresh",
+        headers=auth_headers(user_two["tokens"]["access_token"]),
+        json={"refresh_token": user_one["tokens"]["refresh_token"]},
+    )
+    assert mismatched_response.status_code == 401
+
+    valid_refresh_response = client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": user_one["tokens"]["refresh_token"]},
+    )
+    assert valid_refresh_response.status_code == 200
+
+
 def test_login_refresh_token_rotation(client):
     register_user(
         client,
@@ -111,6 +141,33 @@ def test_logout_blacklists_access_token(client):
 
     profile_after_logout = client.get("/api/v1/auth/me", headers=auth_headers(access_token))
     assert profile_after_logout.status_code == 401
+
+
+def test_logout_rejects_mismatched_access_and_refresh_tokens(client):
+    user_one = register_user(
+        client,
+        email="logout-mismatch-one@example.com",
+        password="StrongPass123",
+        full_name="Logout Mismatch One",
+        role="student",
+    )
+    user_two = register_user(
+        client,
+        email="logout-mismatch-two@example.com",
+        password="StrongPass123",
+        full_name="Logout Mismatch Two",
+        role="student",
+    )
+
+    response = client.post(
+        "/api/v1/auth/logout",
+        headers=auth_headers(user_one["tokens"]["access_token"]),
+        json={"refresh_token": user_two["tokens"]["refresh_token"]},
+    )
+    assert response.status_code == 401
+
+    still_valid = client.get("/api/v1/auth/me", headers=auth_headers(user_one["tokens"]["access_token"]))
+    assert still_valid.status_code == 200
 
 
 def test_logout_requires_access_token(client):
