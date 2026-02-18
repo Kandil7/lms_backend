@@ -34,7 +34,11 @@ class AppCache:
 
         if self._redis_enabled and self._redis is not None:
             try:
-                payload = self._redis.get(full_key)
+                raw_payload = self._redis.get(full_key)
+                if isinstance(raw_payload, str):
+                    payload = raw_payload
+                elif isinstance(raw_payload, bytes):
+                    payload = raw_payload.decode("utf-8")
             except RedisError as exc:
                 self._fallback_to_memory(exc)
 

@@ -1,11 +1,14 @@
 from decimal import Decimal
 from uuid import UUID
+import time
+from typing import Any
 
 from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import ForbiddenException, NotFoundException
 from app.core.permissions import Role
+from app.core.cache import get_app_cache
 from app.modules.analytics.schemas import CourseAnalyticsResponse
 from app.modules.courses.models.course import Course
 from app.modules.enrollments.models import Enrollment
@@ -14,8 +17,18 @@ from app.modules.enrollments.models import Enrollment
 class CourseAnalyticsService:
     def __init__(self, db: Session) -> None:
         self.db = db
+        self.cache = get_app_cache()
 
     def get_course_analytics(self, course_id: UUID, current_user) -> CourseAnalyticsResponse:
+        # Generate cache key
+        cache_key = f"course_analytics:{course_id}"
+        
+        # Try to get from cache first
+        cached_data = self.cache.get_json(cache_key)
+        if cached_data is not None:
+            return CourseAnalyticsResponse(**cached_data)
+        
+        # Execute the query if not in cache
         row = self.db.execute(
             select(
                 Course.id,
@@ -58,7 +71,7 @@ class CourseAnalyticsService:
                 Decimal(completed_students) / Decimal(total_enrollments) * Decimal("100")
             ).quantize(Decimal("0.01"))
 
-        return CourseAnalyticsResponse(
+        result = CourseAnalyticsResponse(
             course_id=row[0],
             course_title=row[1],
             total_enrollments=total_enrollments,
@@ -70,3 +83,13 @@ class CourseAnalyticsService:
             average_rating=average_rating,
             total_reviews=total_reviews,
         )
+        
+        # Cache the result (TTL: 5 minutes for analytics data)
+        self.cache.set_json(cache_key, result.model_dump(), ttl_seconds=300)
+        
+        return result
+
+    def invalidate_course_analytics_cache(self, course_id: UUID) -> None:
+        """Invalidate cache for a specific course's analytics"""
+        cache_key = f"course_analytics:{course_id}"
+        self.cache.delete_by_prefix(cache_key)
