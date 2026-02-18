@@ -1,6 +1,7 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -28,7 +29,16 @@ def create_lesson(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> LessonResponse:
-    lesson = LessonService(db).create_lesson(course_id, payload, current_user)
+    service = LessonService(db)
+    try:
+        lesson = service.create_lesson(course_id, payload, current_user)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except IntegrityError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Lesson already exists or order index conflicts",
+        ) from exc
     return LessonResponse.model_validate(lesson)
 
 
@@ -49,7 +59,16 @@ def update_lesson(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> LessonResponse:
-    lesson = LessonService(db).update_lesson(lesson_id, payload, current_user)
+    service = LessonService(db)
+    try:
+        lesson = service.update_lesson(lesson_id, payload, current_user)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except IntegrityError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Lesson already exists or order index conflicts",
+        ) from exc
     return LessonResponse.model_validate(lesson)
 
 

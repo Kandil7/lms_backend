@@ -62,8 +62,7 @@ class CourseRepository:
 
     def update(self, course: Course, **fields) -> Course:
         for key, value in fields.items():
-            if value is not None:
-                setattr(course, key, value)
+            setattr(course, key, value)
 
         self.db.add(course)
         self.db.flush()
