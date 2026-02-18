@@ -18,23 +18,7 @@ def list_course_quizzes(
     db: Session = Depends(get_db),
 ) -> QuizListResponse:
     service = QuizService(db)
-    quizzes = service.list_course_quizzes(course_id, current_user)
-
-    items = [
-        QuizListItem(
-            id=quiz.id,
-            title=quiz.title,
-            description=quiz.description,
-            quiz_type=quiz.quiz_type,
-            time_limit_minutes=quiz.time_limit_minutes,
-            passing_score=quiz.passing_score,
-            max_attempts=quiz.max_attempts,
-            total_questions=service.quiz_repo.count_questions(quiz.id),
-            total_points=service.quiz_repo.total_points(quiz.id),
-            is_published=quiz.is_published,
-        )
-        for quiz in quizzes
-    ]
+    items = [QuizListItem(**item) for item in service.list_course_quiz_items(course_id, current_user)]
 
     return QuizListResponse(quizzes=items, total=len(items))
 

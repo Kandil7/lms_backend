@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 import uuid
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, Numeric, String, UniqueConstraint, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, Numeric, String, UniqueConstraint, func
 from sqlalchemy import JSON, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -14,6 +14,7 @@ class QuizAttempt(Base):
     __table_args__ = (
         CheckConstraint("status IN ('in_progress','submitted','graded')", name="ck_quiz_attempts_status"),
         UniqueConstraint("enrollment_id", "quiz_id", "attempt_number", name="uq_quiz_attempt_number"),
+        Index("ix_quiz_attempts_enrollment_status_submitted_at", "enrollment_id", "status", "submitted_at"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -34,7 +35,7 @@ class QuizAttempt(Base):
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="in_progress")
 
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
     graded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     score: Mapped[Decimal | None] = mapped_column(Numeric(6, 2), nullable=True)

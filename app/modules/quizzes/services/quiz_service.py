@@ -32,6 +32,17 @@ class QuizService:
 
         return [quiz for quiz in quizzes if quiz.is_published]
 
+    def list_course_quiz_items(self, course_id: UUID, current_user) -> list[dict]:
+        course = self.course_repo.get_by_id(course_id)
+        if not course:
+            raise NotFoundException("Course not found")
+
+        can_manage = self._can_manage_course(course, current_user)
+        if not can_manage and not course.is_published:
+            raise ForbiddenException("Not authorized to view quizzes for this course")
+
+        return self.quiz_repo.list_by_course_with_stats(course_id, published_only=not can_manage)
+
     def get_quiz(self, course_id: UUID, quiz_id: UUID, current_user, *, with_questions: bool = False):
         quiz = self.quiz_repo.get_by_id(quiz_id, with_questions=with_questions)
         if not quiz:

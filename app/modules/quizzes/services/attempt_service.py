@@ -42,7 +42,7 @@ class AttemptService:
         if quiz.max_attempts and latest_attempt_number >= quiz.max_attempts:
             raise ForbiddenException("Maximum attempts reached")
 
-        max_score = self.quiz_repo.total_points(quiz.id)
+        max_score = self._calculate_total_points(quiz)
         attempt = self.attempt_repo.create(
             enrollment_id=enrollment.id,
             quiz_id=quiz.id,
@@ -73,7 +73,7 @@ class AttemptService:
                 "title": quiz.title,
                 "time_limit_minutes": quiz.time_limit_minutes,
                 "total_questions": len(questions),
-                "total_points": self.quiz_repo.total_points(quiz.id),
+                "total_points": self._calculate_total_points(quiz),
             },
             "questions": questions,
         }
@@ -113,7 +113,7 @@ class AttemptService:
             graded_answers.append(result)
             total_score += Decimal(str(result["points_earned"]))
 
-        max_score = self.quiz_repo.total_points(quiz.id)
+        max_score = self._calculate_total_points(quiz)
         percentage = self.attempt_repo.calculate_percentage(total_score, max_score)
         passed = percentage >= Decimal(str(quiz.passing_score))
         started_at = attempt.started_at
@@ -235,3 +235,8 @@ class AttemptService:
             "is_correct": is_correct,
             "points_earned": float(points_earned),
         }
+
+    @staticmethod
+    def _calculate_total_points(quiz) -> Decimal:
+        total = sum((Decimal(str(question.points)) for question in quiz.questions), Decimal("0.00"))
+        return total.quantize(Decimal("0.01"))

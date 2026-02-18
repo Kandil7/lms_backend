@@ -1,7 +1,7 @@
 from datetime import datetime
 import uuid
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, String, func
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, String, func
 from sqlalchemy import Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -10,6 +10,10 @@ from app.core.database import Base
 
 class UploadedFile(Base):
     __tablename__ = "uploaded_files"
+    __table_args__ = (
+        Index("ix_uploaded_files_uploader_created_at", "uploader_id", "created_at"),
+        Index("ix_uploaded_files_uploader_type_created_at", "uploader_id", "file_type", "created_at"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     uploader_id: Mapped[uuid.UUID] = mapped_column(

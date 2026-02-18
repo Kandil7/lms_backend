@@ -7,6 +7,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
+os.environ.setdefault("ALLOW_PUBLIC_ROLE_REGISTRATION", "true")
+
 from app.core.database import Base, get_db
 from app.main import app
 

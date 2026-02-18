@@ -43,6 +43,18 @@ if errorlevel 1 (
     exit /b 1
 )
 
+docker info >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: Docker daemon is not running or not reachable.
+    echo.
+    echo Fix:
+    echo   1. Start Docker Desktop and wait until it shows "Engine running".
+    echo   2. Make sure Docker is using Linux containers.
+    echo   3. Verify with: docker info
+    echo   4. Re-run: scripts\run_project.bat
+    exit /b 1
+)
+
 echo.
 echo ==^> Preparing environment file
 if not exist .env (

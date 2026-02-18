@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+    ALLOW_PUBLIC_ROLE_REGISTRATION: bool = False
+    ACCESS_TOKEN_BLACKLIST_ENABLED: bool = True
+    ACCESS_TOKEN_BLACKLIST_PREFIX: str = "auth:blacklist:access"
+    SECURITY_HEADERS_ENABLED: bool = True
 
     CORS_ORIGINS: CsvList = Field(default_factory=lambda: ["http://localhost:3000"])
     TRUSTED_HOSTS: CsvList = Field(default_factory=lambda: ["localhost", "127.0.0.1", "testserver"])
