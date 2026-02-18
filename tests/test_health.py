@@ -6,20 +6,35 @@ def test_health_endpoint(client):
 
 def test_readiness_endpoint_up(client, monkeypatch):
     monkeypatch.setattr("app.api.v1.api.check_database_health", lambda: True)
+    monkeypatch.setattr("app.api.v1.api.check_redis_health", lambda: True)
     response = client.get("/api/v1/ready")
     assert response.status_code == 200, response.text
     payload = response.json()
     assert payload["status"] == "ok"
     assert payload["database"] == "up"
+    assert payload["redis"] == "up"
 
 
 def test_readiness_endpoint_down(client, monkeypatch):
     monkeypatch.setattr("app.api.v1.api.check_database_health", lambda: False)
+    monkeypatch.setattr("app.api.v1.api.check_redis_health", lambda: True)
     response = client.get("/api/v1/ready")
     assert response.status_code == 503, response.text
     payload = response.json()
     assert payload["status"] == "degraded"
     assert payload["database"] == "down"
+    assert payload["redis"] == "up"
+
+
+def test_readiness_endpoint_redis_down(client, monkeypatch):
+    monkeypatch.setattr("app.api.v1.api.check_database_health", lambda: True)
+    monkeypatch.setattr("app.api.v1.api.check_redis_health", lambda: False)
+    response = client.get("/api/v1/ready")
+    assert response.status_code == 503, response.text
+    payload = response.json()
+    assert payload["status"] == "degraded"
+    assert payload["database"] == "up"
+    assert payload["redis"] == "down"
 
 
 def test_security_headers_are_present(client):
@@ -29,3 +44,4 @@ def test_security_headers_are_present(client):
     assert response.headers["X-Frame-Options"] == "DENY"
     assert response.headers["Referrer-Policy"] == "no-referrer"
     assert response.headers["X-Permitted-Cross-Domain-Policies"] == "none"
+    assert response.headers["Content-Security-Policy"] == "frame-ancestors 'none'; object-src 'none'; base-uri 'self'"

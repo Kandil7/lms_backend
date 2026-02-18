@@ -11,6 +11,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers.setdefault("Referrer-Policy", "no-referrer")
         response.headers.setdefault("X-Permitted-Cross-Domain-Policies", "none")
         response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        response.headers.setdefault("Content-Security-Policy", "frame-ancestors 'none'; object-src 'none'; base-uri 'self'")
 
         if request.url.scheme == "https":
             response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")

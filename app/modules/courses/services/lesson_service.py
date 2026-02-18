@@ -1,4 +1,5 @@
 from uuid import UUID
+from urllib.parse import urlparse
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -56,6 +57,8 @@ class LessonService:
 
         self._ensure_manage_access(course, current_user)
         self._validate_parent_lesson(course.id, payload.parent_lesson_id)
+        video_url = self._normalize_video_url(payload.video_url)
+        self._validate_video_url_usage(payload.lesson_type, video_url)
 
         order_index = payload.order_index or self.lesson_repo.get_next_order_index(course_id)
         lesson = self.lesson_repo.create(
@@ -68,7 +71,7 @@ class LessonService:
             order_index=order_index,
             parent_lesson_id=payload.parent_lesson_id,
             duration_minutes=payload.duration_minutes,
-            video_url=payload.video_url,
+            video_url=video_url,
             is_preview=payload.is_preview,
             lesson_metadata=payload.metadata,
         )
@@ -88,10 +91,18 @@ class LessonService:
 
         updates = payload.model_dump(exclude_unset=True)
         self._validate_nullable_updates(updates)
+        if "video_url" in updates:
+            updates["video_url"] = self._normalize_video_url(updates["video_url"])
         if "metadata" in updates:
             updates["lesson_metadata"] = updates.pop("metadata")
         if "parent_lesson_id" in updates:
             self._validate_parent_lesson(course.id, updates["parent_lesson_id"], current_lesson_id=lesson.id)
+        if "lesson_type" in updates and updates["lesson_type"] != "video" and "video_url" not in updates:
+            updates["video_url"] = None
+        if "lesson_type" in updates or "video_url" in updates:
+            resolved_lesson_type = updates.get("lesson_type", lesson.lesson_type)
+            resolved_video_url = updates.get("video_url", lesson.video_url)
+            self._validate_video_url_usage(resolved_lesson_type, resolved_video_url)
 
         lesson = self.lesson_repo.update(lesson, **updates)
         self._commit()
@@ -169,3 +180,19 @@ class LessonService:
             if next_ancestor is None:
                 break
             ancestor = next_ancestor
+
+    @staticmethod
+    def _validate_video_url_usage(lesson_type: str, video_url: str | None) -> None:
+        if video_url is not None:
+            parsed = urlparse(video_url)
+            if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+                raise ValueError("video_url must be a valid http/https URL")
+        if lesson_type != "video" and video_url is not None:
+            raise ValueError("video_url is only allowed for video lessons")
+
+    @staticmethod
+    def _normalize_video_url(video_url: str | None) -> str | None:
+        if video_url is None:
+            return None
+        normalized = video_url.strip()
+        return normalized or None

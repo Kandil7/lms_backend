@@ -1,7 +1,31 @@
 services:
+  migrate:
+    build: .
+    command: alembic upgrade head
+    env_file:
+      - .env
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      DATABASE_URL: ${PROD_DATABASE_URL:-postgresql+psycopg2://lms:${POSTGRES_PASSWORD:-lms}@db:5432/lms}
+      REDIS_URL: ${PROD_REDIS_URL:-redis://redis:6379/0}
+      CELERY_BROKER_URL: ${PROD_CELERY_BROKER_URL:-redis://redis:6379/1}
+      CELERY_RESULT_BACKEND: ${PROD_CELERY_RESULT_BACKEND:-redis://redis:6379/2}
+      TASKS_FORCE_INLINE: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
   api:
     build: .
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-2}
+    command:
+      - /bin/sh
+      - -c
+      - >
+        mkdir -p /app/uploads /app/certificates &&
+        chown -R nobody:nogroup /app/uploads /app/certificates &&
+        exec su nobody -s /bin/sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-2}"
     env_file:
       - .env
     environment:
@@ -22,6 +46,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
     healthcheck:
       test:
@@ -61,6 +87,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   celery-beat:
@@ -91,6 +119,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   db:

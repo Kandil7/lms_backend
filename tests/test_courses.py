@@ -334,3 +334,114 @@ def test_duplicate_lesson_order_index_returns_conflict(client):
         },
     )
     assert duplicate_lesson.status_code == 409, duplicate_lesson.text
+
+
+def test_video_lesson_accepts_video_link_alias(client):
+    instructor = register_user(
+        client,
+        email="video-link-instructor@example.com",
+        password="StrongPass123",
+        full_name="Video Link Instructor",
+        role="instructor",
+    )
+    instructor_headers = auth_headers(instructor["tokens"]["access_token"])
+
+    create_course = client.post(
+        "/api/v1/courses",
+        headers=instructor_headers,
+        json={
+            "title": "Video Link Course",
+            "description": "Video lesson link support",
+            "category": "Backend",
+            "difficulty_level": "beginner",
+        },
+    )
+    assert create_course.status_code == 201, create_course.text
+    course_id = create_course.json()["id"]
+
+    lesson_response = client.post(
+        f"/api/v1/courses/{course_id}/lessons",
+        headers=instructor_headers,
+        json={
+            "title": "YouTube Lesson",
+            "lesson_type": "video",
+            "order_index": 1,
+            "video_link": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        },
+    )
+    assert lesson_response.status_code == 201, lesson_response.text
+    assert lesson_response.json()["video_url"] == "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+
+
+def test_video_lesson_rejects_non_http_video_link(client):
+    instructor = register_user(
+        client,
+        email="video-link-invalid-instructor@example.com",
+        password="StrongPass123",
+        full_name="Video Link Invalid Instructor",
+        role="instructor",
+    )
+    instructor_headers = auth_headers(instructor["tokens"]["access_token"])
+
+    create_course = client.post(
+        "/api/v1/courses",
+        headers=instructor_headers,
+        json={
+            "title": "Video Link Validation Course",
+            "description": "Video lesson link validation",
+            "category": "Backend",
+            "difficulty_level": "beginner",
+        },
+    )
+    assert create_course.status_code == 201, create_course.text
+    course_id = create_course.json()["id"]
+
+    lesson_response = client.post(
+        f"/api/v1/courses/{course_id}/lessons",
+        headers=instructor_headers,
+        json={
+            "title": "Broken Link Lesson",
+            "lesson_type": "video",
+            "order_index": 1,
+            "video_link": "youtube.com/watch?v=dQw4w9WgXcQ",
+        },
+    )
+    assert lesson_response.status_code == 400, lesson_response.text
+    assert lesson_response.json()["detail"] == "video_url must be a valid http/https URL"
+
+
+def test_non_video_lesson_rejects_video_link(client):
+    instructor = register_user(
+        client,
+        email="video-link-text-instructor@example.com",
+        password="StrongPass123",
+        full_name="Video Link Text Instructor",
+        role="instructor",
+    )
+    instructor_headers = auth_headers(instructor["tokens"]["access_token"])
+
+    create_course = client.post(
+        "/api/v1/courses",
+        headers=instructor_headers,
+        json={
+            "title": "Text Lesson Video Link Guard",
+            "description": "Prevent wrong field usage",
+            "category": "Backend",
+            "difficulty_level": "beginner",
+        },
+    )
+    assert create_course.status_code == 201, create_course.text
+    course_id = create_course.json()["id"]
+
+    lesson_response = client.post(
+        f"/api/v1/courses/{course_id}/lessons",
+        headers=instructor_headers,
+        json={
+            "title": "Text Lesson",
+            "lesson_type": "text",
+            "order_index": 1,
+            "video_link": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        },
+    )
+    assert lesson_response.status_code == 400, lesson_response.text
+    assert lesson_response.json()["detail"] == "video_url is only allowed for video lessons"

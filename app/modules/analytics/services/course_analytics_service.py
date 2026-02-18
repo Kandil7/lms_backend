@@ -1,7 +1,5 @@
 from decimal import Decimal
 from uuid import UUID
-import time
-from typing import Any
 
 from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
@@ -85,7 +83,7 @@ class CourseAnalyticsService:
         )
         
         # Cache the result (TTL: 5 minutes for analytics data)
-        self.cache.set_json(cache_key, result.model_dump(), ttl_seconds=300)
+        self.cache.set_json(cache_key, result.model_dump(mode="json"), ttl_seconds=300)
         
         return result
 

@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     ALLOW_PUBLIC_ROLE_REGISTRATION: bool = False
     ACCESS_TOKEN_BLACKLIST_ENABLED: bool = True
+    ACCESS_TOKEN_BLACKLIST_FAIL_CLOSED: bool = False
     ACCESS_TOKEN_BLACKLIST_PREFIX: str = "auth:blacklist:access"
     SECURITY_HEADERS_ENABLED: bool = True
 
@@ -116,6 +117,9 @@ class Settings(BaseSettings):
         insecure_values = {"change-me", "change-this-in-production-with-64-random-chars-minimum"}
         if self.SECRET_KEY in insecure_values or len(self.SECRET_KEY) < 32:
             raise ValueError("SECRET_KEY must be a strong random value (32+ chars) in production")
+
+        if self.ACCESS_TOKEN_BLACKLIST_ENABLED and not self.ACCESS_TOKEN_BLACKLIST_FAIL_CLOSED:
+            raise ValueError("ACCESS_TOKEN_BLACKLIST_FAIL_CLOSED must be true in production")
 
         if self.TASKS_FORCE_INLINE:
             raise ValueError("TASKS_FORCE_INLINE must be false when ENVIRONMENT=production")

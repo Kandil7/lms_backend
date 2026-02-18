@@ -79,6 +79,10 @@ class AccessTokenBlacklist:
             self._memory.pop(jti, None)
 
     def _fallback_to_memory(self, exc: RedisError) -> None:
+        if settings.ENVIRONMENT == "production" and settings.ACCESS_TOKEN_BLACKLIST_FAIL_CLOSED:
+            logger.error("Access token blacklist backend unavailable in production: %s", exc)
+            raise UnauthorizedException("Token revocation service unavailable")
+
         if not self._redis_error_logged:
             logger.warning("Access token blacklist fallback to in-memory mode: %s", exc)
             self._redis_error_logged = True

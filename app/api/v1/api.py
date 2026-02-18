@@ -4,6 +4,7 @@ from enum import Enum
 from fastapi import APIRouter, Response, status
 
 from app.core.database import check_database_health
+from app.core.health import check_redis_health
 
 logger = logging.getLogger(__name__)
 
@@ -18,11 +19,13 @@ def health_check() -> dict:
 @api_router.get("/ready", tags=["Health"])
 def readiness_check(response: Response) -> dict:
     db_up = check_database_health()
-    if not db_up:
+    redis_up = check_redis_health()
+    if not db_up or not redis_up:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     return {
-        "status": "ok" if db_up else "degraded",
+        "status": "ok" if db_up and redis_up else "degraded",
         "database": "up" if db_up else "down",
+        "redis": "up" if redis_up else "down",
     }
 
 
