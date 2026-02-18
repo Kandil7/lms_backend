@@ -1,0 +1,159 @@
+services:
+  migrate:
+    build: .
+    command: alembic upgrade head
+    env_file:
+      - .env
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      DATABASE_URL: ${PROD_DATABASE_URL:-postgresql+psycopg2://lms:${POSTGRES_PASSWORD:-lms}@db:5432/lms}
+      REDIS_URL: ${PROD_REDIS_URL:-redis://redis:6379/0}
+      CELERY_BROKER_URL: ${PROD_CELERY_BROKER_URL:-redis://redis:6379/1}
+      CELERY_RESULT_BACKEND: ${PROD_CELERY_RESULT_BACKEND:-redis://redis:6379/2}
+      TASKS_FORCE_INLINE: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: .
+    command:
+      - /bin/sh
+      - -c
+      - >
+        mkdir -p /app/uploads /app/certificates &&
+        chown -R nobody:nogroup /app/uploads /app/certificates &&
+        exec su nobody -s /bin/sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-2}"
+    env_file:
+      - .env
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      DATABASE_URL: ${PROD_DATABASE_URL:-postgresql+psycopg2://lms:${POSTGRES_PASSWORD:-lms}@db:5432/lms}
+      REDIS_URL: ${PROD_REDIS_URL:-redis://redis:6379/0}
+      CELERY_BROKER_URL: ${PROD_CELERY_BROKER_URL:-redis://redis:6379/1}
+      CELERY_RESULT_BACKEND: ${PROD_CELERY_RESULT_BACKEND:-redis://redis:6379/2}
+      TASKS_FORCE_INLINE: "false"
+    ports:
+      - "8000:8000"
+    volumes:
+      - uploads_data:/app/uploads
+      - certificates_data:/app/certificates
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >
+          python -c "import urllib.request,sys;
+          sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/v1/ready', timeout=3).status == 200 else 1)"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  celery-worker:
+    build: .
+    command:
+      - /bin/sh
+      - -c
+      - >
+        mkdir -p /app/uploads /app/certificates /tmp &&
+        chown -R nobody:nogroup /app/uploads /app/certificates /tmp &&
+        celery -A app.tasks.celery_app.celery_app worker --loglevel=info --queues=emails,progress,certificates --uid=nobody
+    env_file:
+      - .env
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      DATABASE_URL: ${PROD_DATABASE_URL:-postgresql+psycopg2://lms:${POSTGRES_PASSWORD:-lms}@db:5432/lms}
+      REDIS_URL: ${PROD_REDIS_URL:-redis://redis:6379/0}
+      CELERY_BROKER_URL: ${PROD_CELERY_BROKER_URL:-redis://redis:6379/1}
+      CELERY_RESULT_BACKEND: ${PROD_CELERY_RESULT_BACKEND:-redis://redis:6379/2}
+      TASKS_FORCE_INLINE: "false"
+    volumes:
+      - uploads_data:/app/uploads
+      - certificates_data:/app/certificates
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  celery-beat:
+    build: .
+    command:
+      - /bin/sh
+      - -c
+      - >
+        mkdir -p /tmp &&
+        chown -R nobody:nogroup /tmp &&
+        celery -A app.tasks.celery_app.celery_app beat --loglevel=info --uid=nobody --schedule=/tmp/celerybeat-schedule
+    env_file:
+      - .env
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      DATABASE_URL: ${PROD_DATABASE_URL:-postgresql+psycopg2://lms:${POSTGRES_PASSWORD:-lms}@db:5432/lms}
+      REDIS_URL: ${PROD_REDIS_URL:-redis://redis:6379/0}
+      CELERY_BROKER_URL: ${PROD_CELERY_BROKER_URL:-redis://redis:6379/1}
+      CELERY_RESULT_BACKEND: ${PROD_CELERY_RESULT_BACKEND:-redis://redis:6379/2}
+      TASKS_FORCE_INLINE: "false"
+    volumes:
+      - uploads_data:/app/uploads
+      - certificates_data:/app/certificates
+      - celerybeat_data:/tmp
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-lms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lms}
+      POSTGRES_DB: ${POSTGRES_DB:-lms}
+    expose:
+      - "5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lms} -d ${POSTGRES_DB:-lms}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save 60 1 --loglevel warning
+    expose:
+      - "6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  postgres_data:
+  uploads_data:
+  certificates_data:
+  celerybeat_data:

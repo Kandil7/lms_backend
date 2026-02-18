@@ -36,8 +36,7 @@ class LessonRepository:
 
     def update(self, lesson: Lesson, **fields) -> Lesson:
         for key, value in fields.items():
-            if value is not None:
-                setattr(lesson, key, value)
+            setattr(lesson, key, value)
 
         self.db.add(lesson)
         self.db.flush()

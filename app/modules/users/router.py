@@ -1,13 +1,13 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user, get_pagination, require_roles
 from app.core.permissions import Role
 from app.modules.users.schemas import UserCreate, UserListResponse, UserResponse, UserUpdate
-from app.modules.users.services.user_service import UserService
+from app.modules.users.services.user_service import UserAlreadyExistsError, UserService
 from app.utils.pagination import PageParams, paginate
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -47,7 +47,10 @@ def create_user(
     _: object = Depends(require_roles(Role.ADMIN)),
     db: Session = Depends(get_db),
 ) -> UserResponse:
-    user = UserService(db).create_user(payload)
+    try:
+        user = UserService(db).create_user(payload)
+    except UserAlreadyExistsError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     return UserResponse.model_validate(user)
 
 

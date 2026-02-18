@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import ForbiddenException, NotFoundException
@@ -11,6 +12,8 @@ from app.utils.validators import slugify
 
 
 class CourseService:
+    NON_NULLABLE_UPDATE_FIELDS = {"title", "is_published"}
+
     def __init__(self, db: Session) -> None:
         self.db = db
         self.repo = CourseRepository(db)
@@ -78,7 +81,7 @@ class CourseService:
             course_metadata=payload.metadata,
             is_published=False,
         )
-        self.db.commit()
+        self._commit()
         return course
 
     def update_course(self, course_id: UUID, payload: CourseUpdate, current_user):
@@ -89,11 +92,12 @@ class CourseService:
         self._ensure_manage_access(course, current_user)
 
         updates = payload.model_dump(exclude_unset=True)
+        self._validate_nullable_updates(updates)
         if "metadata" in updates:
             updates["course_metadata"] = updates.pop("metadata")
 
         course = self.repo.update(course, **updates)
-        self.db.commit()
+        self._commit()
         return course
 
     def publish_course(self, course_id: UUID, current_user):
@@ -104,7 +108,7 @@ class CourseService:
         self._ensure_manage_access(course, current_user)
 
         course = self.repo.update(course, is_published=True)
-        self.db.commit()
+        self._commit()
         return course
 
     def delete_course(self, course_id: UUID, current_user) -> None:
@@ -114,7 +118,7 @@ class CourseService:
 
         self._ensure_manage_access(course, current_user)
         self.repo.delete(course)
-        self.db.commit()
+        self._commit()
 
     def _can_manage_course(self, course, current_user) -> bool:
         if not current_user:
@@ -126,3 +130,18 @@ class CourseService:
     def _ensure_manage_access(self, course, current_user) -> None:
         if not self._can_manage_course(course, current_user):
             raise ForbiddenException("Not authorized to manage this course")
+
+    def _commit(self) -> None:
+        try:
+            self.db.commit()
+        except IntegrityError:
+            self.db.rollback()
+            raise
+        except Exception:
+            self.db.rollback()
+            raise
+
+    def _validate_nullable_updates(self, updates: dict) -> None:
+        for field in self.NON_NULLABLE_UPDATE_FIELDS:
+            if field in updates and updates[field] is None:
+                raise ValueError(f"'{field}' cannot be null")

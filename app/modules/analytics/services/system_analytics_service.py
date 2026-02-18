@@ -1,4 +1,4 @@
-from sqlalchemy import and_, func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import ForbiddenException
@@ -17,26 +17,34 @@ class SystemAnalyticsService:
         if current_user.role != Role.ADMIN.value:
             raise ForbiddenException("Only admins can access system overview")
 
-        total_users = int(self.db.scalar(select(func.count()).select_from(User)) or 0)
-        total_students = int(
-            self.db.scalar(select(func.count()).select_from(User).where(User.role == Role.STUDENT.value)) or 0
-        )
-        total_instructors = int(
-            self.db.scalar(select(func.count()).select_from(User).where(User.role == Role.INSTRUCTOR.value)) or 0
-        )
-
-        total_courses = int(self.db.scalar(select(func.count()).select_from(Course)) or 0)
-        published_courses = int(
-            self.db.scalar(select(func.count()).select_from(Course).where(Course.is_published.is_(True))) or 0
-        )
-
-        total_enrollments = int(self.db.scalar(select(func.count()).select_from(Enrollment)) or 0)
-        active_enrollments = int(
-            self.db.scalar(
-                select(func.count()).select_from(Enrollment).where(Enrollment.status == "active")
+        user_row = self.db.execute(
+            select(
+                func.count(User.id),
+                func.sum(case((User.role == Role.STUDENT.value, 1), else_=0)),
+                func.sum(case((User.role == Role.INSTRUCTOR.value, 1), else_=0)),
             )
-            or 0
-        )
+        ).one()
+        total_users = int(user_row[0] or 0)
+        total_students = int(user_row[1] or 0)
+        total_instructors = int(user_row[2] or 0)
+
+        course_row = self.db.execute(
+            select(
+                func.count(Course.id),
+                func.sum(case((Course.is_published.is_(True), 1), else_=0)),
+            )
+        ).one()
+        total_courses = int(course_row[0] or 0)
+        published_courses = int(course_row[1] or 0)
+
+        enrollment_row = self.db.execute(
+            select(
+                func.count(Enrollment.id),
+                func.sum(case((Enrollment.status == "active", 1), else_=0)),
+            )
+        ).one()
+        total_enrollments = int(enrollment_row[0] or 0)
+        active_enrollments = int(enrollment_row[1] or 0)
 
         return SystemOverviewResponse(
             total_users=total_users,

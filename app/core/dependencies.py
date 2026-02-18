@@ -38,6 +38,8 @@ def get_current_user(
     user = UserRepository(db).get_by_id(user_id)
     if not user or not user.is_active:
         raise UnauthorizedException("Could not validate credentials")
+    if settings.REQUIRE_EMAIL_VERIFICATION_FOR_LOGIN and user.email_verified_at is None:
+        raise UnauthorizedException("Email is not verified")
 
     return user
 

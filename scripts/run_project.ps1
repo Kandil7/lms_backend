@@ -60,8 +60,8 @@ if ($SeedDemoData) {
     & docker compose -f docker-compose.yml exec -T api python scripts/seed_demo_data.py
 }
 
-Write-Step "Waiting for API health endpoint"
-$healthUrl = "http://localhost:8000/api/v1/health"
+Write-Step "Waiting for API readiness endpoint"
+$healthUrl = "http://localhost:8000/api/v1/ready"
 $healthOk = $false
 
 for ($i = 1; $i -le 30; $i++) {
@@ -78,10 +78,10 @@ for ($i = 1; $i -le 30; $i++) {
 }
 
 if (-not $healthOk) {
-    Write-Warning "API health check did not become ready in time. Check logs with: docker compose logs --tail=200 api"
+    Write-Warning "API readiness check did not become ready in time. Check logs with: docker compose logs --tail=200 api"
 }
 else {
-    Write-Host "API is healthy at $healthUrl" -ForegroundColor Green
+    Write-Host "API is ready at $healthUrl" -ForegroundColor Green
 }
 
 Write-Step "Project is running"

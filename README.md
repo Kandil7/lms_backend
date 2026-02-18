@@ -15,7 +15,7 @@ Production-oriented LMS backend built as a modular monolith with FastAPI.
 - `tests`: API integration tests.
 
 ## Implemented Modules
-- `auth`: registration/login/refresh/logout, refresh token revocation.
+- `auth`: registration/login/refresh/logout, refresh token revocation, forgot/reset password, email verification, optional MFA login challenge.
 - `users`: profile + admin user management.
 - `courses`: course and lesson CRUD with ownership checks.
 - `enrollments`: enrollment lifecycle, lesson progress aggregation, reviews.
@@ -53,6 +53,14 @@ Docs: `http://localhost:8000/docs`
 docker compose up --build
 ```
 
+Production-like stack:
+```bash
+cp .env.production.example .env
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+Note: `docker-compose.prod.yml` uses `PROD_*` URLs (for DB/Redis/Celery) so local dev `.env` values like `localhost` do not leak into production containers.
+
 PowerShell one-command startup (Windows):
 ```powershell
 .\scripts\run_project.ps1
@@ -69,6 +77,9 @@ Useful flags:
 - `-CreateAdmin`
 - `-SeedDemoData`
 - `-FollowLogs`
+
+Readiness endpoint:
+- `http://localhost:8000/api/v1/ready`
 
 Services included in `docker-compose.yml`:
 - `api`
@@ -121,6 +132,14 @@ Important environment flags:
 - `RATE_LIMIT_WINDOW_SECONDS=60`
 - `FILE_STORAGE_PROVIDER=local` (or `s3`)
 - `FILE_DOWNLOAD_URL_EXPIRE_SECONDS=900`
+- `TASKS_FORCE_INLINE=true` for local/dev, `false` for production
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`
+- `FRONTEND_BASE_URL` (used in password reset links)
+- `EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES`
+- `REQUIRE_EMAIL_VERIFICATION_FOR_LOGIN`
+- `MFA_CHALLENGE_TOKEN_EXPIRE_MINUTES`
+- `MFA_LOGIN_CODE_EXPIRE_MINUTES`
+- `MFA_LOGIN_CODE_LENGTH`
 
 ## Branch Strategy
 - `main`: stable releases.

@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class LessonBase(BaseModel):
@@ -13,7 +13,7 @@ class LessonBase(BaseModel):
     order_index: int | None = Field(default=None, ge=1)
     parent_lesson_id: UUID | None = None
     duration_minutes: int | None = Field(default=None, ge=1)
-    video_url: str | None = None
+    video_url: str | None = Field(default=None, validation_alias=AliasChoices("video_url", "video_link"))
     is_preview: bool = False
     metadata: dict | None = None
 
@@ -30,7 +30,7 @@ class LessonUpdate(BaseModel):
     order_index: int | None = Field(default=None, ge=1)
     parent_lesson_id: UUID | None = None
     duration_minutes: int | None = Field(default=None, ge=1)
-    video_url: str | None = None
+    video_url: str | None = Field(default=None, validation_alias=AliasChoices("video_url", "video_link"))
     is_preview: bool | None = None
     metadata: dict | None = None
 

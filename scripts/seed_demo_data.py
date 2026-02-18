@@ -4,6 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 from typing import Any
+from datetime import UTC, datetime
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -89,6 +90,7 @@ def ensure_user(repo: UserRepository, *, email: str, password: str, full_name: s
             full_name=full_name,
             role=role,
             is_active=True,
+            email_verified_at=datetime.now(UTC),
         )
 
     changed = False
@@ -106,12 +108,16 @@ def ensure_user(repo: UserRepository, *, email: str, password: str, full_name: s
         changed = True
 
     if changed:
+        if user.email_verified_at is None:
+            user.email_verified_at = datetime.now(UTC)
+            changed = True
         repo.update(
             user,
             role=user.role,
             full_name=user.full_name,
             is_active=user.is_active,
             password_hash=user.password_hash,
+            email_verified_at=user.email_verified_at,
         )
 
     return user

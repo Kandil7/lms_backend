@@ -1,7 +1,7 @@
 from decimal import Decimal
 import uuid
 
-from sqlalchemy import CheckConstraint, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy import JSON, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -16,6 +16,7 @@ class QuizQuestion(Base):
             name="ck_quiz_questions_type",
         ),
         UniqueConstraint("quiz_id", "order_index", name="uq_quiz_questions_order"),
+        Index("ix_quiz_questions_quiz_type_order", "quiz_id", "question_type", "order_index"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)

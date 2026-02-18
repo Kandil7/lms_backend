@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 import uuid
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy import JSON, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -14,6 +14,10 @@ class Enrollment(Base):
     __table_args__ = (
         CheckConstraint("status IN ('active','completed','dropped','expired')", name="ck_enrollments_status"),
         UniqueConstraint("student_id", "course_id", name="uq_enrollments_student_course"),
+        Index("ix_enrollments_student_enrolled_at", "student_id", "enrolled_at"),
+        Index("ix_enrollments_course_enrolled_at", "course_id", "enrolled_at"),
+        Index("ix_enrollments_course_status", "course_id", "status"),
+        Index("ix_enrollments_student_status", "student_id", "status"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -62,6 +66,8 @@ class LessonProgress(Base):
     __table_args__ = (
         CheckConstraint("status IN ('not_started','in_progress','completed')", name="ck_lesson_progress_status"),
         UniqueConstraint("enrollment_id", "lesson_id", name="uq_lesson_progress_enrollment_lesson"),
+        Index("ix_lesson_progress_enrollment_status", "enrollment_id", "status"),
+        Index("ix_lesson_progress_enrollment_completed_at", "enrollment_id", "completed_at"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)

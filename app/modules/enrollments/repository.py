@@ -3,7 +3,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy import and_, func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.modules.enrollments.models import Enrollment, LessonProgress
 
@@ -13,12 +13,29 @@ class EnrollmentRepository:
         self.db = db
 
     def get_by_id(self, enrollment_id: UUID) -> Enrollment | None:
-        stmt = select(Enrollment).where(Enrollment.id == enrollment_id)
+        stmt = select(Enrollment).options(joinedload(Enrollment.course)).where(Enrollment.id == enrollment_id)
+        return self.db.scalar(stmt)
+
+    def get_by_id_for_update(self, enrollment_id: UUID) -> Enrollment | None:
+        stmt = (
+            select(Enrollment)
+            .options(joinedload(Enrollment.course))
+            .where(Enrollment.id == enrollment_id)
+            .with_for_update()
+        )
         return self.db.scalar(stmt)
 
     def get_by_student_and_course(self, student_id: UUID, course_id: UUID) -> Enrollment | None:
         stmt = select(Enrollment).where(
             and_(Enrollment.student_id == student_id, Enrollment.course_id == course_id)
+        )
+        return self.db.scalar(stmt)
+
+    def get_by_student_and_course_for_update(self, student_id: UUID, course_id: UUID) -> Enrollment | None:
+        stmt = (
+            select(Enrollment)
+            .where(and_(Enrollment.student_id == student_id, Enrollment.course_id == course_id))
+            .with_for_update()
         )
         return self.db.scalar(stmt)
 
@@ -30,6 +47,7 @@ class EnrollmentRepository:
 
         stmt = (
             select(Enrollment)
+            .options(joinedload(Enrollment.course))
             .where(base_filter)
             .order_by(Enrollment.enrolled_at.desc())
             .offset((page - 1) * page_size)
@@ -47,6 +65,7 @@ class EnrollmentRepository:
 
         stmt = (
             select(Enrollment)
+            .options(joinedload(Enrollment.student))
             .where(base_filter)
             .order_by(Enrollment.enrolled_at.desc())
             .offset((page - 1) * page_size)
@@ -82,6 +101,14 @@ class EnrollmentRepository:
     def get_lesson_progress(self, enrollment_id: UUID, lesson_id: UUID) -> LessonProgress | None:
         stmt = select(LessonProgress).where(
             and_(LessonProgress.enrollment_id == enrollment_id, LessonProgress.lesson_id == lesson_id)
+        )
+        return self.db.scalar(stmt)
+
+    def get_lesson_progress_for_update(self, enrollment_id: UUID, lesson_id: UUID) -> LessonProgress | None:
+        stmt = (
+            select(LessonProgress)
+            .where(and_(LessonProgress.enrollment_id == enrollment_id, LessonProgress.lesson_id == lesson_id))
+            .with_for_update()
         )
         return self.db.scalar(stmt)
 

@@ -1,8 +1,11 @@
 from uuid import UUID
+from urllib.parse import urlparse
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import ForbiddenException, NotFoundException
+from app.core.permissions import Role
 from app.modules.courses.repositories.course_repository import CourseRepository
 from app.modules.courses.repositories.lesson_repository import LessonRepository
 from app.modules.courses.schemas.lesson import LessonCreate, LessonUpdate
@@ -10,6 +13,8 @@ from app.utils.validators import slugify
 
 
 class LessonService:
+    NON_NULLABLE_UPDATE_FIELDS = {"title", "lesson_type", "order_index", "is_preview"}
+
     def __init__(self, db: Session) -> None:
         self.db = db
         self.course_repo = CourseRepository(db)
@@ -40,7 +45,7 @@ class LessonService:
             raise NotFoundException("Course not found")
 
         can_manage = self._can_manage(course, current_user)
-        if not can_manage and not course.is_published and not lesson.is_preview:
+        if not can_manage and not course.is_published:
             raise ForbiddenException("Not authorized to view this lesson")
 
         return lesson
@@ -51,6 +56,9 @@ class LessonService:
             raise NotFoundException("Course not found")
 
         self._ensure_manage_access(course, current_user)
+        self._validate_parent_lesson(course.id, payload.parent_lesson_id)
+        video_url = self._normalize_video_url(payload.video_url)
+        self._validate_video_url_usage(payload.lesson_type, video_url)
 
         order_index = payload.order_index or self.lesson_repo.get_next_order_index(course_id)
         lesson = self.lesson_repo.create(
@@ -63,11 +71,11 @@ class LessonService:
             order_index=order_index,
             parent_lesson_id=payload.parent_lesson_id,
             duration_minutes=payload.duration_minutes,
-            video_url=payload.video_url,
+            video_url=video_url,
             is_preview=payload.is_preview,
             lesson_metadata=payload.metadata,
         )
-        self.db.commit()
+        self._commit()
         return lesson
 
     def update_lesson(self, lesson_id: UUID, payload: LessonUpdate, current_user):
@@ -82,11 +90,22 @@ class LessonService:
         self._ensure_manage_access(course, current_user)
 
         updates = payload.model_dump(exclude_unset=True)
+        self._validate_nullable_updates(updates)
+        if "video_url" in updates:
+            updates["video_url"] = self._normalize_video_url(updates["video_url"])
         if "metadata" in updates:
             updates["lesson_metadata"] = updates.pop("metadata")
+        if "parent_lesson_id" in updates:
+            self._validate_parent_lesson(course.id, updates["parent_lesson_id"], current_lesson_id=lesson.id)
+        if "lesson_type" in updates and updates["lesson_type"] != "video" and "video_url" not in updates:
+            updates["video_url"] = None
+        if "lesson_type" in updates or "video_url" in updates:
+            resolved_lesson_type = updates.get("lesson_type", lesson.lesson_type)
+            resolved_video_url = updates.get("video_url", lesson.video_url)
+            self._validate_video_url_usage(resolved_lesson_type, resolved_video_url)
 
         lesson = self.lesson_repo.update(lesson, **updates)
-        self.db.commit()
+        self._commit()
         return lesson
 
     def delete_lesson(self, lesson_id: UUID, current_user) -> None:
@@ -101,16 +120,79 @@ class LessonService:
         self._ensure_manage_access(course, current_user)
 
         self.lesson_repo.delete(lesson)
-        self.db.commit()
+        self._commit()
 
     @staticmethod
     def _can_manage(course, current_user) -> bool:
         if not current_user:
             return False
-        if current_user.role == "admin":
+        if current_user.role == Role.ADMIN.value:
             return True
-        return current_user.role == "instructor" and course.instructor_id == current_user.id
+        return current_user.role == Role.INSTRUCTOR.value and course.instructor_id == current_user.id
 
     def _ensure_manage_access(self, course, current_user) -> None:
         if not self._can_manage(course, current_user):
             raise ForbiddenException("Not authorized to manage lessons for this course")
+
+    def _commit(self) -> None:
+        try:
+            self.db.commit()
+        except IntegrityError:
+            self.db.rollback()
+            raise
+        except Exception:
+            self.db.rollback()
+            raise
+
+    def _validate_nullable_updates(self, updates: dict) -> None:
+        for field in self.NON_NULLABLE_UPDATE_FIELDS:
+            if field in updates and updates[field] is None:
+                raise ValueError(f"'{field}' cannot be null")
+
+    def _validate_parent_lesson(
+        self,
+        course_id: UUID,
+        parent_lesson_id: UUID | None,
+        *,
+        current_lesson_id: UUID | None = None,
+    ) -> None:
+        if parent_lesson_id is None:
+            return
+
+        parent_lesson = self.lesson_repo.get_by_id(parent_lesson_id)
+        if not parent_lesson:
+            raise NotFoundException("Parent lesson not found")
+        if parent_lesson.course_id != course_id:
+            raise ValueError("Parent lesson must belong to the same course")
+        if current_lesson_id and parent_lesson.id == current_lesson_id:
+            raise ValueError("Lesson cannot be its own parent")
+
+        ancestor = parent_lesson
+        visited: set[UUID] = {ancestor.id}
+        while ancestor.parent_lesson_id is not None:
+            if current_lesson_id and ancestor.parent_lesson_id == current_lesson_id:
+                raise ValueError("Parent lesson creates a cycle")
+            if ancestor.parent_lesson_id in visited:
+                break
+
+            visited.add(ancestor.parent_lesson_id)
+            next_ancestor = self.lesson_repo.get_by_id(ancestor.parent_lesson_id)
+            if next_ancestor is None:
+                break
+            ancestor = next_ancestor
+
+    @staticmethod
+    def _validate_video_url_usage(lesson_type: str, video_url: str | None) -> None:
+        if video_url is not None:
+            parsed = urlparse(video_url)
+            if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+                raise ValueError("video_url must be a valid http/https URL")
+        if lesson_type != "video" and video_url is not None:
+            raise ValueError("video_url is only allowed for video lessons")
+
+    @staticmethod
+    def _normalize_video_url(video_url: str | None) -> str | None:
+        if video_url is None:
+            return None
+        normalized = video_url.strip()
+        return normalized or None

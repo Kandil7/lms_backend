@@ -10,7 +10,7 @@ from app.core.exceptions import ForbiddenException, NotFoundException
 from app.modules.files.models import UploadedFile
 from app.modules.files.storage import LocalStorageBackend, S3StorageBackend
 from app.modules.files.storage.base import StorageBackend
-from app.utils.validators import ensure_allowed_extension
+from app.utils.validators import ensure_allowed_extension, normalize_storage_folder
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +29,7 @@ class FileService:
         if file_size > settings.MAX_UPLOAD_BYTES:
             raise ValueError(f"File too large. Max size is {settings.MAX_UPLOAD_MB}MB")
 
+        safe_folder = normalize_storage_folder(folder)
         ext = ensure_allowed_extension(file.filename or "", settings.ALLOWED_UPLOAD_EXTENSIONS)
         safe_filename = f"{uuid4().hex}.{ext}"
 
@@ -36,8 +37,8 @@ class FileService:
         file_type = self._detect_file_type(mime_type, ext)
         backend = self._get_backend(self.default_provider)
 
-        storage_path = backend.save(folder=folder, filename=safe_filename, content=content, content_type=mime_type)
-        file_url = backend.build_file_url(storage_path)
+        storage_path = backend.save(folder=safe_folder, filename=safe_filename, content=content, content_type=mime_type)
+        file_url = self._build_file_url(backend, storage_path)
 
         uploaded_file = UploadedFile(
             uploader_id=uploader_id,
@@ -48,12 +49,18 @@ class FileService:
             file_type=file_type,
             mime_type=mime_type,
             file_size=file_size,
-            folder=folder,
+            folder=safe_folder,
             storage_provider=backend.provider,
             is_public=is_public,
         )
 
         self.db.add(uploaded_file)
+        self.db.flush()
+
+        if backend.provider == "local":
+            uploaded_file.file_url = self._build_local_download_url(uploaded_file.id)
+            self.db.add(uploaded_file)
+
         self.db.commit()
         self.db.refresh(uploaded_file)
         return uploaded_file
@@ -132,6 +139,15 @@ class FileService:
         if backend:
             return backend
         raise NotFoundException(f"Storage provider '{provider}' is unavailable")
+
+    @staticmethod
+    def _build_local_download_url(file_id: UUID) -> str:
+        return f"{settings.API_V1_PREFIX}/files/download/{file_id}"
+
+    def _build_file_url(self, backend: StorageBackend, storage_path: str) -> str:
+        if backend.provider == "local":
+            return ""
+        return backend.build_file_url(storage_path)
 
     @staticmethod
     def _detect_file_type(mime_type: str, extension: str) -> str:

@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -31,13 +32,23 @@ class UserRepository:
         items = list(self.db.scalars(stmt).all())
         return items, total
 
-    def create(self, *, email: str, password_hash: str, full_name: str, role: str, is_active: bool = True) -> User:
+    def create(
+        self,
+        *,
+        email: str,
+        password_hash: str,
+        full_name: str,
+        role: str,
+        is_active: bool = True,
+        email_verified_at: datetime | None = None,
+    ) -> User:
         user = User(
             email=email.lower(),
             password_hash=password_hash,
             full_name=full_name,
             role=role,
             is_active=is_active,
+            email_verified_at=email_verified_at,
         )
         self.db.add(user)
         self.db.flush()

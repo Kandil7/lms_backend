@@ -7,6 +7,7 @@ Usage:
 import os
 from pathlib import Path
 import sys
+from datetime import UTC, datetime
 
 # Keep script runnable from repository root.
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,6 +37,7 @@ def main() -> None:
             full_name=full_name,
             role="admin",
             is_active=True,
+            email_verified_at=datetime.now(UTC),
         )
 
     print(f"Created admin user: {email}")

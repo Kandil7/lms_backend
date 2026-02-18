@@ -1,7 +1,7 @@
 from datetime import datetime
 import uuid
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy import JSON, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -13,6 +13,7 @@ class Lesson(Base):
     __table_args__ = (
         CheckConstraint("lesson_type IN ('video','text','quiz','assignment')", name="ck_lessons_lesson_type"),
         UniqueConstraint("course_id", "order_index", name="uq_lessons_course_order"),
+        Index("ix_lessons_course_lesson_type_order", "course_id", "lesson_type", "order_index"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
