@@ -11,6 +11,8 @@ def check_redis_health() -> bool:
     client: Redis | None = None
     try:
         client = Redis.from_url(settings.REDIS_URL, encoding="utf-8", decode_responses=True)
+        if client is None:
+            return False
         return bool(client.ping())
     except RedisError:
         return False
