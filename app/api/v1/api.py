@@ -1,7 +1,7 @@
 import logging
 from enum import Enum
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response, status
 
 from app.core.database import check_database_health
 
@@ -12,9 +12,17 @@ api_router = APIRouter()
 
 @api_router.get("/health", tags=["Health"])
 def health_check() -> dict:
+    return {"status": "ok"}
+
+
+@api_router.get("/ready", tags=["Health"])
+def readiness_check(response: Response) -> dict:
+    db_up = check_database_health()
+    if not db_up:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     return {
-        "status": "ok",
-        "database": "up" if check_database_health() else "down",
+        "status": "ok" if db_up else "degraded",
+        "database": "up" if db_up else "down",
     }
 
 

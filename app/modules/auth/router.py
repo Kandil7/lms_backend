@@ -6,6 +6,7 @@ from app.core.dependencies import get_current_user
 from app.core.exceptions import UnauthorizedException
 from app.modules.auth.schemas import AuthResponse, LogoutRequest, RefreshTokenRequest
 from app.modules.auth.service import AuthService
+from app.tasks.dispatcher import enqueue_task_with_fallback
 from app.modules.users.schemas import UserCreate, UserLogin, UserResponse
 from app.modules.users.services.user_service import (
     InvalidCredentialsError,
@@ -29,6 +30,13 @@ def register(payload: UserCreate, db: Session = Depends(get_db)) -> AuthResponse
     tokens = auth_service._issue_tokens(user.id, user.role)
     db.commit()
     db.refresh(user)
+
+    enqueue_task_with_fallback(
+        "app.tasks.email_tasks.send_welcome_email",
+        email=user.email,
+        full_name=user.full_name,
+    )
+
     return AuthResponse(user=UserResponse.model_validate(user), tokens=tokens)
 
 

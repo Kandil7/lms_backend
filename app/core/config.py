@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Annotated, Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 CsvList = Annotated[list[str], NoDecode]
@@ -37,12 +37,13 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
     CELERY_BROKER_URL: str = "redis://localhost:6379/1"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
+    TASKS_FORCE_INLINE: bool = True
     RATE_LIMIT_USE_REDIS: bool = True
     RATE_LIMIT_REQUESTS_PER_MINUTE: int = 100
     RATE_LIMIT_WINDOW_SECONDS: int = 60
     RATE_LIMIT_REDIS_PREFIX: str = "ratelimit"
     RATE_LIMIT_EXCLUDED_PATHS: CsvList = Field(
-        default_factory=lambda: ["/", "/docs", "/redoc", "/openapi.json", "/api/v1/health"]
+        default_factory=lambda: ["/", "/docs", "/redoc", "/openapi.json", "/api/v1/health", "/api/v1/ready"]
     )
 
     UPLOAD_DIR: str = "uploads"
@@ -91,6 +92,23 @@ class Settings(BaseSettings):
     @property
     def MAX_UPLOAD_BYTES(self) -> int:
         return self.MAX_UPLOAD_MB * 1024 * 1024
+
+    @model_validator(mode="after")
+    def validate_production_settings(self):
+        if self.ENVIRONMENT != "production":
+            return self
+
+        if self.DEBUG:
+            raise ValueError("DEBUG must be false when ENVIRONMENT=production")
+
+        insecure_values = {"change-me", "change-this-in-production-with-64-random-chars-minimum"}
+        if self.SECRET_KEY in insecure_values or len(self.SECRET_KEY) < 32:
+            raise ValueError("SECRET_KEY must be a strong random value (32+ chars) in production")
+
+        if self.TASKS_FORCE_INLINE:
+            raise ValueError("TASKS_FORCE_INLINE must be false when ENVIRONMENT=production")
+
+        return self
 
 
 @lru_cache(maxsize=1)

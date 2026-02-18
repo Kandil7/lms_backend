@@ -5,18 +5,20 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.api.v1.api import api_router
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.middleware import RateLimitMiddleware, RequestLoggingMiddleware
+from app.core.model_registry import load_all_models
 
 logging.basicConfig(
     level=logging.DEBUG if settings.DEBUG else logging.INFO,
     format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
 )
+
+load_all_models()
 
 
 @asynccontextmanager
@@ -54,13 +56,6 @@ app.add_middleware(
 )
 
 register_exception_handlers(app)
-
-app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR, check_dir=False), name="uploads")
-app.mount(
-    "/certificates-static",
-    StaticFiles(directory=settings.CERTIFICATES_DIR, check_dir=False),
-    name="certificates-static",
-)
 
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 

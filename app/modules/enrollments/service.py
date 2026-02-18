@@ -10,6 +10,7 @@ from app.modules.courses.repositories.course_repository import CourseRepository
 from app.modules.courses.repositories.lesson_repository import LessonRepository
 from app.modules.enrollments.repository import EnrollmentRepository
 from app.modules.enrollments.schemas import LessonProgressUpdate, ReviewCreate
+from app.tasks.dispatcher import enqueue_task_with_fallback
 from app.utils.pagination import PageParams, paginate
 
 
@@ -113,18 +114,29 @@ class EnrollmentService:
         )
 
         self._refresh_enrollment_summary(enrollment)
-
-        if enrollment.status == "completed" and enrollment.certificate_issued_at is None:
-            try:
-                from app.modules.certificates.service import CertificateService
-
-                CertificateService(self.db).issue_for_enrollment(enrollment, commit=False)
-            except Exception:
-                # Certificate generation should not block progress completion.
-                pass
+        needs_certificate = enrollment.status == "completed" and enrollment.certificate_issued_at is None
 
         self.db.commit()
         self.db.refresh(progress)
+
+        enqueue_task_with_fallback(
+            "app.tasks.progress_tasks.recalculate_course_progress",
+            enrollment_id=str(enrollment.id),
+            fallback=lambda: None,
+        )
+
+        if needs_certificate:
+            def issue_certificate_now() -> None:
+                from app.modules.certificates.service import CertificateService
+
+                CertificateService(self.db).issue_for_enrollment(enrollment)
+
+            enqueue_task_with_fallback(
+                "app.tasks.certificate_tasks.generate_certificate",
+                enrollment_id=str(enrollment.id),
+                fallback=issue_certificate_now,
+            )
+
         return progress
 
     def mark_lesson_completed(self, enrollment_id: UUID, lesson_id: UUID, current_user):
@@ -156,6 +168,16 @@ class EnrollmentService:
             raise ForbiddenException("Not authorized to view course stats")
 
         return self.repo.get_course_stats(course_id)
+
+    def recalculate_enrollment_summary(self, enrollment_id: UUID, *, commit: bool = True) -> bool:
+        enrollment = self.repo.get_by_id(enrollment_id)
+        if not enrollment:
+            return False
+
+        self._refresh_enrollment_summary(enrollment)
+        if commit:
+            self.db.commit()
+        return True
 
     def _refresh_enrollment_summary(self, enrollment) -> None:
         total_lessons = self.lesson_repo.count_by_course(enrollment.course_id)

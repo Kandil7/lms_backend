@@ -102,10 +102,10 @@ if "%SEED_DEMO_DATA%"=="1" (
 )
 
 echo.
-echo ==^> Waiting for API health endpoint
+echo ==^> Waiting for API readiness endpoint
 set "HEALTH_OK=0"
 for /L %%I in (1,1,30) do (
-    curl.exe -fsS "http://localhost:8000/api/v1/health" >nul 2>&1
+    curl.exe -fsS "http://localhost:8000/api/v1/ready" >nul 2>&1
     if !errorlevel! EQU 0 (
         set "HEALTH_OK=1"
         goto health_done
@@ -115,9 +115,9 @@ for /L %%I in (1,1,30) do (
 
 :health_done
 if "%HEALTH_OK%"=="1" (
-    echo API is healthy at http://localhost:8000/api/v1/health
+    echo API is ready at http://localhost:8000/api/v1/ready
 ) else (
-    echo WARNING: API health check did not become ready in time.
+    echo WARNING: API readiness check did not become ready in time.
     echo Check logs with: docker compose logs --tail=200 api
 )
 

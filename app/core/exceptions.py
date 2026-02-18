@@ -38,6 +38,10 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def handle_validation_exception(_: Request, exc: RequestValidationError) -> JSONResponse:
         return JSONResponse(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content={"detail": exc.errors()})
 
+    @app.exception_handler(ValueError)
+    async def handle_value_error(_: Request, exc: ValueError) -> JSONResponse:
+        return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content={"detail": str(exc)})
+
     @app.exception_handler(Exception)
     async def handle_unexpected_exception(_: Request, __: Exception) -> JSONResponse:
         return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content={"detail": "Internal server error"})

@@ -53,6 +53,14 @@ Docs: `http://localhost:8000/docs`
 docker compose up --build
 ```
 
+Production-like stack:
+```bash
+cp .env.production.example .env
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+Note: `docker-compose.prod.yml` uses `PROD_*` URLs (for DB/Redis/Celery) so local dev `.env` values like `localhost` do not leak into production containers.
+
 PowerShell one-command startup (Windows):
 ```powershell
 .\scripts\run_project.ps1
@@ -69,6 +77,9 @@ Useful flags:
 - `-CreateAdmin`
 - `-SeedDemoData`
 - `-FollowLogs`
+
+Readiness endpoint:
+- `http://localhost:8000/api/v1/ready`
 
 Services included in `docker-compose.yml`:
 - `api`
@@ -121,6 +132,7 @@ Important environment flags:
 - `RATE_LIMIT_WINDOW_SECONDS=60`
 - `FILE_STORAGE_PROVIDER=local` (or `s3`)
 - `FILE_DOWNLOAD_URL_EXPIRE_SECONDS=900`
+- `TASKS_FORCE_INLINE=true` for local/dev, `false` for production
 
 ## Branch Strategy
 - `main`: stable releases.
