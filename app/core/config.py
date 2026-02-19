@@ -24,6 +24,13 @@ class Settings(BaseSettings):
     STRICT_ROUTER_IMPORTS: bool = False
     METRICS_ENABLED: bool = True
     METRICS_PATH: str = "/metrics"
+    SENTRY_DSN: str | None = None
+    SENTRY_ENVIRONMENT: str | None = None
+    SENTRY_RELEASE: str | None = None
+    SENTRY_TRACES_SAMPLE_RATE: float = Field(default=0.0, ge=0.0, le=1.0)
+    SENTRY_PROFILES_SAMPLE_RATE: float = Field(default=0.0, ge=0.0, le=1.0)
+    SENTRY_SEND_PII: bool = False
+    SENTRY_ENABLE_FOR_CELERY: bool = True
 
     DATABASE_URL: str = "postgresql+psycopg2://lms:lms@localhost:5432/lms"
     SQLALCHEMY_ECHO: bool = False
@@ -146,6 +153,10 @@ class Settings(BaseSettings):
         if self.ENVIRONMENT == "production":
             return True
         return self.STRICT_ROUTER_IMPORTS
+
+    @property
+    def SENTRY_ENVIRONMENT_EFFECTIVE(self) -> str:
+        return self.SENTRY_ENVIRONMENT or self.ENVIRONMENT
 
     @model_validator(mode="after")
     def validate_production_settings(self):

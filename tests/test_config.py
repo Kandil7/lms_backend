@@ -1,3 +1,5 @@
+import pytest
+
 from app.core.config import Settings
 
 
@@ -29,3 +31,12 @@ def test_metrics_path_normalization() -> None:
     settings = Settings(METRICS_PATH="metrics")
     assert settings.METRICS_PATH == "/metrics"
 
+
+def test_sentry_environment_effective_defaults_to_runtime_environment() -> None:
+    settings = Settings(ENVIRONMENT="staging", SENTRY_ENVIRONMENT="")
+    assert settings.SENTRY_ENVIRONMENT_EFFECTIVE == "staging"
+
+
+def test_sentry_sample_rates_must_be_in_0_1_range() -> None:
+    with pytest.raises(Exception):
+        Settings(SENTRY_TRACES_SAMPLE_RATE=1.5)

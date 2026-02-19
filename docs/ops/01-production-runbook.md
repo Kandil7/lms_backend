@@ -5,11 +5,15 @@
 ```bash
 docker compose -f docker-compose.prod.yml up -d --build
 ```
-2. Verify readiness:
+2. Start observability stack:
+```bash
+docker compose -f docker-compose.observability.yml up -d
+```
+3. Verify readiness:
 ```bash
 curl -f http://localhost:8000/api/v1/ready
 ```
-3. Verify metrics endpoint:
+4. Verify metrics endpoint:
 ```bash
 curl -f http://localhost:8000/metrics
 ```
@@ -50,11 +54,24 @@ backup_db.bat
 restore_db.bat backups\db\lms_YYYYMMDD_HHMMSS.dump --yes
 ```
 
+## 4.1 Restore Drill
+- Manual:
+```bat
+restore_drill.bat -ComposeFile docker-compose.prod.yml
+```
+- Weekly scheduler:
+```powershell
+.\scripts\setup_restore_drill_task.ps1 -TaskName LMS-DB-Restore-Drill -Time 03:30 -DaysOfWeek Sunday -ComposeFile docker-compose.prod.yml
+```
+
 ## 5. Logs and Troubleshooting
 ```bash
 docker compose -f docker-compose.prod.yml logs --tail=200 api
 docker compose -f docker-compose.prod.yml logs --tail=200 celery-worker
 docker compose -f docker-compose.prod.yml logs --tail=200 celery-beat
+docker compose -f docker-compose.observability.yml logs --tail=200 prometheus
+docker compose -f docker-compose.observability.yml logs --tail=200 grafana
+docker compose -f docker-compose.observability.yml logs --tail=200 alertmanager
 ```
 
 ## 6. Rollback
@@ -69,3 +86,9 @@ docker compose -f docker-compose.prod.yml logs --tail=200 celery-beat
 - Keep `TASKS_FORCE_INLINE=false` in production.
 - Rotate credentials regularly (`SECRET_KEY`, DB, SMTP).
 - Review results of `.github/workflows/security.yml` on every PR.
+- Configure `SENTRY_DSN` for API/Celery error tracking.
+- Keep production secrets in Vault/Secret Manager, not `.env` in git.
+
+## 8. Incident References
+- Policy and severity model: `docs/ops/09-sla-slo-incident-support-policy.md`
+- Observability setup: `docs/ops/05-observability-and-alerting.md`

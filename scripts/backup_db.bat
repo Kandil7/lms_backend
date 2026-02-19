@@ -24,6 +24,12 @@ if not defined STAMP (
 )
 
 set "COMPOSE_FILE=%PROJECT_ROOT%\docker-compose.yml"
+if not "%~2"=="" set "COMPOSE_FILE=%~2"
+if defined LMS_COMPOSE_FILE set "COMPOSE_FILE=%LMS_COMPOSE_FILE%"
+if not exist "%COMPOSE_FILE%" (
+    echo ERROR: Compose file not found: %COMPOSE_FILE%
+    exit /b 1
+)
 set "BACKUP_FILE=%BACKUP_DIR%\lms_%STAMP%.dump"
 
 echo.
@@ -39,4 +45,3 @@ if errorlevel 1 (
 
 echo Backup created successfully: %BACKUP_FILE%
 exit /b 0
-

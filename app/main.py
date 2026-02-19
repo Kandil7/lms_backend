@@ -13,6 +13,7 @@ from app.core.exceptions import register_exception_handlers
 from app.core.metrics import MetricsMiddleware, build_metrics_router, metrics_available
 from app.core.middleware import RateLimitMiddleware, RequestLoggingMiddleware, SecurityHeadersMiddleware
 from app.core.model_registry import load_all_models
+from app.core.observability import init_sentry_for_api
 
 logging.basicConfig(
     level=logging.DEBUG if settings.DEBUG else logging.INFO,
@@ -20,6 +21,7 @@ logging.basicConfig(
 )
 
 load_all_models()
+init_sentry_for_api()
 
 
 @asynccontextmanager

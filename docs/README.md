@@ -17,6 +17,24 @@ This folder contains detailed technical documentation for the LMS backend.
 - `docs/FULL_PROJECT_DOCUMENTATION.md`
 - `docs/ops/01-production-runbook.md`
 - `docs/ops/02-staging-release-checklist.md`
+- `docs/ops/03-launch-readiness-tracker.md`
+- `docs/ops/04-uat-and-bug-bash-plan.md`
+- `docs/ops/05-observability-and-alerting.md`
+- `docs/ops/06-backup-and-restore-drill-policy.md`
+- `docs/ops/07-security-signoff-and-hardening.md`
+- `docs/ops/08-performance-capacity-signoff.md`
+- `docs/ops/09-sla-slo-incident-support-policy.md`
+
+## Legal and Compliance Templates
+
+- `docs/legal/privacy-policy-template.md`
+- `docs/legal/terms-of-service-template.md`
+- `docs/legal/data-retention-and-deletion-policy.md`
+
+## UAT and QA Templates
+
+- `docs/templates/uat-scenario-template.md`
+- `docs/templates/bug-bash-report-template.md`
 
 ## Scope
 

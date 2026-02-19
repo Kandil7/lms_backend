@@ -18,6 +18,8 @@ docker compose -f docker-compose.staging.yml exec -T api alembic upgrade head
 - `GET /api/v1/ready` returns `200`
 - `GET /metrics` returns `200`
 - `GET /docs` available in staging
+- Sentry event appears in staging project (manual test exception)
+- Grafana dashboard is receiving metrics
 
 ## 3. Validate Demo Flow
 1. Run `run_demo.bat -NoBuild` in non-production environment.
@@ -37,10 +39,21 @@ Optional authenticated benchmark:
 run_load_test.bat http://localhost:8001 20 60s localhost true
 ```
 
+Realistic capacity benchmark:
+```bat
+run_load_test_realistic.bat http://localhost:8001 10m localhost 8 3 1
+```
+
 ## 5. Validate Security and CI
 - `ci.yml` green on branch.
 - `security.yml` green on branch.
+- secret scan (gitleaks) shows no leaks.
 
-## 6. Go/No-Go
+## 6. UAT / Bug Bash Pre-GoLive
+- Execute plan in `docs/ops/04-uat-and-bug-bash-plan.md`.
+- Fill templates in `docs/templates/`.
+- Confirm no open `P0/P1` issues.
+
+## 7. Go/No-Go
 - If all checks pass: approve production deployment.
 - If any check fails: open blocking incident and rollback to last green build.

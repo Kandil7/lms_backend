@@ -2,8 +2,10 @@ from celery import Celery
 
 from app.core.config import settings
 from app.core.model_registry import load_all_models
+from app.core.observability import init_sentry_for_celery
 
 load_all_models()
+init_sentry_for_celery()
 
 celery_app = Celery(
     "lms_backend",

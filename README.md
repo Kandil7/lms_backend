@@ -8,6 +8,12 @@ Production-oriented LMS backend built as a modular monolith with FastAPI.
 - Arabic detailed docs set: `docs/01-overview-ar.md` -> `docs/07-testing-and-quality-ar.md`
 - Operations runbook: `docs/ops/01-production-runbook.md`
 - Staging checklist: `docs/ops/02-staging-release-checklist.md`
+- Launch readiness tracker: `docs/ops/03-launch-readiness-tracker.md`
+- UAT/Bug bash plan: `docs/ops/04-uat-and-bug-bash-plan.md`
+- Observability guide: `docs/ops/05-observability-and-alerting.md`
+- Security sign-off guide: `docs/ops/07-security-signoff-and-hardening.md`
+- SLA/SLO and incident policy: `docs/ops/09-sla-slo-incident-support-policy.md`
+- Legal/compliance templates: `docs/legal/`
 
 ## Architecture
 - `app/core`: config, database, security, dependencies, middleware.
@@ -67,6 +73,12 @@ cp .env.staging.example .env
 docker compose -f docker-compose.staging.yml up -d --build
 ```
 
+Observability stack (Grafana + Prometheus + Alertmanager):
+```bash
+cp .env.observability.example .env.observability
+docker compose -f docker-compose.observability.yml up -d
+```
+
 Note: `docker-compose.prod.yml` uses `PROD_*` URLs (for DB/Redis/Celery) so local dev `.env` values like `localhost` do not leak into production containers.
 
 PowerShell one-command startup (Windows):
@@ -87,6 +99,11 @@ run_demo.bat
 Staging one-command startup (Windows):
 ```bat
 run_staging.bat
+```
+
+Observability one-command startup (Windows):
+```bat
+run_observability.bat
 ```
 
 Useful flags:
@@ -128,6 +145,11 @@ Optional authenticated flow:
 run_load_test.bat http://localhost:8000 20 60s localhost true
 ```
 
+Realistic sign-off scenario (student/instructor/admin):
+```bat
+run_load_test_realistic.bat http://localhost:8001 10m localhost 8 3 1
+```
+
 ## Database Backup and Restore
 Create a backup (Windows):
 ```bat
@@ -142,6 +164,16 @@ restore_db.bat backups\db\lms_YYYYMMDD_HHMMSS.dump --yes
 Create a daily scheduled backup task (Windows):
 ```powershell
 .\scripts\setup_backup_task.ps1 -TaskName LMS-DB-Backup -Time 02:00
+```
+
+Run restore drill manually (Windows):
+```bat
+restore_drill.bat -ComposeFile docker-compose.prod.yml
+```
+
+Create a weekly restore drill task (Windows):
+```powershell
+.\scripts\setup_restore_drill_task.ps1 -TaskName LMS-DB-Restore-Drill -Time 03:30 -DaysOfWeek Sunday -ComposeFile docker-compose.prod.yml
 ```
 
 ## Demo Data Seed
@@ -187,10 +219,12 @@ Generated demo files:
 ## Production Hardening
 - CI pipeline: `.github/workflows/ci.yml` runs compile checks, dependency checks, coverage gate, and tests on Python 3.11 and 3.12.
 - Security pipeline: `.github/workflows/security.yml` runs `pip-audit` and `bandit` on push/PR and weekly schedule.
+- Secret scanning: `security.yml` also runs `gitleaks`.
 - Rate limiting supports Redis with in-memory fallback.
 - File storage is pluggable (`local` or `s3`).
 - API docs (`/docs`, `/redoc`, `/openapi.json`) are disabled by default in production.
 - Router loading is fail-fast in production (startup fails if any router import fails).
+- Error tracking supports Sentry for API and Celery.
 
 Important environment flags:
 - `RATE_LIMIT_USE_REDIS=true`
@@ -200,6 +234,13 @@ Important environment flags:
 - `STRICT_ROUTER_IMPORTS=true` in production
 - `METRICS_ENABLED=true`
 - `METRICS_PATH=/metrics`
+- `SENTRY_DSN`
+- `SENTRY_ENVIRONMENT`
+- `SENTRY_RELEASE`
+- `SENTRY_TRACES_SAMPLE_RATE`
+- `SENTRY_PROFILES_SAMPLE_RATE`
+- `SENTRY_SEND_PII`
+- `SENTRY_ENABLE_FOR_CELERY`
 - `FILE_STORAGE_PROVIDER=local` (or `s3`)
 - `FILE_DOWNLOAD_URL_EXPIRE_SECONDS=900`
 - `TASKS_FORCE_INLINE=true` for local/dev, `false` for production
