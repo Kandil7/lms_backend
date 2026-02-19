@@ -62,10 +62,27 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        # Ensure the version table can store long revision IDs in a committed
+        # transaction before Alembic starts its own migration transaction.
+        with connection.begin():
+            _ensure_version_table_capacity(connection)
+
         context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
 
         with context.begin_transaction():
             context.run_migrations()
+
+
+def _ensure_version_table_capacity(connection) -> None:
+    # Alembic defaults to VARCHAR(32) for alembic_version.version_num, while this
+    # project uses descriptive revision ids longer than 32 chars.
+    connection.exec_driver_sql(
+        "CREATE TABLE IF NOT EXISTS alembic_version (version_num VARCHAR(255) NOT NULL PRIMARY KEY)"
+    )
+    if connection.dialect.name == "postgresql":
+        connection.exec_driver_sql(
+            "ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(255)"
+        )
 
 
 import_models()

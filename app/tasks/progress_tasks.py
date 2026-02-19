@@ -11,7 +11,13 @@ from app.tasks.celery_app import celery_app
 logger = logging.getLogger("app.tasks.progress")
 
 
-@celery_app.task(name="app.tasks.progress_tasks.recalculate_course_progress")
+@celery_app.task(
+    name="app.tasks.progress_tasks.recalculate_course_progress",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    retry_kwargs={"max_retries": 3},
+)
 def recalculate_course_progress(enrollment_id: str) -> str:
     try:
         enrollment_uuid = UUID(enrollment_id)

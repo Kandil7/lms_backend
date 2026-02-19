@@ -16,8 +16,19 @@ celery_app = Celery(
     ],
 )
 
-celery_app.conf.task_routes = {
-    "app.tasks.email_tasks.*": {"queue": "emails"},
-    "app.tasks.progress_tasks.*": {"queue": "progress"},
-    "app.tasks.certificate_tasks.*": {"queue": "certificates"},
-}
+celery_app.conf.update(
+    task_routes={
+        "app.tasks.email_tasks.*": {"queue": "emails"},
+        "app.tasks.progress_tasks.*": {"queue": "progress"},
+        "app.tasks.certificate_tasks.*": {"queue": "certificates"},
+    },
+    task_acks_late=True,
+    task_reject_on_worker_lost=True,
+    task_acks_on_failure_or_timeout=False,
+    task_track_started=True,
+    worker_prefetch_multiplier=1,
+    broker_connection_retry_on_startup=True,
+    task_default_retry_delay=5,
+    task_time_limit=300,
+    task_soft_time_limit=240,
+)

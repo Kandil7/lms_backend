@@ -10,16 +10,56 @@ set "FOLLOW_LOGS=0"
 
 :parse_args
 if "%~1"=="" goto args_done
-if /I "%~1"=="-NoBuild" set "NO_BUILD=1" & shift & goto parse_args
-if /I "%~1"=="--no-build" set "NO_BUILD=1" & shift & goto parse_args
-if /I "%~1"=="-NoMigrate" set "NO_MIGRATE=1" & shift & goto parse_args
-if /I "%~1"=="--no-migrate" set "NO_MIGRATE=1" & shift & goto parse_args
-if /I "%~1"=="-SeedDemoData" set "SEED_DEMO_DATA=1" & shift & goto parse_args
-if /I "%~1"=="--seed-demo-data" set "SEED_DEMO_DATA=1" & shift & goto parse_args
-if /I "%~1"=="-CreateAdmin" set "CREATE_ADMIN=1" & shift & goto parse_args
-if /I "%~1"=="--create-admin" set "CREATE_ADMIN=1" & shift & goto parse_args
-if /I "%~1"=="-FollowLogs" set "FOLLOW_LOGS=1" & shift & goto parse_args
-if /I "%~1"=="--follow-logs" set "FOLLOW_LOGS=1" & shift & goto parse_args
+if /I "%~1"=="-NoBuild" (
+    set "NO_BUILD=1"
+    shift
+    goto parse_args
+)
+if /I "%~1"=="--no-build" (
+    set "NO_BUILD=1"
+    shift
+    goto parse_args
+)
+if /I "%~1"=="-NoMigrate" (
+    set "NO_MIGRATE=1"
+    shift
+    goto parse_args
+)
+if /I "%~1"=="--no-migrate" (
+    set "NO_MIGRATE=1"
+    shift
+    goto parse_args
+)
+if /I "%~1"=="-SeedDemoData" (
+    set "SEED_DEMO_DATA=1"
+    shift
+    goto parse_args
+)
+if /I "%~1"=="--seed-demo-data" (
+    set "SEED_DEMO_DATA=1"
+    shift
+    goto parse_args
+)
+if /I "%~1"=="-CreateAdmin" (
+    set "CREATE_ADMIN=1"
+    shift
+    goto parse_args
+)
+if /I "%~1"=="--create-admin" (
+    set "CREATE_ADMIN=1"
+    shift
+    goto parse_args
+)
+if /I "%~1"=="-FollowLogs" (
+    set "FOLLOW_LOGS=1"
+    shift
+    goto parse_args
+)
+if /I "%~1"=="--follow-logs" (
+    set "FOLLOW_LOGS=1"
+    shift
+    goto parse_args
+)
 if /I "%~1"=="-h" goto show_help
 if /I "%~1"=="--help" goto show_help
 echo Unknown option: %~1
@@ -137,12 +177,13 @@ echo.
 echo ==^> Project is running
 echo API Docs: http://localhost:8000/docs
 echo ReDoc:    http://localhost:8000/redoc
+if /I not "%FOLLOW_LOGS%"=="1" goto after_follow_logs
 
-if "%FOLLOW_LOGS%"=="1" (
-    echo.
-    echo ==^> Following API and worker logs (Ctrl+C to stop)
-    docker compose -f "%COMPOSE_FILE%" logs -f api celery-worker celery-beat
-)
+echo.
+echo ==^> Following API and worker logs (Ctrl+C to stop)
+docker compose -f "%COMPOSE_FILE%" logs -f api celery-worker celery-beat
+
+:after_follow_logs
 
 popd
 exit /b 0

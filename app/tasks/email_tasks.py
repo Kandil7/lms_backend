@@ -6,6 +6,7 @@ from app.core.config import settings
 from app.tasks.celery_app import celery_app
 
 logger = logging.getLogger("app.tasks.email")
+EMAIL_AUTORETRY_EXCEPTIONS = (smtplib.SMTPException, TimeoutError, OSError)
 
 
 def _send_email(*, to_email: str, subject: str, body: str) -> str:
@@ -40,7 +41,13 @@ def _send_email(*, to_email: str, subject: str, body: str) -> str:
     return sent_message
 
 
-@celery_app.task(name="app.tasks.email_tasks.send_welcome_email")
+@celery_app.task(
+    name="app.tasks.email_tasks.send_welcome_email",
+    autoretry_for=EMAIL_AUTORETRY_EXCEPTIONS,
+    retry_backoff=True,
+    retry_jitter=True,
+    retry_kwargs={"max_retries": 5},
+)
 def send_welcome_email(email: str, full_name: str) -> str:
     subject = "Welcome to LMS"
     body = (
@@ -51,7 +58,13 @@ def send_welcome_email(email: str, full_name: str) -> str:
     return _send_email(to_email=email, subject=subject, body=body)
 
 
-@celery_app.task(name="app.tasks.email_tasks.send_password_reset_email")
+@celery_app.task(
+    name="app.tasks.email_tasks.send_password_reset_email",
+    autoretry_for=EMAIL_AUTORETRY_EXCEPTIONS,
+    retry_backoff=True,
+    retry_jitter=True,
+    retry_kwargs={"max_retries": 5},
+)
 def send_password_reset_email(email: str, full_name: str, reset_token: str, reset_url: str) -> str:
     subject = "Reset your LMS password"
     body = (
@@ -65,7 +78,13 @@ def send_password_reset_email(email: str, full_name: str, reset_token: str, rese
     return _send_email(to_email=email, subject=subject, body=body)
 
 
-@celery_app.task(name="app.tasks.email_tasks.send_email_verification_email")
+@celery_app.task(
+    name="app.tasks.email_tasks.send_email_verification_email",
+    autoretry_for=EMAIL_AUTORETRY_EXCEPTIONS,
+    retry_backoff=True,
+    retry_jitter=True,
+    retry_kwargs={"max_retries": 5},
+)
 def send_email_verification_email(email: str, full_name: str, verification_token: str, verification_url: str) -> str:
     subject = "Verify your LMS email"
     body = (
@@ -79,7 +98,13 @@ def send_email_verification_email(email: str, full_name: str, verification_token
     return _send_email(to_email=email, subject=subject, body=body)
 
 
-@celery_app.task(name="app.tasks.email_tasks.send_mfa_login_code_email")
+@celery_app.task(
+    name="app.tasks.email_tasks.send_mfa_login_code_email",
+    autoretry_for=EMAIL_AUTORETRY_EXCEPTIONS,
+    retry_backoff=True,
+    retry_jitter=True,
+    retry_kwargs={"max_retries": 5},
+)
 def send_mfa_login_code_email(email: str, full_name: str, code: str, expires_minutes: int) -> str:
     subject = "Your LMS login verification code"
     body = (
@@ -93,7 +118,13 @@ def send_mfa_login_code_email(email: str, full_name: str, code: str, expires_min
     return _send_email(to_email=email, subject=subject, body=body)
 
 
-@celery_app.task(name="app.tasks.email_tasks.send_mfa_setup_code_email")
+@celery_app.task(
+    name="app.tasks.email_tasks.send_mfa_setup_code_email",
+    autoretry_for=EMAIL_AUTORETRY_EXCEPTIONS,
+    retry_backoff=True,
+    retry_jitter=True,
+    retry_kwargs={"max_retries": 5},
+)
 def send_mfa_setup_code_email(email: str, full_name: str, code: str, expires_minutes: int) -> str:
     subject = "Your LMS MFA setup code"
     body = (

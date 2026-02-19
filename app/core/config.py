@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     ENVIRONMENT: Literal["development", "staging", "production"] = "development"
     DEBUG: bool = True
     API_V1_PREFIX: str = "/api/v1"
+    ENABLE_API_DOCS: bool = True
+    STRICT_ROUTER_IMPORTS: bool = False
+    METRICS_ENABLED: bool = True
+    METRICS_PATH: str = "/metrics"
 
     DATABASE_URL: str = "postgresql+psycopg2://lms:lms@localhost:5432/lms"
     SQLALCHEMY_ECHO: bool = False
@@ -117,9 +121,31 @@ class Settings(BaseSettings):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
 
+    @field_validator("METRICS_PATH", mode="before")
+    @classmethod
+    def normalize_metrics_path(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            return "/metrics"
+        if not normalized.startswith("/"):
+            normalized = f"/{normalized}"
+        return normalized
+
     @property
     def MAX_UPLOAD_BYTES(self) -> int:
         return self.MAX_UPLOAD_MB * 1024 * 1024
+
+    @property
+    def API_DOCS_EFFECTIVE_ENABLED(self) -> bool:
+        if self.ENVIRONMENT == "production":
+            return False
+        return self.ENABLE_API_DOCS
+
+    @property
+    def STRICT_ROUTER_IMPORTS_EFFECTIVE(self) -> bool:
+        if self.ENVIRONMENT == "production":
+            return True
+        return self.STRICT_ROUTER_IMPORTS
 
     @model_validator(mode="after")
     def validate_production_settings(self):

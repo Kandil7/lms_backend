@@ -15,6 +15,8 @@ This folder contains detailed technical documentation for the LMS backend.
 ## Existing Full Technical Guide (English)
 
 - `docs/FULL_PROJECT_DOCUMENTATION.md`
+- `docs/ops/01-production-runbook.md`
+- `docs/ops/02-staging-release-checklist.md`
 
 ## Scope
 

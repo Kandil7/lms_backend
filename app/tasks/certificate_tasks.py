@@ -11,7 +11,13 @@ from app.tasks.celery_app import celery_app
 logger = logging.getLogger("app.tasks.certificate")
 
 
-@celery_app.task(name="app.tasks.certificate_tasks.generate_certificate")
+@celery_app.task(
+    name="app.tasks.certificate_tasks.generate_certificate",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    retry_kwargs={"max_retries": 3},
+)
 def generate_certificate(enrollment_id: str) -> str:
     try:
         enrollment_uuid = UUID(enrollment_id)

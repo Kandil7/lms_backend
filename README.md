@@ -6,6 +6,8 @@ Production-oriented LMS backend built as a modular monolith with FastAPI.
 - Full technical documentation: `docs/FULL_PROJECT_DOCUMENTATION.md`
 - Documentation index: `docs/README.md`
 - Arabic detailed docs set: `docs/01-overview-ar.md` -> `docs/07-testing-and-quality-ar.md`
+- Operations runbook: `docs/ops/01-production-runbook.md`
+- Staging checklist: `docs/ops/02-staging-release-checklist.md`
 
 ## Architecture
 - `app/core`: config, database, security, dependencies, middleware.
@@ -59,6 +61,12 @@ cp .env.production.example .env
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
+Staging stack:
+```bash
+cp .env.staging.example .env
+docker compose -f docker-compose.staging.yml up -d --build
+```
+
 Note: `docker-compose.prod.yml` uses `PROD_*` URLs (for DB/Redis/Celery) so local dev `.env` values like `localhost` do not leak into production containers.
 
 PowerShell one-command startup (Windows):
@@ -71,6 +79,16 @@ Batch one-command startup (Windows):
 scripts\run_project.bat
 ```
 
+Demo one-command startup (Windows, includes seed + demo Postman JSON):
+```bat
+run_demo.bat
+```
+
+Staging one-command startup (Windows):
+```bat
+run_staging.bat
+```
+
 Useful flags:
 - `-NoBuild`
 - `-NoMigrate`
@@ -80,6 +98,9 @@ Useful flags:
 
 Readiness endpoint:
 - `http://localhost:8000/api/v1/ready`
+
+Metrics endpoint:
+- `http://localhost:8000/metrics`
 
 Services included in `docker-compose.yml`:
 - `api`
@@ -93,6 +114,36 @@ Services included in `docker-compose.yml`:
 pytest -q
 ```
 
+Coverage gate (same style as CI):
+```bash
+pytest -q --cov=app --cov-report=term-missing --cov-fail-under=75
+```
+
+Load test smoke baseline:
+```bat
+run_load_test.bat
+```
+Optional authenticated flow:
+```bat
+run_load_test.bat http://localhost:8000 20 60s localhost true
+```
+
+## Database Backup and Restore
+Create a backup (Windows):
+```bat
+backup_db.bat
+```
+
+Restore from backup (Windows):
+```bat
+restore_db.bat backups\db\lms_YYYYMMDD_HHMMSS.dump --yes
+```
+
+Create a daily scheduled backup task (Windows):
+```powershell
+.\scripts\setup_backup_task.ps1 -TaskName LMS-DB-Backup -Time 02:00
+```
+
 ## Demo Data Seed
 Use this script to create demo users, one published course, lessons, enrollment, quiz, and a graded attempt.
 
@@ -104,6 +155,7 @@ Options:
 - `--create-tables`: create tables before seeding.
 - `--reset-passwords`: reset passwords for existing demo users.
 - `--skip-attempt`: skip creating/submitting demo quiz attempt.
+- `--json-output <path>`: write a seed snapshot JSON for Postman demo generation.
 
 Default demo credentials:
 - `admin@lms.local / AdminPass123`
@@ -121,15 +173,33 @@ Generated files:
 - `postman/LMS Backend.postman_collection.json`
 - `postman/LMS Backend.postman_environment.json`
 
+Generate demo Postman artifacts from seeded data snapshot:
+
+```bash
+python scripts/generate_demo_postman.py --seed-file postman/demo_seed_snapshot.json
+```
+
+Generated demo files:
+- `postman/LMS Backend Demo.postman_collection.json`
+- `postman/LMS Backend Demo.postman_environment.json`
+- `postman/demo_seed_snapshot.json`
+
 ## Production Hardening
-- CI pipeline: `.github/workflows/ci.yml` runs compile checks + tests on Python 3.11 and 3.12.
+- CI pipeline: `.github/workflows/ci.yml` runs compile checks, dependency checks, coverage gate, and tests on Python 3.11 and 3.12.
+- Security pipeline: `.github/workflows/security.yml` runs `pip-audit` and `bandit` on push/PR and weekly schedule.
 - Rate limiting supports Redis with in-memory fallback.
 - File storage is pluggable (`local` or `s3`).
+- API docs (`/docs`, `/redoc`, `/openapi.json`) are disabled by default in production.
+- Router loading is fail-fast in production (startup fails if any router import fails).
 
 Important environment flags:
 - `RATE_LIMIT_USE_REDIS=true`
 - `RATE_LIMIT_REQUESTS_PER_MINUTE=100`
 - `RATE_LIMIT_WINDOW_SECONDS=60`
+- `ENABLE_API_DOCS=false` in production
+- `STRICT_ROUTER_IMPORTS=true` in production
+- `METRICS_ENABLED=true`
+- `METRICS_PATH=/metrics`
 - `FILE_STORAGE_PROVIDER=local` (or `s3`)
 - `FILE_DOWNLOAD_URL_EXPIRE_SECONDS=900`
 - `TASKS_FORCE_INLINE=true` for local/dev, `false` for production
