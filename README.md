@@ -6,6 +6,7 @@ Production-oriented LMS backend built as a modular monolith with FastAPI.
 - Full technical documentation: `docs/FULL_PROJECT_DOCUMENTATION.md`
 - Documentation index: `docs/README.md`
 - Arabic detailed docs set: `docs/01-overview-ar.md` -> `docs/07-testing-and-quality-ar.md`
+- API reference (implementation-accurate): `docs/08-api-documentation.md`
 - Operations runbook: `docs/ops/01-production-runbook.md`
 - Staging checklist: `docs/ops/02-staging-release-checklist.md`
 - Launch readiness tracker: `docs/ops/03-launch-readiness-tracker.md`
@@ -234,6 +235,8 @@ Important environment flags:
 - `STRICT_ROUTER_IMPORTS=true` in production
 - `METRICS_ENABLED=true`
 - `METRICS_PATH=/metrics`
+- `API_RESPONSE_ENVELOPE_ENABLED` and `API_RESPONSE_SUCCESS_MESSAGE`
+- `API_RESPONSE_ENVELOPE_EXCLUDED_PATHS`
 - `SENTRY_DSN`
 - `SENTRY_ENVIRONMENT`
 - `SENTRY_RELEASE`
@@ -241,8 +244,18 @@ Important environment flags:
 - `SENTRY_PROFILES_SAMPLE_RATE`
 - `SENTRY_SEND_PII`
 - `SENTRY_ENABLE_FOR_CELERY`
+- `WEBHOOKS_ENABLED`
+- `WEBHOOK_TARGET_URLS`
+- `WEBHOOK_SIGNING_SECRET`
+- `WEBHOOK_TIMEOUT_SECONDS`
 - `FILE_STORAGE_PROVIDER=local` (or `s3`)
 - `FILE_DOWNLOAD_URL_EXPIRE_SECONDS=900`
+- `AUTH_RATE_LIMIT_REQUESTS_PER_MINUTE`
+- `AUTH_RATE_LIMIT_WINDOW_SECONDS`
+- `AUTH_RATE_LIMIT_PATHS`
+- `FILE_UPLOAD_RATE_LIMIT_REQUESTS_PER_HOUR`
+- `FILE_UPLOAD_RATE_LIMIT_WINDOW_SECONDS`
+- `FILE_UPLOAD_RATE_LIMIT_PATHS`
 - `TASKS_FORCE_INLINE=true` for local/dev, `false` for production
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`
 - `FRONTEND_BASE_URL` (used in password reset links)

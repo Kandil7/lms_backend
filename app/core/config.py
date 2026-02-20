@@ -24,6 +24,19 @@ class Settings(BaseSettings):
     STRICT_ROUTER_IMPORTS: bool = False
     METRICS_ENABLED: bool = True
     METRICS_PATH: str = "/metrics"
+    API_RESPONSE_ENVELOPE_ENABLED: bool = False
+    API_RESPONSE_SUCCESS_MESSAGE: str = "Success"
+    API_RESPONSE_ENVELOPE_EXCLUDED_PATHS: CsvList = Field(
+        default_factory=lambda: [
+            "/docs",
+            "/redoc",
+            "/openapi.json",
+            "/metrics",
+            "/api/v1/health",
+            "/api/v1/ready",
+            "/api/v1/auth/token",
+        ]
+    )
     SENTRY_DSN: str | None = None
     SENTRY_ENVIRONMENT: str | None = None
     SENTRY_RELEASE: str | None = None
@@ -31,6 +44,10 @@ class Settings(BaseSettings):
     SENTRY_PROFILES_SAMPLE_RATE: float = Field(default=0.0, ge=0.0, le=1.0)
     SENTRY_SEND_PII: bool = False
     SENTRY_ENABLE_FOR_CELERY: bool = True
+    WEBHOOKS_ENABLED: bool = False
+    WEBHOOK_TARGET_URLS: CsvList = Field(default_factory=list)
+    WEBHOOK_SIGNING_SECRET: str | None = None
+    WEBHOOK_TIMEOUT_SECONDS: float = Field(default=5.0, ge=1.0, le=30.0)
 
     DATABASE_URL: str = "postgresql+psycopg2://lms:lms@localhost:5432/lms"
     SQLALCHEMY_ECHO: bool = False
@@ -84,6 +101,14 @@ class Settings(BaseSettings):
     RATE_LIMIT_EXCLUDED_PATHS: CsvList = Field(
         default_factory=lambda: ["/", "/docs", "/redoc", "/openapi.json", "/api/v1/health", "/api/v1/ready"]
     )
+    AUTH_RATE_LIMIT_REQUESTS_PER_MINUTE: int = 60
+    AUTH_RATE_LIMIT_WINDOW_SECONDS: int = 60
+    AUTH_RATE_LIMIT_PATHS: CsvList = Field(
+        default_factory=lambda: ["/api/v1/auth/login", "/api/v1/auth/token", "/api/v1/auth/login/mfa"]
+    )
+    FILE_UPLOAD_RATE_LIMIT_REQUESTS_PER_HOUR: int = 100
+    FILE_UPLOAD_RATE_LIMIT_WINDOW_SECONDS: int = 3600
+    FILE_UPLOAD_RATE_LIMIT_PATHS: CsvList = Field(default_factory=lambda: ["/api/v1/files/upload"])
 
     UPLOAD_DIR: str = "uploads"
     CERTIFICATES_DIR: str = "certificates"
@@ -121,12 +146,40 @@ class Settings(BaseSettings):
             return [item.strip().lower() for item in value.split(",") if item.strip()]
         return [item.lower() for item in value]
 
-    @field_validator("RATE_LIMIT_EXCLUDED_PATHS", mode="before")
+    @field_validator(
+        "RATE_LIMIT_EXCLUDED_PATHS",
+        "API_RESPONSE_ENVELOPE_EXCLUDED_PATHS",
+        "WEBHOOK_TARGET_URLS",
+        "AUTH_RATE_LIMIT_PATHS",
+        "FILE_UPLOAD_RATE_LIMIT_PATHS",
+        mode="before",
+    )
     @classmethod
-    def parse_rate_limit_excluded_paths(cls, value: str | list[str]) -> list[str]:
+    def parse_csv_lists(cls, value: str | list[str]) -> list[str]:
         if isinstance(value, str):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
+
+    @field_validator(
+        "RATE_LIMIT_EXCLUDED_PATHS",
+        "API_RESPONSE_ENVELOPE_EXCLUDED_PATHS",
+        "AUTH_RATE_LIMIT_PATHS",
+        "FILE_UPLOAD_RATE_LIMIT_PATHS",
+        mode="after",
+    )
+    @classmethod
+    def normalize_path_lists(cls, value: list[str]) -> list[str]:
+        normalized_paths: list[str] = []
+        for item in value:
+            cleaned = item.strip()
+            if not cleaned:
+                continue
+            if not cleaned.startswith("/"):
+                cleaned = f"/{cleaned}"
+            if cleaned != "/" and cleaned.endswith("/"):
+                cleaned = cleaned.rstrip("/")
+            normalized_paths.append(cleaned)
+        return normalized_paths
 
     @field_validator("METRICS_PATH", mode="before")
     @classmethod

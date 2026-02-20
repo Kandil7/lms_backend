@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import ForbiddenException, NotFoundException
 from app.core.permissions import Role
+from app.core.webhooks import emit_webhook_event
 from app.modules.courses.repositories.course_repository import CourseRepository
 from app.modules.courses.repositories.lesson_repository import LessonRepository
 from app.modules.enrollments.repository import EnrollmentRepository
@@ -38,6 +39,16 @@ class EnrollmentService:
             enrollment = self.repo.create(student_id=student_id, course_id=course_id)
             self._refresh_enrollment_summary(enrollment)
             self._commit()
+            emit_webhook_event(
+                "enrollment.created",
+                {
+                    "enrollment_id": str(enrollment.id),
+                    "student_id": str(enrollment.student_id),
+                    "course_id": str(enrollment.course_id),
+                    "status": enrollment.status,
+                    "enrolled_at": enrollment.enrolled_at.isoformat() if enrollment.enrolled_at else None,
+                },
+            )
             return enrollment
         except IntegrityError:
             self.db.rollback()
@@ -81,6 +92,7 @@ class EnrollmentService:
         enrollment = self.repo.get_by_id_for_update(enrollment_id)
         if not enrollment:
             raise NotFoundException("Enrollment not found")
+        previous_status = enrollment.status
 
         if not self._can_view_enrollment(enrollment, current_user):
             raise ForbiddenException("Not authorized to access this enrollment")
@@ -156,6 +168,17 @@ class EnrollmentService:
 
         self._commit()
         self.db.refresh(progress)
+
+        if previous_status != "completed" and enrollment.status == "completed":
+            emit_webhook_event(
+                "enrollment.completed",
+                {
+                    "enrollment_id": str(enrollment.id),
+                    "student_id": str(enrollment.student_id),
+                    "course_id": str(enrollment.course_id),
+                    "completed_at": enrollment.completed_at.isoformat() if enrollment.completed_at else None,
+                },
+            )
 
         enqueue_task_with_fallback(
             "app.tasks.progress_tasks.recalculate_course_progress",

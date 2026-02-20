@@ -29,7 +29,7 @@ def generate_certificate(enrollment_id: str) -> str:
         if not enrollment:
             return f"enrollment not found: {enrollment_id}"
 
-        certificate = CertificateService(db).issue_for_enrollment(enrollment, commit=False)
+        certificate = CertificateService(db).issue_for_enrollment(enrollment)
         if certificate is None:
             return f"certificate skipped for enrollment {enrollment_id}"
 

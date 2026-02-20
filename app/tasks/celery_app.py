@@ -15,6 +15,7 @@ celery_app = Celery(
         "app.tasks.email_tasks",
         "app.tasks.progress_tasks",
         "app.tasks.certificate_tasks",
+        "app.tasks.webhook_tasks",
     ],
 )
 
@@ -23,6 +24,7 @@ celery_app.conf.update(
         "app.tasks.email_tasks.*": {"queue": "emails"},
         "app.tasks.progress_tasks.*": {"queue": "progress"},
         "app.tasks.certificate_tasks.*": {"queue": "certificates"},
+        "app.tasks.webhook_tasks.*": {"queue": "webhooks"},
     },
     task_acks_late=True,
     task_reject_on_worker_lost=True,
