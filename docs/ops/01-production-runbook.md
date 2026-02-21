@@ -1,5 +1,35 @@
 # Production Runbook
 
+## 0. Go-Live Checklist
+Use this checklist before approving production release.  
+Status values:
+- `Done`: `Yes` or `No`
+- `Owner`: team/person responsible
+- `Date`: target or completion date (`YYYY-MM-DD`)
+- `Evidence`: link to PR, CI run, dashboard screenshot, or ticket
+
+| Item | Done | Owner | Date | Evidence |
+|---|---|---|---|---|
+| Release commit + tag created from tested branch | No |  |  |  |
+| CI green (tests + security workflow) | No |  |  |  |
+| Alembic migration applied on staging and production | No |  |  |  |
+| MyFatoorah live credentials configured in secret manager | No |  |  |  |
+| `MYFATOORAH_WEBHOOK_SECRET` configured and verified | No |  |  |  |
+| MyFatoorah webhook endpoint reachable: `/api/v1/payments/webhooks/myfatoorah` | No |  |  |  |
+| Payment E2E tested (success, failed, refunded, duplicate webhook) | No |  |  |  |
+| SMTP production config validated (send/receive) | No |  |  |  |
+| Backup task running daily with successful latest run | No |  |  |  |
+| Restore drill executed and validated | No |  |  |  |
+| Observability live (Grafana/Alertmanager/Sentry) with active alerts | No |  |  |  |
+| Production-like smoke check passed (`run_smoke_prod_like.bat`) | No |  |  |  |
+| Security hardening sign-off (CSP, sanitization, secrets policy) | No |  |  |  |
+| SLA/SLO + incident response workflow approved | No |  |  |  |
+| Legal docs approved (Privacy, Terms, retention/deletion policy) | No |  |  |  |
+
+Go/No-Go Rule:
+1. Launch only when all critical items above are `Done=Yes`.
+2. If any critical item is `No`, release is blocked.
+
 ## 1. Start and Validate
 1. Start stack:
 ```bash
@@ -16,6 +46,14 @@ curl -f http://localhost:8000/api/v1/ready
 4. Verify metrics endpoint:
 ```bash
 curl -f http://localhost:8000/metrics
+```
+5. Run production-like smoke checks:
+```bat
+run_smoke_prod_like.bat
+```
+Or:
+```bash
+python scripts/smoke_prod_like.py --base-url http://localhost:8000 --flower-url http://localhost:5555 --compose-file docker-compose.prod.yml
 ```
 
 ## 1.1 Staging Rehearsal
@@ -74,6 +112,11 @@ docker compose -f docker-compose.observability.yml logs --tail=200 grafana
 docker compose -f docker-compose.observability.yml logs --tail=200 alertmanager
 ```
 
+Flower quick check:
+```bash
+curl -I http://localhost:5555
+```
+
 ## 6. Rollback
 1. Stop current release.
 2. Deploy previous image tag.
@@ -84,6 +127,7 @@ docker compose -f docker-compose.observability.yml logs --tail=200 alertmanager
 - Keep `ENABLE_API_DOCS=false` in production.
 - Keep `STRICT_ROUTER_IMPORTS=true` in production.
 - Keep `TASKS_FORCE_INLINE=false` in production.
+- Keep `PAYMENTS_MOCK_MODE=false` in production.
 - Rotate credentials regularly (`SECRET_KEY`, DB, SMTP).
 - Review results of `.github/workflows/security.yml` on every PR.
 - Configure `SENTRY_DSN` for API/Celery error tracking.

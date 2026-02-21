@@ -305,13 +305,73 @@ Verify response:
 }
 ```
 
-## 11. System Endpoints
+## 11. Payments Endpoints
+
+- `POST /payments/create-payment-intent`
+- `POST /payments/create-subscription`
+- `GET /payments/my-payments`
+- `GET /payments/my-subscriptions`
+- `GET /payments/revenue/summary` (admin)
+- `POST /payments/webhooks/myfatoorah` (public MyFatoorah webhook endpoint)
+- `POST /payments/webhooks/paymob` (deprecated compatibility alias)
+
+`POST /payments/create-payment-intent` request:
+```json
+{
+  "enrollment_id": "uuid",
+  "amount": 499.99,
+  "currency": "EGP"
+}
+```
+
+`POST /payments/create-payment-intent` response:
+```json
+{
+  "client_secret": "myfatoorah_payment_token",
+  "payment_intent_id": "myfatoorah_invoice_id",
+  "checkout_url": "https://portal.myfatoorah.com/EN/KWT/PayInvoice/<token>",
+  "amount": 499.99,
+  "currency": "EGP",
+  "status": "pending"
+}
+```
+
+Webhook security:
+- header (optional unless secret configured): `X-MyFatoorah-Signature`
+- signature validated using `MYFATOORAH_WEBHOOK_SECRET` when configured
+
+Processed MyFatoorah transaction states:
+- `transaction.succeeded`
+- `transaction.failed`
+- `transaction.pending`
+- `transaction.refunded`
+
+Email notification behavior:
+- On successful payment webhook, the backend enqueues:
+  - `app.tasks.email_tasks.send_payment_confirmation_email`
+- Duplicate webhook events are idempotent and do not re-send confirmation email.
+
+## 12. System Endpoints
 
 - `GET /health`
 - `GET /ready`
 - `GET /metrics`
 
-## 12. HTTP Status Codes Used
+## 12.1 Background Email Notifications
+
+Asynchronous email notifications are dispatched through Celery (`emails` queue) for:
+- Welcome email after register.
+- Email verification and password reset.
+- Enrollment confirmation.
+- Quiz submission results.
+- Course completion (after certificate issuance).
+- Payment confirmation (after successful MyFatoorah webhook).
+
+Periodic email tasks:
+- Weekly progress report (`app.tasks.email_tasks.send_weekly_progress_report`)
+- Daily course reminders (`app.tasks.email_tasks.send_course_reminders`)
+
+## 13. HTTP Status Codes Used
 
 | Code | Meaning |
 |---|---|
@@ -328,7 +388,7 @@ Verify response:
 | 500 | Internal Server Error |
 | 503 | Service Unavailable |
 
-## 13. Rate Limiting
+## 14. Rate Limiting
 
 Current implementation is global, path-aware, and based on:
 - `RATE_LIMIT_REQUESTS_PER_MINUTE` (default `100`)
@@ -352,7 +412,7 @@ Retry-After (on 429)
 }
 ```
 
-## 14. Webhooks (Optional)
+## 15. Webhooks (Optional)
 
 Event dispatch is available when:
 - `WEBHOOKS_ENABLED=true`
@@ -374,7 +434,7 @@ Payload format:
 }
 ```
 
-## 15. Pagination
+## 16. Pagination
 
 Standard paginated endpoints return:
 ```json
@@ -387,7 +447,7 @@ Standard paginated endpoints return:
 }
 ```
 
-## 16. Postman and SDK Notes
+## 17. Postman and SDK Notes
 
 ### Postman files
 - `postman/LMS Backend.postman_collection.json`
@@ -406,7 +466,7 @@ When using login, access token is under:
 - `response["tokens"]["access_token"]`
 - not at top-level `response["access_token"]`
 
-## 17. Interactive Docs
+## 18. Interactive Docs
 
 - Swagger UI: `/docs`
 - ReDoc: `/redoc`
