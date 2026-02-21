@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from importlib import import_module
 
 from app.modules.files.storage.base import StorageBackend
 
@@ -24,26 +25,29 @@ class AzureBlobStorageBackend(StorageBackend):
             raise ValueError("Either AZURE_STORAGE_CONNECTION_STRING or AZURE_STORAGE_ACCOUNT_URL is required")
 
         try:
-            from azure.core.exceptions import AzureError
-            from azure.storage.blob import BlobServiceClient
+            azure_core_exceptions = import_module("azure.core.exceptions")
+            azure_blob = import_module("azure.storage.blob")
+            azure_error = getattr(azure_core_exceptions, "AzureError")
+            blob_service_client = getattr(azure_blob, "BlobServiceClient")
         except Exception as exc:
             raise ValueError("azure-storage-blob is required for Azure Blob storage backend") from exc
 
-        self._azure_error = AzureError
+        self._azure_blob_module = azure_blob
+        self._azure_error = azure_error
         self.account_name = account_name
         self.account_key = account_key
         self.container_name = container_name
         self.container_url = container_url.rstrip("/") if container_url else None
 
         if connection_string:
-            self.service_client = BlobServiceClient.from_connection_string(connection_string)
+            self.service_client = blob_service_client.from_connection_string(connection_string)
             parsed = self._parse_connection_string(connection_string)
             if not self.account_name:
                 self.account_name = parsed.get("accountname")
             if not self.account_key:
                 self.account_key = parsed.get("accountkey")
         else:
-            self.service_client = BlobServiceClient(account_url=account_url, credential=account_key or None)
+            self.service_client = blob_service_client(account_url=account_url, credential=account_key or None)
 
         self.container_client = self.service_client.get_container_client(container_name)
 
@@ -51,11 +55,10 @@ class AzureBlobStorageBackend(StorageBackend):
         blob_path = f"{folder}/{filename}".strip("/")
 
         try:
-            from azure.storage.blob import ContentSettings
-
+            content_settings_type = getattr(self._azure_blob_module, "ContentSettings")
             upload_kwargs: dict[str, object] = {}
             if content_type:
-                upload_kwargs["content_settings"] = ContentSettings(content_type=content_type)
+                upload_kwargs["content_settings"] = content_settings_type(content_type=content_type)
             self.container_client.upload_blob(name=blob_path, data=content, overwrite=True, **upload_kwargs)
         except self._azure_error as exc:
             raise ValueError(f"Azure Blob upload failed: {exc}") from exc
@@ -75,14 +78,14 @@ class AzureBlobStorageBackend(StorageBackend):
             return None
 
         try:
-            from azure.storage.blob import BlobSasPermissions, generate_blob_sas
-
+            blob_sas_permissions = getattr(self._azure_blob_module, "BlobSasPermissions")
+            generate_blob_sas = getattr(self._azure_blob_module, "generate_blob_sas")
             sas_token = generate_blob_sas(
                 account_name=self.account_name,
                 container_name=self.container_name,
                 blob_name=storage_path,
                 account_key=self.account_key,
-                permission=BlobSasPermissions(read=True),
+                permission=blob_sas_permissions(read=True),
                 expiry=datetime.now(timezone.utc) + timedelta(seconds=expires_seconds),
             )
         except Exception:

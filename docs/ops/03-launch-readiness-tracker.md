@@ -117,6 +117,20 @@ Use this tracker as the release gate before production go-live.
   - `docs/ops/19-uat-procedures-guide.md`
   - `docs/ops/20-sla-slo-baselines.md`
 
+## 10. Environment Security Verification
+- Owner: Security + DevOps
+- Target status: `Secure environment configuration validated`
+- Evidence required:
+  - Example files updated to remove hardcoded secrets
+  - Environment validation script implemented
+  - Production environment files secured and tested
+  - Secret rotation procedures documented
+- Artifacts:
+  - `docs/ops/23-environment-security-guide.md`
+  - Environment validation script
+  - Secure environment templates
+  - CI/CD integration for environment validation
+
 ## 9. Testing and Documentation
 - Owner: Engineering + QA
 - Target status: `Quality gates met`

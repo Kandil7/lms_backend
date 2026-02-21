@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     DB_MAX_OVERFLOW: int = 40
 
     # Security secrets - will be loaded from secrets manager in production
-    SECRET_KEY: str = "change-me"
+    SECRET_KEY: str = ""
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
