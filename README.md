@@ -222,7 +222,7 @@ Generated demo files:
 - Security pipeline: `.github/workflows/security.yml` runs `pip-audit` and `bandit` on push/PR and weekly schedule.
 - Secret scanning: `security.yml` also runs `gitleaks`.
 - Rate limiting supports Redis with in-memory fallback.
-- File storage is pluggable (`local` or `s3`).
+- File storage is pluggable (`local` or `azure`).
 - API docs (`/docs`, `/redoc`, `/openapi.json`) are disabled by default in production.
 - Router loading is fail-fast in production (startup fails if any router import fails).
 - Error tracking supports Sentry for API and Celery.
@@ -248,7 +248,7 @@ Important environment flags:
 - `WEBHOOK_TARGET_URLS`
 - `WEBHOOK_SIGNING_SECRET`
 - `WEBHOOK_TIMEOUT_SECONDS`
-- `FILE_STORAGE_PROVIDER=local` (or `s3`)
+- `FILE_STORAGE_PROVIDER=local` (or `azure`)
 - `FILE_DOWNLOAD_URL_EXPIRE_SECONDS=900`
 - `AUTH_RATE_LIMIT_REQUESTS_PER_MINUTE`
 - `AUTH_RATE_LIMIT_WINDOW_SECONDS`

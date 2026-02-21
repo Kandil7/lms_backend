@@ -1,8 +1,14 @@
+import os
 from functools import lru_cache
+import logging
 from typing import Annotated, Literal
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+
+from .secrets import get_secret, initialize_secrets_manager
+
+logger = logging.getLogger(__name__)
 
 CsvList = Annotated[list[str], NoDecode]
 
@@ -54,6 +60,7 @@ class Settings(BaseSettings):
     DB_POOL_SIZE: int = 20
     DB_MAX_OVERFLOW: int = 40
 
+    # Security secrets - will be loaded from secrets manager in production
     SECRET_KEY: str = "change-me"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
@@ -78,6 +85,25 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str | None = None
     SMTP_USE_TLS: bool = True
     SMTP_USE_SSL: bool = False
+
+    # Database credentials - will be loaded from secrets manager in production
+    DATABASE_URL: str = "postgresql+psycopg2://lms:lms@localhost:5432/lms"
+    POSTGRES_USER: str = "lms"
+    POSTGRES_PASSWORD: str = "lms"
+    POSTGRES_DB: str = "lms"
+
+    # Sentry configuration - will be loaded from secrets manager in production
+    SENTRY_DSN: str | None = None
+    SENTRY_ENVIRONMENT: str | None = None
+    SENTRY_RELEASE: str | None = None
+
+    # Azure Blob Storage configuration - can be loaded from secrets manager in production
+    AZURE_STORAGE_CONNECTION_STRING: str | None = None
+    AZURE_STORAGE_ACCOUNT_NAME: str | None = None
+    AZURE_STORAGE_ACCOUNT_KEY: str | None = None
+    AZURE_STORAGE_ACCOUNT_URL: str | None = None
+    AZURE_STORAGE_CONTAINER_NAME: str | None = None
+    AZURE_STORAGE_CONTAINER_URL: str | None = None
 
     CACHE_ENABLED: bool = True
     CACHE_KEY_PREFIX: str = "app:cache"
@@ -116,14 +142,15 @@ class Settings(BaseSettings):
     ALLOWED_UPLOAD_EXTENSIONS: CsvList = Field(
         default_factory=lambda: ["mp4", "avi", "mov", "pdf", "doc", "docx", "jpg", "jpeg", "png"]
     )
-    FILE_STORAGE_PROVIDER: Literal["local", "s3"] = "local"
+    FILE_STORAGE_PROVIDER: Literal["local", "azure"] = "local"
     FILE_DOWNLOAD_URL_EXPIRE_SECONDS: int = 900
 
-    AWS_ACCESS_KEY_ID: str | None = None
-    AWS_SECRET_ACCESS_KEY: str | None = None
-    AWS_REGION: str | None = None
-    AWS_S3_BUCKET: str | None = None
-    AWS_S3_BUCKET_URL: str | None = None
+    AZURE_STORAGE_CONNECTION_STRING: str | None = None
+    AZURE_STORAGE_ACCOUNT_NAME: str | None = None
+    AZURE_STORAGE_ACCOUNT_KEY: str | None = None
+    AZURE_STORAGE_ACCOUNT_URL: str | None = None
+    AZURE_STORAGE_CONTAINER_NAME: str | None = None
+    AZURE_STORAGE_CONTAINER_URL: str | None = None
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
@@ -219,6 +246,70 @@ class Settings(BaseSettings):
         if self.DEBUG:
             raise ValueError("DEBUG must be false when ENVIRONMENT=production")
 
+        # In production, load sensitive values from secrets manager
+        if self.ENVIRONMENT == "production":
+            # Initialize secrets manager for production
+            try:
+                # Try to initialize with Vault first
+                success = initialize_secrets_manager(
+                    "vault",
+                    vault_url=os.getenv("VAULT_ADDR"),
+                    vault_token=os.getenv("VAULT_TOKEN"),
+                    vault_namespace=os.getenv("VAULT_NAMESPACE")
+                )
+                if not success:
+                    # Fall back to environment variables (for development/staging)
+                    initialize_secrets_manager("env_var")
+            except Exception as e:
+                logger.warning(f"Failed to initialize secrets manager: {e}")
+                # Continue with environment variables as fallback
+
+            # Override sensitive values from secrets manager
+            if self.SECRET_KEY in {"change-me", "change-this-in-production-with-64-random-chars-minimum"} or len(self.SECRET_KEY) < 32:
+                secret_key = get_secret("SECRET_KEY", default=self.SECRET_KEY)
+                if secret_key and len(secret_key) >= 32:
+                    self.SECRET_KEY = secret_key
+                else:
+                    raise ValueError("SECRET_KEY must be a strong random value (32+ chars) in production")
+
+            # Load database credentials from secrets
+            if self.POSTGRES_PASSWORD == "lms":
+                db_password = get_secret("DATABASE_PASSWORD", default=self.POSTGRES_PASSWORD)
+                if db_password:
+                    self.POSTGRES_PASSWORD = db_password
+                    # Reconstruct DATABASE_URL
+                    self.DATABASE_URL = f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.DATABASE_URL.split('@')[1]}"
+
+            # Load SMTP credentials from secrets
+            if self.SMTP_PASSWORD is None or self.SMTP_PASSWORD == "":
+                smtp_password = get_secret("SMTP_PASSWORD", default=self.SMTP_PASSWORD)
+                if smtp_password:
+                    self.SMTP_PASSWORD = smtp_password
+
+            # Load Sentry DSN from secrets
+            if self.SENTRY_DSN is None:
+                sentry_dsn = get_secret("SENTRY_DSN", default=self.SENTRY_DSN)
+                if sentry_dsn:
+                    self.SENTRY_DSN = sentry_dsn
+
+            # Load Azure storage credentials from secrets
+            if self.AZURE_STORAGE_CONNECTION_STRING is None:
+                azure_connection_string = get_secret(
+                    "AZURE_STORAGE_CONNECTION_STRING",
+                    default=self.AZURE_STORAGE_CONNECTION_STRING,
+                )
+                if azure_connection_string:
+                    self.AZURE_STORAGE_CONNECTION_STRING = azure_connection_string
+            if self.AZURE_STORAGE_ACCOUNT_NAME is None:
+                azure_account_name = get_secret("AZURE_STORAGE_ACCOUNT_NAME", default=self.AZURE_STORAGE_ACCOUNT_NAME)
+                if azure_account_name:
+                    self.AZURE_STORAGE_ACCOUNT_NAME = azure_account_name
+            if self.AZURE_STORAGE_ACCOUNT_KEY is None:
+                azure_account_key = get_secret("AZURE_STORAGE_ACCOUNT_KEY", default=self.AZURE_STORAGE_ACCOUNT_KEY)
+                if azure_account_key:
+                    self.AZURE_STORAGE_ACCOUNT_KEY = azure_account_key
+
+        # Validate required production settings
         insecure_values = {"change-me", "change-this-in-production-with-64-random-chars-minimum"}
         if self.SECRET_KEY in insecure_values or len(self.SECRET_KEY) < 32:
             raise ValueError("SECRET_KEY must be a strong random value (32+ chars) in production")

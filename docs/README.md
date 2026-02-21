@@ -16,6 +16,7 @@ This folder contains detailed technical documentation for the LMS backend.
 ## Existing Full Technical Guide (English)
 
 - `docs/FULL_PROJECT_DOCUMENTATION.md`
+- `docs/CLIENT_APP_IMPLEMENTATION_PLAN.md` (detailed web client implementation plan)
 - `docs/ops/01-production-runbook.md`
 - `docs/ops/02-staging-release-checklist.md`
 - `docs/ops/03-launch-readiness-tracker.md`

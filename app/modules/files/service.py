@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.exceptions import ForbiddenException, NotFoundException
 from app.modules.files.models import UploadedFile
-from app.modules.files.storage import LocalStorageBackend, S3StorageBackend
+from app.modules.files.storage import AzureBlobStorageBackend, LocalStorageBackend
 from app.modules.files.storage.base import StorageBackend
 from app.utils.validators import ensure_allowed_extension, normalize_storage_folder
 
@@ -110,16 +110,17 @@ class FileService:
         }
 
         try:
-            if settings.AWS_S3_BUCKET:
-                backends["s3"] = S3StorageBackend(
-                    bucket=settings.AWS_S3_BUCKET,
-                    region=settings.AWS_REGION,
-                    bucket_url=settings.AWS_S3_BUCKET_URL,
-                    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            if settings.AZURE_STORAGE_CONTAINER_NAME:
+                backends["azure"] = AzureBlobStorageBackend(
+                    container_name=settings.AZURE_STORAGE_CONTAINER_NAME,
+                    connection_string=settings.AZURE_STORAGE_CONNECTION_STRING,
+                    account_url=settings.AZURE_STORAGE_ACCOUNT_URL,
+                    account_name=settings.AZURE_STORAGE_ACCOUNT_NAME,
+                    account_key=settings.AZURE_STORAGE_ACCOUNT_KEY,
+                    container_url=settings.AZURE_STORAGE_CONTAINER_URL,
                 )
         except Exception as exc:
-            logger.warning("S3 backend is not available, falling back to local storage: %s", exc)
+            logger.warning("Azure storage backend is not available, falling back to local storage: %s", exc)
 
         return backends
 

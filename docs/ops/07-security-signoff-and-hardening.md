@@ -11,14 +11,14 @@
 - Do not store production secrets in `.env` files in git.
 - Use one of:
   - HashiCorp Vault
-  - AWS Secrets Manager
+  - Azure Key Vault
   - GCP Secret Manager
 - Minimum managed secrets:
   - `SECRET_KEY`
   - database password
   - SMTP credentials
   - `SENTRY_DSN`
-  - S3 credentials (if used)
+  - Azure Blob credentials (if used)
 
 ## 3. Secret Rotation Policy
 - Rotation interval:
@@ -45,4 +45,3 @@
 - [ ] docs/openapi disabled in production
 - [ ] rate limiting enabled with Redis backend
 - [ ] hardening baseline verified
-

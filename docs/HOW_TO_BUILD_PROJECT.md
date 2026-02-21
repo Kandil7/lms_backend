@@ -161,7 +161,7 @@ pip install -r requirements.txt
 | sentry-sdk[fastapi] | >=2.18.0 | Error tracking |
 | celery | >=5.4.0 | Background tasks |
 | flower | >=2.0.1 | Celery monitoring |
-| boto3 | ==1.42.51 | AWS S3 SDK |
+| azure-storage-blob | >=12.26.0 | Azure Blob SDK |
 | jinja2 | >=3.1.5 | Email templates |
 | fastapi-mail | >=1.4.1 | Email sending |
 | fpdf2 | >=2.8.2 | PDF generation |

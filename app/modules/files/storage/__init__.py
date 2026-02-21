@@ -1,4 +1,4 @@
 from app.modules.files.storage.local import LocalStorageBackend
-from app.modules.files.storage.s3 import S3StorageBackend
+from app.modules.files.storage.azure_blob import AzureBlobStorageBackend
 
-__all__ = ["LocalStorageBackend", "S3StorageBackend"]
+__all__ = ["LocalStorageBackend", "AzureBlobStorageBackend"]

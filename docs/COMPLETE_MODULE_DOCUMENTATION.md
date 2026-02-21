@@ -888,7 +888,7 @@ class UploadedFile(Base):
     
     # Organization
     folder: Mapped[str | None]
-    storage_provider: Mapped[str]  # local, s3
+    storage_provider: Mapped[str]  # local, azure
     is_public: Mapped[bool]
 ```
 
@@ -904,25 +904,25 @@ class LocalStorage(StorageBackend):
         return str(path)
 ```
 
-**S3 Storage:**
+**Azure Blob Storage:**
 ```python
-class S3Storage(StorageBackend):
+class AzureBlobStorage(StorageBackend):
     def save(self, folder: str, filename: str, content: bytes) -> str:
-        key = f"{folder}/{filename}"
-        self.s3.put_object(Bucket=self.bucket, Key=key, Body=content)
-        return key
+        blob_path = f"{folder}/{filename}"
+        self.container_client.upload_blob(name=blob_path, data=content, overwrite=True)
+        return blob_path
 ```
 
 **Why Abstract Storage?**
 - Easy to switch between providers
-- Can add Google Cloud Storage, Azure later
+- Can add more providers later if needed
 - Testing is easier (mock storage)
 - Consistent API regardless of backend
 
 ### 8.3 Configuration
 
 ```env
-FILE_STORAGE_PROVIDER=local  # or s3
+FILE_STORAGE_PROVIDER=local  # or azure
 UPLOAD_DIR=uploads
 MAX_UPLOAD_MB=100
 ALLOWED_UPLOAD_EXTENSIONS=mp4,avi,mov,pdf,doc,docx,jpg,jpeg,png

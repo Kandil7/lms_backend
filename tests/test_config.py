@@ -40,3 +40,13 @@ def test_sentry_environment_effective_defaults_to_runtime_environment() -> None:
 def test_sentry_sample_rates_must_be_in_0_1_range() -> None:
     with pytest.raises(Exception):
         Settings(SENTRY_TRACES_SAMPLE_RATE=1.5)
+
+
+def test_file_storage_provider_accepts_azure() -> None:
+    settings = Settings(FILE_STORAGE_PROVIDER="azure")
+    assert settings.FILE_STORAGE_PROVIDER == "azure"
+
+
+def test_file_storage_provider_rejects_legacy_s3() -> None:
+    with pytest.raises(Exception):
+        Settings(FILE_STORAGE_PROVIDER="s3")
