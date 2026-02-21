@@ -31,6 +31,11 @@ Go/No-Go Rule:
 2. If any critical item is `No`, release is blocked.
 
 ## 1. Start and Validate
+Pre-requisites in `.env`:
+- `PROD_DATABASE_URL` points to Azure Database for PostgreSQL Flexible Server with `sslmode=require`
+- `APP_DOMAIN` points to your production DNS record
+- `LETSENCRYPT_EMAIL` is a valid ops email for ACME/TLS issuance
+
 1. Start stack:
 ```bash
 docker compose -f docker-compose.prod.yml up -d --build
@@ -41,11 +46,11 @@ docker compose -f docker-compose.observability.yml up -d
 ```
 3. Verify readiness:
 ```bash
-curl -f http://localhost:8000/api/v1/ready
+curl -f https://<APP_DOMAIN>/api/v1/ready
 ```
 4. Verify metrics endpoint:
 ```bash
-curl -f http://localhost:8000/metrics
+curl -f https://<APP_DOMAIN>/metrics
 ```
 5. Run production-like smoke checks:
 ```bat
@@ -76,21 +81,12 @@ run_load_test.bat http://localhost:8001 20 60s
 - Metrics: `GET /metrics`
 
 ## 3. Backup
-- Windows:
-```bat
-backup_db.bat
-```
-- Output path (default): `backups/db/lms_YYYYMMDD_HHMMSS.dump`
-- Optional daily schedule (Windows):
-```powershell
-.\scripts\setup_backup_task.ps1 -TaskName LMS-DB-Backup -Time 02:00
-```
+- Use Azure Database for PostgreSQL built-in backups (PITR retention configured on server).
+- Validate latest recovery point in Azure Portal before each release.
 
 ## 4. Restore
-- Windows:
-```bat
-restore_db.bat backups\db\lms_YYYYMMDD_HHMMSS.dump --yes
-```
+- Perform restore using Azure PostgreSQL point-in-time restore or server restore workflow.
+- For app rollback, redeploy previous app commit and keep DB restore isolated to incidents requiring data recovery.
 
 ## 4.1 Restore Drill
 - Manual:

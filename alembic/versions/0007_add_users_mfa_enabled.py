@@ -18,9 +18,19 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.add_column("users", sa.Column("mfa_enabled", sa.Boolean(), nullable=False, server_default=sa.text("false")))
-    op.alter_column("users", "mfa_enabled", server_default=None)
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = {column["name"] for column in inspector.get_columns("users")}
+
+    if "mfa_enabled" not in columns:
+        op.add_column("users", sa.Column("mfa_enabled", sa.Boolean(), nullable=False, server_default=sa.text("false")))
+        op.alter_column("users", "mfa_enabled", server_default=None)
 
 
 def downgrade() -> None:
-    op.drop_column("users", "mfa_enabled")
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = {column["name"] for column in inspector.get_columns("users")}
+
+    if "mfa_enabled" in columns:
+        op.drop_column("users", "mfa_enabled")

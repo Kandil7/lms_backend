@@ -68,6 +68,11 @@ cp .env.production.example .env
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
+Production stack notes:
+- `docker-compose.prod.yml` expects an external managed Postgres via `PROD_DATABASE_URL` (Azure Database for PostgreSQL Flexible Server recommended).
+- TLS is terminated by `caddy` on ports `80/443` using `APP_DOMAIN` + `LETSENCRYPT_EMAIL`.
+- API container is internal-only on port `8000` behind Caddy reverse proxy.
+
 Staging stack:
 ```bash
 cp .env.staging.example .env
@@ -116,6 +121,7 @@ Useful flags:
 
 Readiness endpoint:
 - `http://localhost:8000/api/v1/ready`
+- `https://<APP_DOMAIN>/api/v1/ready` in production with Caddy
 
 Metrics endpoint:
 - `http://localhost:8000/metrics`
