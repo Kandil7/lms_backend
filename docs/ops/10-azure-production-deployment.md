@@ -74,6 +74,28 @@ Set GitHub `Environment: production` secrets:
 - `SMTP_USERNAME`
 - `SMTP_PASSWORD`
 - `EMAIL_FROM`
+- `SMTP_USE_TLS` (optional, default `true`)
+- `SMTP_USE_SSL` (optional, default `false`)
 - `SENTRY_DSN` (optional)
 
 On push to `main`, the workflow copies a release archive to the VM and runs `scripts/deploy_azure_vm.sh`.
+
+## 4. SMTP Provider (Recommended: Resend)
+Production SMTP values:
+- `SMTP_HOST=smtp.resend.com`
+- `SMTP_PORT=587`
+- `SMTP_USERNAME=resend`
+- `SMTP_PASSWORD=<resend_api_key>`
+- `SMTP_USE_TLS=true`
+- `SMTP_USE_SSL=false`
+- `EMAIL_FROM=<verified-sender@your-domain>`
+
+Connection test:
+```bash
+python scripts/test_smtp_connection.py
+python scripts/test_smtp_connection.py --to your-email@example.com
+```
+
+Provider notes:
+- Supabase does not provide a production relay for your backend app; for Supabase Auth, configure custom SMTP with the same provider credentials.
+- Firebase custom SMTP requires Identity Platform; default Firebase Auth email flow is not a direct replacement for backend SMTP settings.

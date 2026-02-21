@@ -27,6 +27,7 @@ This folder contains detailed technical documentation for the LMS backend.
 - `docs/ops/08-performance-capacity-signoff.md`
 - `docs/ops/09-sla-slo-incident-support-policy.md`
 - `docs/ops/10-azure-production-deployment.md`
+- `docs/ops/11-smtp-provider-selection.md`
 
 ## Legal and Compliance Templates
 

@@ -271,6 +271,19 @@ Important environment flags:
 - `MFA_LOGIN_CODE_EXPIRE_MINUTES`
 - `MFA_LOGIN_CODE_LENGTH`
 
+SMTP provider quick start (Resend):
+- `SMTP_HOST=smtp.resend.com`
+- `SMTP_PORT=587`
+- `SMTP_USERNAME=resend`
+- `SMTP_PASSWORD=<resend_api_key>`
+- `SMTP_USE_TLS=true`
+
+SMTP connectivity check:
+```bash
+python scripts/test_smtp_connection.py
+python scripts/test_smtp_connection.py --to your-email@example.com
+```
+
 ## Branch Strategy
 - `main`: stable releases.
 - `develop`: integration branch.

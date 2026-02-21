@@ -47,6 +47,8 @@ jobs:
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS }}
+          SMTP_USE_SSL: ${{ secrets.SMTP_USE_SSL }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           SENTRY_RELEASE: ${{ github.sha }}
         with:
@@ -55,7 +57,7 @@ jobs:
           key: ${{ secrets.AZURE_VM_SSH_KEY }}
           port: 22
           script_stop: true
-          envs: PROD_DATABASE_URL,SECRET_KEY,APP_DOMAIN,LETSENCRYPT_EMAIL,FRONTEND_BASE_URL,CORS_ORIGINS,TRUSTED_HOSTS,SMTP_HOST,SMTP_PORT,SMTP_USERNAME,SMTP_PASSWORD,EMAIL_FROM,SENTRY_DSN,SENTRY_RELEASE
+          envs: PROD_DATABASE_URL,SECRET_KEY,APP_DOMAIN,LETSENCRYPT_EMAIL,FRONTEND_BASE_URL,CORS_ORIGINS,TRUSTED_HOSTS,SMTP_HOST,SMTP_PORT,SMTP_USERNAME,SMTP_PASSWORD,EMAIL_FROM,SMTP_USE_TLS,SMTP_USE_SSL,SENTRY_DSN,SENTRY_RELEASE
           script: |
             set -euo pipefail
             APP_DIR=/opt/lms_backend

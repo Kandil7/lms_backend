@@ -75,6 +75,14 @@ upsert_env "SMTP_USERNAME" "$SMTP_USERNAME"
 upsert_env "SMTP_PASSWORD" "$SMTP_PASSWORD"
 upsert_env "EMAIL_FROM" "$EMAIL_FROM"
 
+if [[ -n "${SMTP_USE_TLS:-}" ]]; then
+  upsert_env "SMTP_USE_TLS" "$SMTP_USE_TLS"
+fi
+
+if [[ -n "${SMTP_USE_SSL:-}" ]]; then
+  upsert_env "SMTP_USE_SSL" "$SMTP_USE_SSL"
+fi
+
 if [[ -n "${SENTRY_DSN:-}" ]]; then
   upsert_env "SENTRY_DSN" "$SENTRY_DSN"
 fi
