@@ -1,34 +1,50 @@
 from __future__ import annotations
 
 from time import perf_counter
+from typing import Any
 
 from fastapi import APIRouter, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
-try:
-    from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
+CONTENT_TYPE_LATEST = "text/plain; version=0.0.4; charset=utf-8"
+_PROMETHEUS_AVAILABLE = False
 
+HTTP_REQUESTS_TOTAL: Any | None = None
+HTTP_REQUEST_DURATION_SECONDS: Any | None = None
+HTTP_REQUESTS_IN_PROGRESS: Any | None = None
+
+
+def generate_latest() -> bytes:
+    return b""
+
+
+try:
+    from prometheus_client import CONTENT_TYPE_LATEST as _CONTENT_TYPE_LATEST
+    from prometheus_client import Counter as _Counter
+    from prometheus_client import Gauge as _Gauge
+    from prometheus_client import Histogram as _Histogram
+    from prometheus_client import generate_latest as _generate_latest
+
+    CONTENT_TYPE_LATEST = _CONTENT_TYPE_LATEST
+    HTTP_REQUESTS_TOTAL = _Counter(
+        "http_requests_total",
+        "Total HTTP requests",
+        ["method", "path", "status"],
+    )
+    HTTP_REQUEST_DURATION_SECONDS = _Histogram(
+        "http_request_duration_seconds",
+        "HTTP request latency in seconds",
+        ["method", "path"],
+    )
+    HTTP_REQUESTS_IN_PROGRESS = _Gauge(
+        "http_requests_in_progress",
+        "In-progress HTTP requests",
+    )
+    generate_latest = _generate_latest
     _PROMETHEUS_AVAILABLE = True
 except Exception:  # pragma: no cover - optional dependency runtime guard
-    CONTENT_TYPE_LATEST = "text/plain; version=0.0.4; charset=utf-8"
-    _PROMETHEUS_AVAILABLE = False
-
-
-HTTP_REQUESTS_TOTAL = Counter(
-    "http_requests_total",
-    "Total HTTP requests",
-    ["method", "path", "status"],
-) if _PROMETHEUS_AVAILABLE else None
-HTTP_REQUEST_DURATION_SECONDS = Histogram(
-    "http_request_duration_seconds",
-    "HTTP request latency in seconds",
-    ["method", "path"],
-) if _PROMETHEUS_AVAILABLE else None
-HTTP_REQUESTS_IN_PROGRESS = Gauge(
-    "http_requests_in_progress",
-    "In-progress HTTP requests",
-) if _PROMETHEUS_AVAILABLE else None
+    pass
 
 
 def metrics_available() -> bool:

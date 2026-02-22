@@ -1,5 +1,6 @@
+from typing import Literal
+
 from fastapi import Response
-from typing import Optional
 
 from app.core.config import settings
 
@@ -8,11 +9,11 @@ def set_http_only_cookie(
     name: str,
     value: str,
     max_age: int = 30 * 24 * 60 * 60,  # 30 days in seconds
-    domain: Optional[str] = None,
+    domain: str | None = None,
     path: str = "/",
     secure: bool = True,
     httponly: bool = True,
-    samesite: str = "lax",
+    samesite: Literal["lax", "strict", "none"] = "lax",
 ) -> None:
     """
     Set an HTTP-only cookie with secure defaults for production.
@@ -45,7 +46,12 @@ def set_http_only_cookie(
     )
 
 
-def delete_http_only_cookie(response: Response, name: str, path: str = "/", domain: Optional[str] = None) -> None:
+def delete_http_only_cookie(
+    response: Response,
+    name: str,
+    path: str = "/",
+    domain: str | None = None,
+) -> None:
     """
     Delete an HTTP-only cookie by setting it to empty with max_age=0.
     """

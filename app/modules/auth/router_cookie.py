@@ -24,7 +24,11 @@ from app.modules.auth.schemas import (
     VerifyEmailConfirmRequest,
     VerifyEmailRequest,
 )
-from app.modules.auth.schemas_cookie import AuthResponseWithCookies, TokenResponseWithCookies
+from app.modules.auth.schemas_cookie import (
+    AuthResponseWithCookies,
+    LoginResponseWithCookies,
+    TokenResponseWithCookies,
+)
 from app.modules.auth.service import AuthService
 from app.modules.auth.service_cookie import CookieBasedAuthService
 from app.tasks.dispatcher import enqueue_task_with_fallback
@@ -84,13 +88,13 @@ def register(payload: UserCreate, db: Session = Depends(get_db)) -> AuthResponse
     return AuthResponse(user=UserResponse.model_validate(user), tokens=tokens)
 
 
-@router.post("/login", response_model=AuthResponseWithCookies)
+@router.post("/login", response_model=LoginResponseWithCookies)
 def login(
     request: Request,
     response: Response,
     payload: UserLogin,
     db: Session = Depends(get_db)
-) -> AuthResponseWithCookies:
+) -> LoginResponseWithCookies:
     """Login endpoint that returns refresh token in HTTP-only cookie."""
     auth_service = CookieBasedAuthService(db)
     

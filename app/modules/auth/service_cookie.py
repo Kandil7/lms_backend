@@ -14,8 +14,9 @@ from app.core.security import (
     decode_token,
 )
 from app.modules.auth.models import RefreshToken
-from app.modules.auth.schemas_cookie import AuthResponseWithCookies, TokenResponseWithCookies
+from app.modules.auth.schemas_cookie import TokenResponseWithCookies
 from app.modules.auth.service import AuthService as BaseAuthService
+from app.modules.users.schemas import UserResponse
 from app.modules.users.services.user_service import UserService
 from app.core.exceptions import UnauthorizedException
 from datetime import UTC, datetime
@@ -45,7 +46,7 @@ class CookieBasedAuthService(BaseAuthService):
         return TokenResponseWithCookies(
             access_token=access_token,
             token_type="bearer",
-            user=self.user_service.get_user(UUID(user_id))
+            user=UserResponse.model_validate(self.user_service.get_user(UUID(user_id))),
         )
     
     def _set_refresh_token_cookie(self, response: Response, refresh_token: str) -> None:
@@ -106,7 +107,7 @@ class CookieBasedAuthService(BaseAuthService):
         return TokenResponseWithCookies(
             access_token=tokens.access_token,
             token_type="bearer",
-            user=user
+            user=UserResponse.model_validate(user),
         )
     
     def _get_refresh_token_from_cookie(self, request: Request) -> Optional[str]:
