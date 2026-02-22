@@ -77,8 +77,27 @@ Set GitHub `Environment: production` secrets:
 - `SMTP_USE_TLS` (optional, default `true`)
 - `SMTP_USE_SSL` (optional, default `false`)
 - `SENTRY_DSN` (optional)
+- `PROD_REDIS_URL` (optional, defaults to VM Redis)
+- `PROD_CELERY_BROKER_URL` (optional, defaults to VM Redis)
+- `PROD_CELERY_RESULT_BACKEND` (optional, defaults to VM Redis)
+- `AZURE_KEYVAULT_URL` (optional)
+- `AZURE_CLIENT_ID` (optional)
+- `AZURE_TENANT_ID` (optional)
+- `AZURE_CLIENT_SECRET` (optional)
+- `FILE_STORAGE_PROVIDER` (optional, `local` or `azure`)
+- `AZURE_STORAGE_CONNECTION_STRING` (optional)
+- `AZURE_STORAGE_ACCOUNT_NAME` (optional)
+- `AZURE_STORAGE_ACCOUNT_KEY` (optional)
+- `AZURE_STORAGE_ACCOUNT_URL` (optional)
+- `AZURE_STORAGE_CONTAINER_NAME` (optional)
+- `AZURE_STORAGE_CONTAINER_URL` (optional)
 
 On push to `main`, the workflow copies a release archive to the VM and runs `scripts/deploy_azure_vm.sh`.
+
+Deployment script behavior:
+- `scripts/deploy_azure_vm.sh` supports both `docker compose` (v2 plugin) and `docker-compose` (v1 binary).
+- In GitHub Actions it runs in VM-local mode (`DEPLOY_MODE=vm`).
+- For manual Bash deployment from your laptop/runner, set `AZURE_VM_HOST` and `AZURE_VM_USER`; the same script switches to remote mode and deploys over SSH.
 
 ## 4. SMTP Provider (Recommended: Resend)
 Production SMTP values:

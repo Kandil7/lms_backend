@@ -1,148 +1,175 @@
 # Azure VM Deployment Script for LMS Backend (PowerShell)
 
 param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [string]$AzureVMHost,
-    
-    [Parameter(Mandatory=$true)]
+
+    [Parameter(Mandatory = $true)]
     [string]$AzureVMUser,
-    
-    [Parameter(Mandatory=$true)]
+
+    [Parameter(Mandatory = $true)]
     [string]$ProdDatabaseUrl,
-    
-    [Parameter(Mandatory=$true)]
+
+    [Parameter(Mandatory = $true)]
     [string]$SecretKey,
-    
-    [Parameter(Mandatory=$true)]
+
+    [Parameter(Mandatory = $true)]
     [string]$AppDomain,
-    
-    [Parameter(Mandatory=$true)]
-    [string]$LetsEncryptEmail
+
+    [Parameter(Mandatory = $true)]
+    [string]$LetsEncryptEmail,
+
+    [string]$FrontendBaseUrl,
+    [string]$CorsOrigins,
+    [string]$TrustedHosts,
+    [string]$AppDir = "/opt/lms_backend",
+    [string]$SshPrivateKeyPath = "$HOME/.ssh/id_rsa",
+    [int]$SshPort = 22,
+
+    [string]$SmtpHost = "",
+    [string]$SmtpPort = "587",
+    [string]$SmtpUsername = "",
+    [string]$SmtpPassword = "",
+    [string]$EmailFrom = "",
+    [string]$SmtpUseTls = "true",
+    [string]$SmtpUseSsl = "false",
+    [string]$SentryDsn = "",
+    [string]$SentryRelease = "",
+
+    [string]$AzureKeyvaultUrl = "",
+    [string]$AzureClientId = "",
+    [string]$AzureTenantId = "",
+    [string]$AzureClientSecret = "",
+
+    [string]$FileStorageProvider = "",
+    [string]$AzureStorageConnectionString = "",
+    [string]$AzureStorageAccountName = "",
+    [string]$AzureStorageAccountKey = "",
+    [string]$AzureStorageAccountUrl = "",
+    [string]$AzureStorageContainerName = "",
+    [string]$AzureStorageContainerUrl = ""
 )
 
-Write-Host "Starting LMS backend deployment to Azure VM..."
+$ErrorActionPreference = "Stop"
 
-# Validate required parameters
-$requiredParams = @("AzureVMHost", "AzureVMUser", "ProdDatabaseUrl", "SecretKey", "AppDomain", "LetsEncryptEmail")
-foreach ($param in $requiredParams) {
-    if ([string]::IsNullOrEmpty((Get-Variable $param -ValueOnly))) {
-        Write-Error "Required parameter '$param' not provided"
-        exit 1
+function Require-Command {
+    param([string]$Name)
+    if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
+        throw "Required command '$Name' is not available in PATH"
     }
 }
+
+function Ensure-LastExitCode {
+    param([string]$Action)
+    if ($LASTEXITCODE -ne 0) {
+        throw "$Action failed with exit code $LASTEXITCODE"
+    }
+}
+
+Write-Host "[deploy] Starting Azure VM deployment from PowerShell"
+
+if ($SecretKey.Length -lt 32) {
+    throw "SecretKey must be at least 32 characters"
+}
+
+if ([string]::IsNullOrWhiteSpace($FrontendBaseUrl)) {
+    $FrontendBaseUrl = "https://$AppDomain"
+}
+if ([string]::IsNullOrWhiteSpace($CorsOrigins)) {
+    $CorsOrigins = $FrontendBaseUrl
+}
+if ([string]::IsNullOrWhiteSpace($TrustedHosts)) {
+    $TrustedHosts = $AppDomain
+}
+
+Require-Command "git"
+Require-Command "ssh"
+Require-Command "scp"
+
+if (-not (Test-Path $SshPrivateKeyPath)) {
+    throw "SSH private key not found: $SshPrivateKeyPath"
+}
+
+$tempRoot = Join-Path $env:TEMP ("lms-deploy-" + [Guid]::NewGuid().ToString("N"))
+New-Item -ItemType Directory -Path $tempRoot | Out-Null
+
+$archivePath = Join-Path $tempRoot "release.tar.gz"
+$envPath = Join-Path $tempRoot "deploy.env"
+$remoteScriptPath = Join-Path $tempRoot "remote_deploy.sh"
+
+$remoteArchive = "/tmp/lms_backend_release.tar.gz"
+$remoteEnv = "/tmp/lms_backend_deploy.env"
+$remoteScript = "/tmp/lms_backend_remote_deploy.sh"
 
 try {
-    # Create deployment directory on VM
-    Write-Host "Creating deployment directory..."
-    Invoke-Command -ComputerName $AzureVMHost -Credential (Get-Credential) -ScriptBlock {
-        mkdir -p ~/lms-deployment
-    }
+    & git archive --format=tar.gz -o $archivePath HEAD
+    Ensure-LastExitCode "Creating release archive"
 
-    # Copy current codebase to VM using SCP (requires OpenSSH)
-    Write-Host "Copying codebase to VM..."
-    $tempZip = "$env:TEMP\lms-backend.zip"
-    Compress-Archive -Path .\* -DestinationPath $tempZip -Force
-    
-    # Use scp to copy (requires OpenSSH installed on Windows)
-    $scpCommand = "scp -o StrictHostKeyChecking=no `"$tempZip`" $AzureVMUser@$AzureVMHost:~/lms-deployment/"
-    Invoke-Expression $scpCommand
-    
-    Remove-Item $tempZip
-
-    # Extract and prepare on VM
-    Write-Host "Extracting and preparing on VM..."
-    $deployScript = @"
-cd ~/lms-deployment
-unzip lms-backend.zip
-cd lms-backend
-
-# Create production environment file
-cat > .env << EOL
-# Production Environment Configuration
-ENVIRONMENT=production
-DEBUG=false
-ENABLE_API_DOCS=false
-STRICT_ROUTER_IMPORTS=true
-METRICS_ENABLED=true
-API_RESPONSE_ENVELOPE_ENABLED=true
-API_RESPONSE_SUCCESS_MESSAGE=Success
-
-# Database
+    @"
+APP_DIR=$AppDir
 PROD_DATABASE_URL=$ProdDatabaseUrl
-
-# Security
 SECRET_KEY=$SecretKey
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=15
-REFRESH_TOKEN_EXPIRE_DAYS=30
-PASSWORD_RESET_TOKEN_EXPIRE_MINUTES=30
-EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES=1440
-REQUIRE_EMAIL_VERIFICATION_FOR_LOGIN=true
-MFA_CHALLENGE_TOKEN_EXPIRE_MINUTES=10
-MFA_LOGIN_CODE_EXPIRE_MINUTES=10
-MFA_LOGIN_CODE_LENGTH=6
-ACCESS_TOKEN_BLACKLIST_ENABLED=true
-ACCESS_TOKEN_BLACKLIST_FAIL_CLOSED=true
-
-# Domain / TLS
 APP_DOMAIN=$AppDomain
 LETSENCRYPT_EMAIL=$LetsEncryptEmail
+FRONTEND_BASE_URL=$FrontendBaseUrl
+CORS_ORIGINS=$CorsOrigins
+TRUSTED_HOSTS=$TrustedHosts
+SMTP_HOST=$SmtpHost
+SMTP_PORT=$SmtpPort
+SMTP_USERNAME=$SmtpUsername
+SMTP_PASSWORD=$SmtpPassword
+EMAIL_FROM=$EmailFrom
+SMTP_USE_TLS=$SmtpUseTls
+SMTP_USE_SSL=$SmtpUseSsl
+SENTRY_DSN=$SentryDsn
+SENTRY_RELEASE=$SentryRelease
+AZURE_KEYVAULT_URL=$AzureKeyvaultUrl
+AZURE_CLIENT_ID=$AzureClientId
+AZURE_TENANT_ID=$AzureTenantId
+AZURE_CLIENT_SECRET=$AzureClientSecret
+FILE_STORAGE_PROVIDER=$FileStorageProvider
+AZURE_STORAGE_CONNECTION_STRING=$AzureStorageConnectionString
+AZURE_STORAGE_ACCOUNT_NAME=$AzureStorageAccountName
+AZURE_STORAGE_ACCOUNT_KEY=$AzureStorageAccountKey
+AZURE_STORAGE_ACCOUNT_URL=$AzureStorageAccountUrl
+AZURE_STORAGE_CONTAINER_NAME=$AzureStorageContainerName
+AZURE_STORAGE_CONTAINER_URL=$AzureStorageContainerUrl
+"@ | Set-Content -Path $envPath
 
-# CORS / Hosts
-CORS_ORIGINS=https://$AppDomain
-TRUSTED_HOSTS=$AppDomain
+    $remoteScriptLines = @(
+        "#!/usr/bin/env bash"
+        "set -euo pipefail"
+        "set -a"
+        "source /tmp/lms_backend_deploy.env"
+        "set +a"
+        "mkdir -p ""`$`{APP_DIR`}\"""
+        "find ""`$`{APP_DIR`}\"" -mindepth 1 -maxdepth 1 ! -name "".env"" -exec rm -rf {} +"
+        "tar -xzf /tmp/lms_backend_release.tar.gz -C ""`$`{APP_DIR`}\"""
+        "cd ""`$`{APP_DIR`}\"""
+        "chmod +x scripts/deploy_azure_vm.sh"
+        "DEPLOY_MODE=vm ./scripts/deploy_azure_vm.sh"
+        "rm -f /tmp/lms_backend_release.tar.gz /tmp/lms_backend_deploy.env /tmp/lms_backend_remote_deploy.sh"
+    )
+    ($remoteScriptLines -join "`n") | Set-Content -Path $remoteScriptPath
 
-# Redis / Celery
-REDIS_URL=redis://redis:6379/0
-CELERY_BROKER_URL=redis://redis:6379/1
-CELERY_RESULT_BACKEND=redis://redis:6379/2
-TASKS_FORCE_INLINE=false
-RATE_LIMIT_USE_REDIS=true
-RATE_LIMIT_REQUESTS_PER_MINUTE=100
-RATE_LIMIT_WINDOW_SECONDS=60
-RATE_LIMIT_REDIS_PREFIX=ratelimit
+    Write-Host "[deploy] Uploading release and deployment metadata"
+    & scp -P $SshPort -i $SshPrivateKeyPath -o StrictHostKeyChecking=no $archivePath "${AzureVMUser}@${AzureVMHost}:${remoteArchive}"
+    Ensure-LastExitCode "Uploading release archive"
 
-# File Uploads
-UPLOAD_DIR=uploads
-CERTIFICATES_DIR=certificates
-MAX_UPLOAD_MB=100
-ALLOWED_UPLOAD_EXTENSIONS=mp4,avi,mov,pdf,doc,docx,jpg,jpeg,png
-FILE_STORAGE_PROVIDER=local
-FILE_DOWNLOAD_URL_EXPIRE_SECONDS=900
-EOL
+    & scp -P $SshPort -i $SshPrivateKeyPath -o StrictHostKeyChecking=no $envPath "${AzureVMUser}@${AzureVMHost}:${remoteEnv}"
+    Ensure-LastExitCode "Uploading deployment env"
 
-# Install dependencies
-pip install -r requirements.txt
+    & scp -P $SshPort -i $SshPrivateKeyPath -o StrictHostKeyChecking=no $remoteScriptPath "${AzureVMUser}@${AzureVMHost}:${remoteScript}"
+    Ensure-LastExitCode "Uploading remote deployment script"
 
-# Build Docker images
-docker compose -f docker-compose.prod.yml build
+    Write-Host "[deploy] Executing deployment on VM"
+    & ssh -p $SshPort -i $SshPrivateKeyPath -o StrictHostKeyChecking=no "${AzureVMUser}@${AzureVMHost}" "bash ${remoteScript}"
+    Ensure-LastExitCode "Remote deployment"
 
-# Start services
-docker compose -f docker-compose.prod.yml up -d
-
-# Wait for services to be ready
-echo "Waiting for services to start..."
-sleep 30
-
-# Verify deployment
-if curl -sf http://localhost:8000/api/v1/ready; then
-    echo "✅ LMS backend deployed successfully!"
-    echo "Access API at: https://$AppDomain/api/v1/ready"
-else
-    echo "❌ Deployment failed - API not responding"
-    exit 1
-fi
-"@
-
-    Invoke-Command -ComputerName $AzureVMHost -Credential (Get-Credential) -ScriptBlock {
-        param($script)
-        $script | Out-File -FilePath ~/deploy.sh -Encoding UTF8
-        chmod +x ~/deploy.sh
-        bash ~/deploy.sh
-    } -ArgumentList $deployScript
-
-    Write-Host "Deployment completed successfully!"
+    Write-Host "[deploy] Deployment completed successfully"
 }
-catch {
-    Write-Error "Deployment failed: $($_.Exception.Message)"
+finally {
+    if (Test-Path $tempRoot) {
+        Remove-Item -Path $tempRoot -Recurse -Force
+    }
 }

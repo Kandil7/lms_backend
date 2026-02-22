@@ -122,6 +122,13 @@ class SecretsManager:
                     
                     self._azure_client = SecretClient(vault_url=vault_url, credential=credential)
                     logger.info(f"Azure Key Vault authenticated via: {', '.join(auth_methods)}")
+                except ImportError:
+                    raise ValueError(
+                        "Azure Key Vault dependencies not installed. "
+                        "Install with: pip install azure-identity azure-keyvault-secrets"
+                    )
+                except Exception as azure_init_error:
+                    raise ValueError(f"Failed to initialize Azure Key Vault client: {azure_init_error}")
 
             elif self._source == SecretSource.GCP_SECRET_MANAGER:
                 # Initialize GCP Secret Manager client

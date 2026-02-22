@@ -36,6 +36,9 @@ jobs:
         uses: appleboy/ssh-action@v1.2.0
         env:
           PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+          PROD_REDIS_URL: ${{ secrets.PROD_REDIS_URL }}
+          PROD_CELERY_BROKER_URL: ${{ secrets.PROD_CELERY_BROKER_URL }}
+          PROD_CELERY_RESULT_BACKEND: ${{ secrets.PROD_CELERY_RESULT_BACKEND }}
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
           APP_DOMAIN: ${{ secrets.APP_DOMAIN }}
           LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
@@ -51,18 +54,30 @@ jobs:
           SMTP_USE_SSL: ${{ secrets.SMTP_USE_SSL }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           SENTRY_RELEASE: ${{ github.sha }}
+          AZURE_KEYVAULT_URL: ${{ secrets.AZURE_KEYVAULT_URL }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          FILE_STORAGE_PROVIDER: ${{ secrets.FILE_STORAGE_PROVIDER }}
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
+          AZURE_STORAGE_ACCOUNT_NAME: ${{ secrets.AZURE_STORAGE_ACCOUNT_NAME }}
+          AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+          AZURE_STORAGE_ACCOUNT_URL: ${{ secrets.AZURE_STORAGE_ACCOUNT_URL }}
+          AZURE_STORAGE_CONTAINER_NAME: ${{ secrets.AZURE_STORAGE_CONTAINER_NAME }}
+          AZURE_STORAGE_CONTAINER_URL: ${{ secrets.AZURE_STORAGE_CONTAINER_URL }}
         with:
           host: ${{ secrets.AZURE_VM_HOST }}
           username: ${{ secrets.AZURE_VM_USER }}
           key: ${{ secrets.AZURE_VM_SSH_KEY }}
           port: 22
           script_stop: true
-          envs: PROD_DATABASE_URL,SECRET_KEY,APP_DOMAIN,LETSENCRYPT_EMAIL,FRONTEND_BASE_URL,CORS_ORIGINS,TRUSTED_HOSTS,SMTP_HOST,SMTP_PORT,SMTP_USERNAME,SMTP_PASSWORD,EMAIL_FROM,SMTP_USE_TLS,SMTP_USE_SSL,SENTRY_DSN,SENTRY_RELEASE
+          envs: PROD_DATABASE_URL,PROD_REDIS_URL,PROD_CELERY_BROKER_URL,PROD_CELERY_RESULT_BACKEND,SECRET_KEY,APP_DOMAIN,LETSENCRYPT_EMAIL,FRONTEND_BASE_URL,CORS_ORIGINS,TRUSTED_HOSTS,SMTP_HOST,SMTP_PORT,SMTP_USERNAME,SMTP_PASSWORD,EMAIL_FROM,SMTP_USE_TLS,SMTP_USE_SSL,SENTRY_DSN,SENTRY_RELEASE,AZURE_KEYVAULT_URL,AZURE_CLIENT_ID,AZURE_TENANT_ID,AZURE_CLIENT_SECRET,FILE_STORAGE_PROVIDER,AZURE_STORAGE_CONNECTION_STRING,AZURE_STORAGE_ACCOUNT_NAME,AZURE_STORAGE_ACCOUNT_KEY,AZURE_STORAGE_ACCOUNT_URL,AZURE_STORAGE_CONTAINER_NAME,AZURE_STORAGE_CONTAINER_URL
           script: |
             set -euo pipefail
             APP_DIR=/opt/lms_backend
             mkdir -p "$APP_DIR"
+            find "$APP_DIR" -mindepth 1 -maxdepth 1 ! -name ".env" -exec rm -rf {} +
             tar -xzf /tmp/release.tar.gz -C "$APP_DIR"
             cd "$APP_DIR"
             chmod +x scripts/deploy_azure_vm.sh
-            APP_DIR="$APP_DIR" ./scripts/deploy_azure_vm.sh
+            APP_DIR="$APP_DIR" DEPLOY_MODE=vm ./scripts/deploy_azure_vm.sh
