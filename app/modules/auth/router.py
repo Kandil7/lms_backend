@@ -39,6 +39,24 @@ EMAIL_VERIFICATION_REQUEST_MESSAGE = "If the email is registered, a verification
 MFA_ENABLE_REQUEST_MESSAGE = "A verification code has been sent to your email"
 
 
+def _get_client_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        first_ip = forwarded_for.split(",")[0].strip()
+        if first_ip:
+            return first_ip
+
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        normalized_real_ip = real_ip.strip()
+        if normalized_real_ip:
+            return normalized_real_ip
+
+    if request.client and request.client.host:
+        return request.client.host
+    return "127.0.0.1"
+
+
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 def register(payload: UserCreate, db: Session = Depends(get_db)) -> AuthResponse:
     if payload.role != Role.STUDENT and not settings.ALLOW_PUBLIC_ROLE_REGISTRATION:
@@ -91,7 +109,7 @@ def login(
     auth_service = AuthService(db)
     
     # Get client IP address for account lockout
-    ip_address = request.client.host if request.client else "127.0.0.1"
+    ip_address = _get_client_ip(request)
 
     try:
         user, tokens, mfa_challenge = auth_service.login(payload.email, payload.password, ip_address=ip_address)
@@ -115,11 +133,20 @@ def login(
 
 
 @router.post("/token", response_model=TokenResponse, summary="OAuth2 token endpoint for Swagger Authorize")
-def oauth_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)) -> TokenResponse:
+def oauth_token(
+    request: Request,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+) -> TokenResponse:
     auth_service = AuthService(db)
 
     try:
-        user, tokens, mfa_challenge = auth_service.login(form_data.username, form_data.password)
+        ip_address = _get_client_ip(request)
+        user, tokens, mfa_challenge = auth_service.login(
+            form_data.username,
+            form_data.password,
+            ip_address=ip_address,
+        )
     except InvalidCredentialsError as exc:
         raise UnauthorizedException(str(exc)) from exc
 
