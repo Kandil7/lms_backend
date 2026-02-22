@@ -78,6 +78,7 @@ class Settings(BaseSettings):
     SECURITY_HEADERS_ENABLED: bool = True
 
     FRONTEND_BASE_URL: str = "http://localhost:3000"
+    APP_DOMAIN: str | None = None
     EMAIL_FROM: str = "no-reply@lms.local"
     SMTP_HOST: str | None = None
     SMTP_PORT: int = 587
@@ -132,6 +133,7 @@ class Settings(BaseSettings):
     AUTH_RATE_LIMIT_PATHS: CsvList = Field(
         default_factory=lambda: ["/api/v1/auth/login", "/api/v1/auth/token", "/api/v1/auth/login/mfa"]
     )
+    MAX_FAILED_LOGIN_ATTEMPTS: int = 5
     FILE_UPLOAD_RATE_LIMIT_REQUESTS_PER_HOUR: int = 100
     FILE_UPLOAD_RATE_LIMIT_WINDOW_SECONDS: int = 3600
     FILE_UPLOAD_RATE_LIMIT_PATHS: CsvList = Field(default_factory=lambda: ["/api/v1/files/upload"])
@@ -250,13 +252,19 @@ class Settings(BaseSettings):
         if self.ENVIRONMENT == "production":
             # Initialize secrets manager for production
             try:
-                # Try to initialize with Vault first
+                # Try to initialize with Azure Key Vault first (preferred for Azure deployments)
                 success = initialize_secrets_manager(
-                    "vault",
-                    vault_url=os.getenv("VAULT_ADDR"),
-                    vault_token=os.getenv("VAULT_TOKEN"),
-                    vault_namespace=os.getenv("VAULT_NAMESPACE")
+                    "azure_key_vault",
+                    vault_url=os.getenv("AZURE_KEYVAULT_URL") or os.getenv("AZURE_KEYVAULT_ENDPOINT")
                 )
+                if not success:
+                    # Fall back to Vault
+                    success = initialize_secrets_manager(
+                        "vault",
+                        vault_url=os.getenv("VAULT_ADDR"),
+                        vault_token=os.getenv("VAULT_TOKEN"),
+                        vault_namespace=os.getenv("VAULT_NAMESPACE")
+                    )
                 if not success:
                     # Fall back to environment variables (for development/staging)
                     initialize_secrets_manager("env_var")

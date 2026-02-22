@@ -33,20 +33,35 @@ class AuthService:
         self.user_service = UserService(db)
         self.cache = get_app_cache()
 
-    def login(self, email: str, password: str) -> tuple:
-        user = self.user_service.authenticate(email=email, password=password, update_last_login=False)
-        if user.mfa_enabled:
-            challenge_token, code, expires_in_seconds = self._create_mfa_login_challenge(user.id)
-            return user, None, {
-                "challenge_token": challenge_token,
-                "code": code,
-                "expires_in_seconds": expires_in_seconds,
-            }
+    def login(self, email: str, password: str, ip_address: str = "127.0.0.1") -> tuple:
+        from app.core.account_lockout import check_account_lockout, account_lockout_manager
+        
+        # Check if account is locked
+        check_account_lockout(email, ip_address)
+        
+        try:
+            user = self.user_service.authenticate(email=email, password=password, update_last_login=False)
+            
+            # Reset failed attempts on successful login
+            account_lockout_manager.reset_failed_attempts(email, ip_address)
+            
+            if user.mfa_enabled:
+                challenge_token, code, expires_in_seconds = self._create_mfa_login_challenge(user.id)
+                return user, None, {
+                    "challenge_token": challenge_token,
+                    "code": code,
+                    "expires_in_seconds": expires_in_seconds,
+                }
 
-        self._touch_last_login(user)
-        tokens = self._issue_tokens(user.id, user.role)
-        self.db.commit()
-        return user, tokens, None
+            self._touch_last_login(user)
+            tokens = self._issue_tokens(user.id, user.role)
+            self.db.commit()
+            return user, tokens, None
+            
+        except Exception as exc:
+            # Increment failed attempts on authentication failure
+            account_lockout_manager.increment_failed_attempts(email, ip_address)
+            raise exc
 
     def refresh_tokens(self, refresh_token: str, previous_access_token: str | None = None) -> TokenResponse:
         payload = decode_token(refresh_token, expected_type=TokenType.REFRESH)

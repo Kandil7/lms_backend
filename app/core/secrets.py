@@ -43,63 +43,133 @@ class SecretsManager:
         
     def initialize(self, source: str = "env_var", **kwargs) -> bool:
         """Initialize the secrets manager with the specified source.
-        
+
         Args:
             source: Source type ('env_var', 'vault', 'azure_key_vault', 'gcp_secret_manager')
             kwargs: Configuration parameters for the source
-            
+
         Returns:
             bool: True if initialization successful, False otherwise
         """
         try:
             self._source = SecretSource(source)
-            
+
             if self._source == SecretSource.VAULT and HAS_VAULT:
                 # Initialize Vault client
                 vault_url = kwargs.get('vault_url') or os.getenv('VAULT_ADDR')
                 vault_token = kwargs.get('vault_token') or os.getenv('VAULT_TOKEN')
                 vault_namespace = kwargs.get('vault_namespace') or os.getenv('VAULT_NAMESPACE')
-                
+
                 if not vault_url:
                     raise ValueError("Vault URL must be provided for Vault source")
-                
+
                 self._vault_client = hvac.Client(
                     url=vault_url,
                     token=vault_token,
                     namespace=vault_namespace
                 )
-                
+
                 # Test connection
                 if not self._vault_client.is_authenticated():
                     raise ValueError("Failed to authenticate with Vault")
+
+            elif self._source == SecretSource.AZURE_KEY_VAULT:
+                # Initialize Azure Key Vault client
+                vault_url = kwargs.get('vault_url') or os.getenv('AZURE_KEYVAULT_URL')
+                if not vault_url:
+                    raise ValueError("Azure Key Vault URL must be provided for Azure source")
+
+                try:
+                    from azure.identity import DefaultAzureCredential, EnvironmentCredential, ManagedIdentityCredential
+                    from azure.keyvault.secrets import SecretClient
                     
+                    # Try different authentication methods in order of preference
+                    credential = None
+                    auth_methods = []
+                    
+                    # 1. Managed Identity (for Azure VMs, App Services, etc.)
+                    try:
+                        credential = ManagedIdentityCredential()
+                        # Test credential by getting a secret
+                        test_client = SecretClient(vault_url=vault_url, credential=credential)
+                        test_client.get_secret("test-secret")
+                        auth_methods.append("Managed Identity")
+                    except Exception as mi_error:
+                        logger.debug(f"Managed Identity authentication failed: {mi_error}")
+                    
+                    # 2. Environment variables (AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET)
+                    if credential is None:
+                        try:
+                            credential = EnvironmentCredential()
+                            # Test credential
+                            test_client = SecretClient(vault_url=vault_url, credential=credential)
+                            test_client.get_secret("test-secret")
+                            auth_methods.append("Environment Variables")
+                        except Exception as env_error:
+                            logger.debug(f"Environment variables authentication failed: {env_error}")
+                    
+                    # 3. DefaultAzureCredential (fallback that tries multiple methods)
+                    if credential is None:
+                        try:
+                            credential = DefaultAzureCredential()
+                            # Test credential
+                            test_client = SecretClient(vault_url=vault_url, credential=credential)
+                            test_client.get_secret("test-secret")
+                            auth_methods.append("DefaultAzureCredential")
+                        except Exception as default_error:
+                            logger.warning(f"All Azure authentication methods failed: {default_error}")
+                            raise ValueError("Failed to authenticate with Azure Key Vault using any available method")
+                    
+                    self._azure_client = SecretClient(vault_url=vault_url, credential=credential)
+                    logger.info(f"Azure Key Vault authenticated via: {', '.join(auth_methods)}")
+
+            elif self._source == SecretSource.GCP_SECRET_MANAGER:
+                # Initialize GCP Secret Manager client
+                try:
+                    from google.cloud import secretmanager
+                    self._gcp_client = secretmanager.SecretManagerServiceClient()
+                except ImportError:
+                    raise ValueError("GCP Secret Manager dependencies not installed. Install with: pip install google-cloud-secret-manager")
+
             self._initialized = True
             logger.info(f"Secrets manager initialized with source: {self._source.value}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to initialize secrets manager: {e}")
             self._initialized = False
             return False
     
-    def get_secret(self, key: str, default: Optional[str] = None, 
-                   path: str = "secret/data/lms", 
+    def get_secret(self, key: str, default: Optional[str] = None,
+                   path: str = "secret/data/lms",
                    mount_point: str = "secret") -> Optional[str]:
         """Retrieve a secret from the configured source.
-        
+
         Args:
             key: Secret key name
             default: Default value if secret not found
             path: Vault path (for Vault source)
             mount_point: Vault mount point (for Vault source)
-            
+
         Returns:
             str: Secret value or default if not found
         """
         if not self._initialized:
             raise RuntimeError("Secrets manager not initialized")
-        
+
         try:
+            # First try environment variables (fastest)
+            env_key = f"SECRET_{key.upper()}"
+            env_value = os.getenv(env_key)
+            if env_value is not None:
+                return env_value
+
+            # Try direct environment variable (legacy)
+            direct_env_value = os.getenv(key)
+            if direct_env_value is not None:
+                return direct_env_value
+
+            # Then try configured secret source
             if self._source == SecretSource.VAULT and self._vault_client:
                 # Try to get from Vault
                 try:
@@ -112,22 +182,25 @@ class SecretsManager:
                     return data.get(key, default)
                 except Exception as vault_error:
                     logger.warning(f"Vault lookup failed for '{key}': {vault_error}")
-                    # Fall back to environment variables
+                    # Fall back to environment variables (already tried above)
                     pass
-            
-            # Fall back to environment variables
-            env_key = f"SECRET_{key.upper()}"
-            env_value = os.getenv(env_key)
-            if env_value is not None:
-                return env_value
-            
-            # Try direct environment variable (legacy)
-            direct_env_value = os.getenv(key)
-            if direct_env_value is not None:
-                return direct_env_value
-                
+
+            elif self._source == SecretSource.AZURE_KEY_VAULT and hasattr(self, '_azure_client') and self._azure_client:
+                # Try to get from Azure Key Vault
+                try:
+                    # Azure Key Vault uses different naming convention - prefix with 'lms-' for production
+                    azure_key = f"lms-{key.lower()}"
+                    secret = self._azure_client.get_secret(azure_key)
+                    return secret.value
+                except Exception as azure_error:
+                    # Log detailed error but don't fail completely
+                    logger.warning(f"Azure Key Vault lookup failed for '{azure_key}': {azure_error}")
+                    # Fall back to environment variables (already tried above)
+                    pass
+
+            # If all else fails, return default
             return default
-            
+
         except Exception as e:
             logger.error(f"Error retrieving secret '{key}': {e}")
             return default

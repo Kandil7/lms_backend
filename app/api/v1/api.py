@@ -50,7 +50,11 @@ def _safe_include(
         logger.warning("Router '%s' not loaded: %s", import_path, exc)
 
 
-_safe_include(api_router, "app.modules.auth.router:router")
+# Use cookie-based auth router in production for enhanced security
+if settings.ENVIRONMENT == "production":
+    _safe_include(api_router, "app.modules.auth.router_cookie:router")
+else:
+    _safe_include(api_router, "app.modules.auth.router:router")
 _safe_include(api_router, "app.modules.users.router:router")
 _safe_include(api_router, "app.modules.courses.routers.course_router:router")
 _safe_include(api_router, "app.modules.courses.routers.lesson_router:router")

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -24,7 +24,9 @@ from app.modules.auth.schemas import (
     VerifyEmailConfirmRequest,
     VerifyEmailRequest,
 )
+from app.modules.auth.schemas_cookie import AuthResponseWithCookies, TokenResponseWithCookies
 from app.modules.auth.service import AuthService
+from app.modules.auth.service_cookie import CookieBasedAuthService
 from app.tasks.dispatcher import enqueue_task_with_fallback
 from app.modules.users.schemas import UserCreate, UserLogin, UserResponse
 from app.modules.users.services.user_service import (
@@ -82,19 +84,21 @@ def register(payload: UserCreate, db: Session = Depends(get_db)) -> AuthResponse
     return AuthResponse(user=UserResponse.model_validate(user), tokens=tokens)
 
 
-@router.post("/login", response_model=LoginResponse)
+@router.post("/login", response_model=AuthResponseWithCookies)
 def login(
     request: Request,
+    response: Response,
     payload: UserLogin,
     db: Session = Depends(get_db)
-) -> LoginResponse:
-    auth_service = AuthService(db)
+) -> AuthResponseWithCookies:
+    """Login endpoint that returns refresh token in HTTP-only cookie."""
+    auth_service = CookieBasedAuthService(db)
     
     # Get client IP address for account lockout
     ip_address = request.client.host if request.client else "127.0.0.1"
 
     try:
-        user, tokens, mfa_challenge = auth_service.login(payload.email, payload.password, ip_address=ip_address)
+        user, tokens, mfa_challenge = auth_service.login_with_cookies(payload.email, payload.password, response, ip_address=ip_address)
     except InvalidCredentialsError as exc:
         raise UnauthorizedException(str(exc)) from exc
 
@@ -111,7 +115,7 @@ def login(
             expires_in_seconds=mfa_challenge["expires_in_seconds"],
         )
 
-    return AuthResponse(user=UserResponse.model_validate(user), tokens=tokens)
+    return AuthResponseWithCookies(user=UserResponse.model_validate(user), tokens=tokens)
 
 
 @router.post("/token", response_model=TokenResponse, summary="OAuth2 token endpoint for Swagger Authorize")
@@ -132,36 +136,53 @@ def oauth_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
     return tokens
 
 
-@router.post("/login/mfa", response_model=AuthResponse)
-def verify_mfa_login(payload: MfaLoginVerifyRequest, db: Session = Depends(get_db)) -> AuthResponse:
-    auth_service = AuthService(db)
+@router.post("/login/mfa", response_model=AuthResponseWithCookies)
+def verify_mfa_login(
+    request: Request,
+    response: Response,
+    payload: MfaLoginVerifyRequest,
+    db: Session = Depends(get_db)
+) -> AuthResponseWithCookies:
+    """Verify MFA login and set refresh token in HTTP-only cookie."""
+    auth_service = CookieBasedAuthService(db)
     user, tokens = auth_service.verify_mfa_login(payload.challenge_token, payload.code)
-    return AuthResponse(user=UserResponse.model_validate(user), tokens=tokens)
+    
+    # Set refresh token in HTTP-only cookie
+    auth_service._set_refresh_token_cookie(response, tokens.refresh_token)
+    
+    return AuthResponseWithCookies(user=UserResponse.model_validate(user), tokens=tokens)
 
 
-@router.post("/refresh", response_model=AuthResponse)
+@router.post("/refresh", response_model=TokenResponseWithCookies)
 def refresh_tokens(
-    payload: RefreshTokenRequest,
+    request: Request,
+    response: Response,
     db: Session = Depends(get_db),
     access_token: str | None = Depends(optional_oauth2_scheme),
-) -> AuthResponse:
-    auth_service = AuthService(db)
-    tokens = auth_service.refresh_tokens(payload.refresh_token, previous_access_token=access_token)
-
-    user = get_current_user(tokens.access_token, db)
-    return AuthResponse(user=UserResponse.model_validate(user), tokens=tokens)
+) -> TokenResponseWithCookies:
+    """Refresh tokens endpoint that uses HTTP-only cookie for refresh token."""
+    auth_service = CookieBasedAuthService(db)
+    
+    # Get refresh token from cookie (since we're using cookie-based auth)
+    tokens = auth_service.refresh_tokens_with_cookies(request, response, previous_access_token=access_token)
+    
+    return tokens
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout(
+    request: Request,
+    response: Response,
     payload: LogoutRequest,
     db: Session = Depends(get_db),
     access_token: str = Depends(oauth2_scheme),
 ) -> None:
-    auth_service = AuthService(db)
-    auth_service.logout(payload.refresh_token, access_token=access_token)
+    """Logout endpoint that deletes the refresh token cookie."""
+    auth_service = CookieBasedAuthService(db)
+    auth_service.logout_with_cookies(response, access_token=access_token)
 
 
+# Keep other endpoints unchanged for now
 @router.post("/forgot-password", response_model=MessageResponse)
 def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)) -> MessageResponse:
     auth_service = AuthService(db)

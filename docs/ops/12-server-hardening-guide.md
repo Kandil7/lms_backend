@@ -1,202 +1,192 @@
-# Server Hardening Guide
+# Server Hardening Guide for LMS Production Deployment
 
-This document outlines the server hardening requirements for LMS backend production environments.
+This document provides comprehensive server hardening guidelines for deploying the LMS backend in production environments.
 
-## 1. Overview
+## 1. Operating System Hardening
 
-Server hardening is essential for protecting the LMS infrastructure from unauthorized access and attacks. This guide covers OS-level, network-level, and service-level hardening.
-
-## 2. Operating System Hardening
-
-### 2.1 Patch Management
+### 1.1 OS Patching
 - Enable automatic security updates
-- Schedule weekly patch reviews
-- Test patches in staging before production deployment
-- Maintain patch inventory and change logs
+- Apply patches within 24 hours of critical CVE releases
+- Maintain patch inventory and verification logs
 
-### 2.2 User Account Management
+### 1.2 User Account Management
 - Disable root login via SSH
-- Use sudo for administrative tasks
-- Implement least privilege principle
-- Regularly review user accounts and permissions
-- Enforce strong password policies (12+ characters, complexity requirements)
+- Use key-based authentication only (no password authentication)
+- Implement least privilege principle for service accounts
+- Regularly review and rotate service account credentials
 
-### 2.3 File System Security
-- Set proper file permissions (644 for files, 755 for directories)
-- Remove world-writable files and directories
-- Use SELinux or AppArmor for mandatory access control
-- Encrypt sensitive data at rest
+### 1.3 File System Security
+- Set proper file permissions (600 for secrets, 644 for configs)
+- Use immutable filesystem attributes where possible
+- Enable SELinux/AppArmor for additional process isolation
 
-## 3. Network Security
+## 2. Network Security
 
-### 3.1 Firewall Configuration
-**UFW (Ubuntu/Debian) Example:**
-```bash
-# Default policies
-sudo ufw default deny incoming
-sudo ufw default allow outgoing
-
-# Allow essential services
-sudo ufw allow ssh
-sudo ufw allow 80/tcp    # HTTP (for redirect to HTTPS)
-sudo ufw allow 443/tcp   # HTTPS
-sudo ufw allow 22/tcp    # SSH (restrict to admin IPs if possible)
-
-# Rate limiting for SSH
-sudo ufw limit ssh
+### 2.1 Firewall Configuration
+```
+# Allow only required ports
+iptables -A INPUT -p tcp --dport 22 -s <admin-ip-range> -j ACCEPT
+iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+iptables -A INPUT -p tcp --dport 6379 -s <internal-network> -j ACCEPT
+iptables -A INPUT -p tcp --dport 5432 -s <internal-network> -j ACCEPT
+iptables -A INPUT -j DROP
 ```
 
-**iptables (Advanced):**
+### 2.2 SSH Hardening
 ```bash
-# Rate limiting for SSH
-iptables -A INPUT -p tcp --dport 22 -m conntrack --ctstate NEW -m limit --limit 3/min --limit-burst 3 -j ACCEPT
-iptables -A INPUT -p tcp --dport 22 -m conntrack --ctstate NEW -j DROP
-```
-
-### 3.2 SSH Hardening
-**/etc/ssh/sshd_config:**
-```conf
-# Disable root login
+# /etc/ssh/sshd_config
+Port 2222
+Protocol 2
 PermitRootLogin no
-
-# Use key-based authentication only
 PasswordAuthentication no
 PubkeyAuthentication yes
-
-# Restrict protocols
-Protocol 2
-
-# Timeout settings
+AllowTcpForwarding no
 ClientAliveInterval 300
 ClientAliveCountMax 3
-
-# Limit users
-AllowGroups ssh-users
-# Or: AllowUsers deploy,admin
-
-# Disable unused features
-X11Forwarding no
-TCPKeepAlive yes
-UseDNS no
 ```
 
-### 3.3 Fail2Ban Configuration
-**/etc/fail2ban/jail.local:**
-```ini
-[sshd]
-enabled = true
-port = ssh
-filter = sshd
-logpath = /var/log/auth.log
-maxretry = 3
-bantime = 1h
-findtime = 10m
-```
+### 2.3 Network Segmentation
+- Separate database, cache, and application tiers
+- Use private subnets for internal services
+- Implement VPC peering for multi-cloud deployments
 
-## 4. Service Hardening
+## 3. Application Security
 
-### 4.1 Docker Security
-- Run containers as non-root users (already implemented in docker-compose.prod.yml)
+### 3.1 Container Security
+- Run containers as non-root user (nobody:nogroup)
 - Use read-only filesystems where possible
-- Limit container capabilities
-- Regularly scan images for vulnerabilities
-- Use Docker content trust for image signing
+- Implement seccomp and AppArmor profiles
+- Scan container images for vulnerabilities
 
-### 4.2 PostgreSQL Hardening
-- Use strong passwords and rotate regularly
-- Restrict database access to application servers only
-- Enable SSL for database connections
-- Configure pg_hba.conf for host-based authentication
-- Monitor for suspicious queries and connections
+### 3.2 API Security
+- Enforce rate limiting on all endpoints
+- Implement proper input validation and sanitization
+- Use parameterized queries to prevent SQL injection
+- Validate and sanitize all user inputs
 
-### 4.3 Redis Hardening
-- Set strong requirepass in redis.conf
-- Bind to localhost only (or specific internal IPs)
-- Disable dangerous commands (FLUSHDB, CONFIG, etc.)
-- Use Redis ACL for fine-grained permissions
-- Enable TLS for Redis connections
+### 3.3 Authentication & Authorization
+- Enforce MFA for administrative access
+- Implement account lockout after 5 failed attempts
+- Use short-lived JWT tokens with proper refresh mechanisms
+- Implement proper session management and timeout
 
-## 5. Monitoring and Logging
+## 4. Monitoring and Logging
 
-### 5.1 Log Collection
-- Centralize logs using ELK stack, Loki, or cloud logging
+### 4.1 Log Collection
+- Centralize logs to SIEM system
 - Retain logs for at least 90 days
-- Monitor for security events (failed logins, unusual activity)
-- Set up alerts for critical security events
+- Include audit trails for sensitive operations
+- Monitor for suspicious patterns and anomalies
 
-### 5.2 Security Monitoring
-- Install and configure OSSEC or Wazuh for intrusion detection
-- Enable auditd for system call monitoring
-- Monitor file integrity with AIDE or Tripwire
-- Regular security scans with OpenVAS or Nessus
+### 4.2 Security Monitoring
+- Alert on failed login attempts
+- Monitor for unusual API request patterns
+- Track data exfiltration attempts
+- Implement anomaly detection for user behavior
 
-## 6. Production Deployment Checklist
+## 5. Compliance Requirements
 
-### 6.1 Pre-deployment
-- [ ] Verify firewall rules are configured correctly
-- [ ] Confirm SSH hardening settings
-- [ ] Validate fail2ban is running and configured
-- [ ] Check OS patch levels
-- [ ] Verify container security settings
+### 5.1 GDPR Compliance
+- Implement data subject rights (access, deletion, portability)
+- Conduct regular data protection impact assessments
+- Maintain records of processing activities
+- Implement appropriate technical and organizational measures
 
-### 6.2 Post-deployment
-- [ ] Test security configurations
-- [ ] Verify logging and monitoring setup
-- [ ] Run vulnerability scan
-- [ ] Document security configuration
+### 5.2 HIPAA Compliance (if handling PHI)
+- Implement encryption at rest and in transit
+- Conduct regular risk assessments
+- Implement access controls and audit logging
+- Sign business associate agreements
 
-## 7. Compliance Requirements
+## 6. Verification Checklist
 
-### 7.1 GDPR/Privacy Compliance
-- Data encryption at rest and in transit
-- Access controls and audit logging
-- Data retention policies
-- Right to be forgotten implementation
+### Pre-Deployment Verification
+- [ ] OS patches applied and verified
+- [ ] Firewall rules configured and tested
+- [ ] SSH hardening implemented and verified
+- [ ] Container security policies applied
+- [ ] Rate limiting configured and tested
+- [ ] Secret management validated
+- [ ] TLS configuration verified
+- [ ] Logging and monitoring enabled
 
-### 7.2 ISO 27001 Controls
-- A.9.2.3: Manage privileged access rights
-- A.12.4.1: Event logging
-- A.13.1.1: Network controls
-- A.14.2.1: Secure development policy
+### Post-Deployment Verification
+- [ ] Security scanning completed with no high/critical findings
+- [ ] Penetration testing performed
+- [ ] Vulnerability assessment completed
+- [ ] Incident response procedures tested
+- [ ] Backup and restore procedures validated
 
-## 8. Verification Commands
+## 7. Tools and References
+
+### Security Scanning Tools
+- `pip-audit` - Python dependency vulnerability scanning
+- `bandit` - Python static security analysis
+- `gitleaks` - Secret detection in source code
+- `trivy` - Container image vulnerability scanning
+- `nmap` - Network security scanning
+
+### Compliance Frameworks
+- NIST SP 800-53 - Security and Privacy Controls
+- CIS Benchmarks - Secure configuration guidelines
+- OWASP Top 10 - Web application security risks
+- ISO 27001 - Information security management
+
+## 8. Emergency Response
+
+### Immediate Actions for Security Incidents
+1. Isolate affected systems
+2. Preserve evidence and logs
+3. Notify incident response team
+4. Contain the breach
+5. Eradicate threat
+6. Recover systems
+7. Post-incident review
+
+### Contact Information
+- Security Team: security@yourcompany.com
+- 24/7 Incident Response: +1-555-SECURITY
+- SOC Operations: soc@yourcompany.com
+
+## Appendix A: Sample Hardening Script
 
 ```bash
-# Check firewall status
-sudo ufw status verbose
+#!/bin/bash
+# Server hardening script for LMS production deployment
 
-# Verify SSH configuration
-sudo sshd -t
+set -e
 
-# Check fail2ban status
-sudo systemctl status fail2ban
-sudo fail2ban-client status
+echo "Starting server hardening..."
 
-# Check running processes
-ps aux | grep -E "(postgres|redis|uvicorn)"
+# 1. Update system
+apt-get update && apt-get upgrade -y
 
-# Verify file permissions
-find /app -type f ! -perm 644 -exec ls -la {} \;
-find /app -type d ! -perm 755 -exec ls -la {} \;
+# 2. Configure firewall
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow 2222/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw allow from 10.0.0.0/8 to any port 6379 proto tcp
+ufw allow from 10.0.0.0/8 to any port 5432 proto tcp
+ufw enable
+
+# 3. Harden SSH
+sed -i 's/^#*PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+sed -i 's/^#*Port.*/Port 2222/' /etc/ssh/sshd_config
+systemctl restart ssh
+
+# 4. Create non-root user for application
+useradd -r -s /usr/sbin/nologin lms-app
+
+# 5. Set file permissions
+chown -R root:root /etc/lms/
+chmod 600 /etc/lms/*.conf
+chmod 644 /etc/lms/*.yaml
+
+echo "Server hardening completed successfully."
 ```
 
-## 9. Emergency Response
-
-### 9.1 Incident Response Plan
-- Immediate containment procedures
-- Forensic data collection
-- Communication protocols
-- Recovery procedures
-
-### 9.2 Backup Security
-- Encrypt backup files
-- Store backups offsite
-- Test restore procedures quarterly
-- Verify backup integrity
-
-## 10. Documentation Requirements
-
-- Server hardening checklist completed and signed off
-- Security configuration documentation
-- Incident response procedures
-- Regular security audit reports
+**Note**: Adapt this script for your specific environment and requirements.

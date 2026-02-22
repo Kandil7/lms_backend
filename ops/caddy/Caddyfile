@@ -1,8 +1,68 @@
 {
 	email {$LETSENCRYPT_EMAIL}
+	# Enable automatic HTTPS with Let's Encrypt
+	acme_ca https://acme-v02.api.letsencrypt.org/directory
+	# Use modern TLS settings
+	tls internal
 }
 
 {$APP_DOMAIN} {
+	# Enable compression
 	encode zstd gzip
+
+	# Security headers
+	header {
+		# Prevent MIME type sniffing
+		X-Content-Type-Options nosniff
+		
+		# Prevent clickjacking
+		X-Frame-Options DENY
+		
+		# XSS protection
+		X-XSS-Protection "1; mode=block"
+		
+		# Content Security Policy (restrictive but flexible)
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://*.sentry.io; frame-src 'self'"
+		
+		# Strict Transport Security - 1 year (31536000 seconds)
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		
+		# Referrer policy
+		Referrer-Policy strict-origin-when-cross-origin
+		
+		# Feature policy (deprecated but some browsers still use)
+		Feature-Policy "geolocation 'none'; microphone 'none'; camera 'none'"
+	}
+
+	# Rate limiting for API endpoints
+	rate_limit /api/* {
+		interval 1m
+		burst 100
+	}
+
+	# Reverse proxy to API
 	reverse_proxy api:8000
+
+	# Error pages
+	errors {
+		404 {
+			rewrite /404.html
+		}
+		500 {
+			rewrite /500.html
+		}
+	}
+
+	# Health check endpoint (bypass security headers for health checks)
+	handle /api/v1/ready {
+		# Allow health check without security headers
+		header -X-Content-Type-Options
+		header -X-Frame-Options
+		header -X-XSS-Protection
+		header -Content-Security-Policy
+		header -Strict-Transport-Security
+		header -Referrer-Policy
+		header -Feature-Policy
+		reverse_proxy api:8000
+	}
 }

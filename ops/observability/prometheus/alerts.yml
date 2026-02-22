@@ -45,3 +45,113 @@ groups:
           summary: "Rate limit spike detected"
           description: "429 responses are above 2 req/s over 5m on {{ $labels.job }}."
 
+  - name: lms-database-alerts
+    rules:
+      - alert: LMSDBConnectionHigh
+        expr: postgresql_connections{datname="lms"} / postgresql_max_connections > 0.95
+        for: 5m
+        labels:
+          severity: critical
+          service: lms-db
+        annotations:
+          summary: "Database connection pool exhausted"
+          description: "Connection usage is {{ $value | printf \"%.2f\" }}%"
+
+      - alert: LMSDBSlowQueries
+        expr: rate(postgresql_query_duration_seconds_count{datname="lms"}[5m]) > 10
+        for: 10m
+        labels:
+          severity: warning
+          service: lms-db
+        annotations:
+          summary: "High number of slow queries"
+          description: "{{ $value }} slow queries per minute"
+
+  - name: lms-cache-alerts
+    rules:
+      - alert: LMSCacheHitRatioLow
+        expr: redis_cache_hit_ratio < 0.8
+        for: 10m
+        labels:
+          severity: warning
+          service: lms-cache
+        annotations:
+          summary: "Cache hit ratio below 80%"
+          description: "Cache hit ratio is {{ $value | printf \"%.2f\" }}"
+
+      - alert: LMSRedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: critical
+          service: lms-cache
+        annotations:
+          summary: "Redis memory usage above 90%"
+          description: "Memory usage is {{ $value | printf \"%.2f\" }}%"
+
+  - name: lms-celery-alerts
+    rules:
+      - alert: LMSCeleryQueueHigh
+        expr: celery_queue_length > 1000
+        for: 5m
+        labels:
+          severity: critical
+          service: lms-celery
+        annotations:
+          summary: "Celery queue depth too high"
+          description: "Queue depth is {{ $value }} tasks"
+
+      - alert: LMSCeleryWorkerDown
+        expr: celery_workers_up == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: lms-celery
+        annotations:
+          summary: "All Celery workers are down"
+          description: "No Celery workers are reporting as up"
+
+  - name: lms-security-alerts
+    rules:
+      - alert: LMSFailedLoginHigh
+        expr: sum(rate(auth_failed_login_attempts_total[5m])) > 50
+        for: 5m
+        labels:
+          severity: warning
+          service: lms-auth
+        annotations:
+          summary: "High failed login attempts"
+          description: "{{ $value }} failed login attempts in last 5 minutes"
+
+      - alert: LMSAccountLockoutHigh
+        expr: sum(rate(auth_account_lockouts_total[5m])) > 10
+        for: 10m
+        labels:
+          severity: critical
+          service: lms-auth
+        annotations:
+          summary: "High account lockouts"
+          description: "{{ $value }} account lockouts" 
+
+  - name: lms-user-engagement-alerts
+    rules:
+      - alert: LMSUserDropoutHigh
+        expr: lms_student_dropout_rate > 0.2
+        for: 1h
+        labels:
+          severity: warning
+          service: lms-analytics
+        annotations:
+          summary: "Student dropout rate above 20%"
+          description: "Dropout rate is {{ $value | printf \"%.2f\" }}%"
+
+      - alert: LMSCourseCompletionLow
+        expr: lms_course_completion_rate < 0.6
+        for: 24h
+        labels:
+          severity: warning
+          service: lms-analytics
+        annotations:
+          summary: "Course completion rate below 60%"
+          description: "Completion rate is {{ $value | printf \"%.2f\" }}%"
+
