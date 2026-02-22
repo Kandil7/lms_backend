@@ -177,7 +177,7 @@ run_vm_deploy() {
     chmod 644 "${env_file}"
 
     log "Running migrations"
-    "${COMPOSE_CMD[@]}" -f "${compose_file}" run --rm migrate
+    "${COMPOSE_CMD[@]}" -f "${compose_file}" run --build --rm migrate
 
     log "Starting production services"
     "${COMPOSE_CMD[@]}" -f "${compose_file}" up -d --build --remove-orphans redis api celery-worker celery-beat caddy
