@@ -13,9 +13,36 @@ logger = logging.getLogger("app.tasks.email")
 EMAIL_AUTORETRY_EXCEPTIONS = (smtplib.SMTPException, TimeoutError, OSError)
 
 
+def _effective_email_from() -> str:
+    """
+    Resolve sender address for SMTP providers.
+
+    For local/dev setups using Resend SMTP, the default lms.local sender
+    is rejected. Fall back to Resend's test sender in non-production.
+    """
+    configured = (settings.EMAIL_FROM or "").strip() or "no-reply@lms.local"
+    smtp_host = (settings.SMTP_HOST or "").strip().lower()
+
+    if (
+        settings.ENVIRONMENT != "production"
+        and smtp_host == "smtp.resend.com"
+        and configured.endswith("@lms.local")
+    ):
+        fallback = "onboarding@resend.dev"
+        logger.warning(
+            "EMAIL_FROM '%s' is not valid for Resend SMTP in non-production. "
+            "Falling back to '%s'. Configure EMAIL_FROM to a verified sender for production.",
+            configured,
+            fallback,
+        )
+        return fallback
+
+    return configured
+
+
 def _send_email(*, to_email: str, subject: str, body: str) -> str:
     message = EmailMessage()
-    message["From"] = settings.EMAIL_FROM
+    message["From"] = _effective_email_from()
     message["To"] = to_email
     message["Subject"] = subject
     message.set_content(body)

@@ -1,13 +1,20 @@
 services:
   migrate:
     build: .
-    command: alembic upgrade head
+    command:
+      - /bin/sh
+      - -c
+      - >
+        python scripts/wait_for_db.py &&
+        alembic upgrade head
     env_file:
       - .env
     environment:
       ENVIRONMENT: production
       DEBUG: "false"
       DATABASE_URL: ${PROD_DATABASE_URL}
+      DB_WAIT_TIMEOUT_SECONDS: ${DB_WAIT_TIMEOUT_SECONDS:-180}
+      DB_WAIT_INTERVAL_SECONDS: ${DB_WAIT_INTERVAL_SECONDS:-2}
       REDIS_URL: ${PROD_REDIS_URL:-redis://redis:6379/0}
       CELERY_BROKER_URL: ${PROD_CELERY_BROKER_URL:-redis://redis:6379/1}
       CELERY_RESULT_BACKEND: ${PROD_CELERY_RESULT_BACKEND:-redis://redis:6379/2}
@@ -49,8 +56,9 @@ services:
       test:
         - CMD-SHELL
         - >
-          python -c "import urllib.request,sys;
-          sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/v1/ready', timeout=3).status == 200 else 1)"
+          python -c "import os,urllib.request,sys;
+          req=urllib.request.Request('http://localhost:8000/api/v1/ready', headers={'Host': os.getenv('APP_DOMAIN', 'localhost')});
+          sys.exit(0 if urllib.request.urlopen(req, timeout=3).status == 200 else 1)"
       interval: 15s
       timeout: 5s
       retries: 5

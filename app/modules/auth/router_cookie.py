@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -150,11 +150,15 @@ def verify_mfa_login(
     """Verify MFA login and set refresh token in HTTP-only cookie."""
     auth_service = CookieBasedAuthService(db)
     user, tokens = auth_service.verify_mfa_login(payload.challenge_token, payload.code)
-    
+
     # Set refresh token in HTTP-only cookie
     auth_service._set_refresh_token_cookie(response, tokens.refresh_token)
-    
-    return AuthResponseWithCookies(user=UserResponse.model_validate(user), tokens=tokens)
+    cookie_tokens = auth_service._build_cookie_token_response(
+        access_token=tokens.access_token,
+        user=user,
+    )
+
+    return AuthResponseWithCookies(user=UserResponse.model_validate(user), tokens=cookie_tokens)
 
 
 @router.post("/refresh", response_model=TokenResponseWithCookies)
@@ -163,13 +167,18 @@ def refresh_tokens(
     response: Response,
     db: Session = Depends(get_db),
     access_token: str | None = Depends(optional_oauth2_scheme),
+    payload: RefreshTokenRequest | None = Body(default=None),
 ) -> TokenResponseWithCookies:
     """Refresh tokens endpoint that uses HTTP-only cookie for refresh token."""
     auth_service = CookieBasedAuthService(db)
-    
-    # Get refresh token from cookie (since we're using cookie-based auth)
-    tokens = auth_service.refresh_tokens_with_cookies(request, response, previous_access_token=access_token)
-    
+
+    tokens = auth_service.refresh_tokens_with_cookies(
+        request,
+        response,
+        previous_access_token=access_token,
+        fallback_refresh_token=payload.refresh_token if payload else None,
+    )
+
     return tokens
 
 
@@ -177,13 +186,18 @@ def refresh_tokens(
 def logout(
     request: Request,
     response: Response,
-    payload: LogoutRequest,
+    payload: LogoutRequest | None = Body(default=None),
     db: Session = Depends(get_db),
     access_token: str = Depends(oauth2_scheme),
 ) -> None:
     """Logout endpoint that deletes the refresh token cookie."""
     auth_service = CookieBasedAuthService(db)
-    auth_service.logout_with_cookies(response, access_token=access_token)
+    auth_service.logout_with_cookies(
+        request,
+        response,
+        access_token=access_token,
+        fallback_refresh_token=payload.refresh_token if payload else None,
+    )
 
 
 # Keep other endpoints unchanged for now
