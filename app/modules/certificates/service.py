@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.exceptions import ForbiddenException, NotFoundException
 from app.core.permissions import Role
+from app.core.webhooks import emit_webhook_event
 from app.modules.certificates.models import Certificate
 from app.modules.courses.models.course import Course
 from app.modules.users.models import User
@@ -66,6 +67,17 @@ class CertificateService:
 
         if commit:
             self.db.commit()
+            emit_webhook_event(
+                "certificate.issued",
+                {
+                    "certificate_id": str(certificate.id),
+                    "certificate_number": certificate.certificate_number,
+                    "enrollment_id": str(certificate.enrollment_id),
+                    "student_id": str(certificate.student_id),
+                    "course_id": str(certificate.course_id),
+                    "issued_at": certificate.issued_at.isoformat() if certificate.issued_at else None,
+                },
+            )
 
         return certificate
 

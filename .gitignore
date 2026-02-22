@@ -14,12 +14,18 @@ htmlcov/
 .env.*
 !.env.example
 !.env.production.example
+!.env.staging.example
+!.env.observability.example
 /uploads/
 /certificates/
 celerybeat-schedule*
+/backups/
+run_*trace*.log
+run_*debug*.log
 dist/
 build/
 *.egg-info/
 .idea/
 .vscode/
+.tmp/
 

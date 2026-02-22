@@ -3,6 +3,7 @@ from enum import Enum
 
 from fastapi import APIRouter, Response, status
 
+from app.core.config import settings
 from app.core.database import check_database_health
 from app.core.health import check_redis_health
 
@@ -43,10 +44,17 @@ def _safe_include(
         include_router = getattr(module, attr_name)
         router.include_router(include_router, prefix=prefix, tags=tags)
     except Exception as exc:  # pragma: no cover - startup best effort
+        if settings.STRICT_ROUTER_IMPORTS_EFFECTIVE:
+            logger.exception("Router '%s' failed during startup and strict mode is enabled.", import_path)
+            raise RuntimeError(f"Router '{import_path}' failed to load") from exc
         logger.warning("Router '%s' not loaded: %s", import_path, exc)
 
 
-_safe_include(api_router, "app.modules.auth.router:router")
+# Use cookie-based auth router in production for enhanced security
+if settings.ENVIRONMENT == "production":
+    _safe_include(api_router, "app.modules.auth.router_cookie:router")
+else:
+    _safe_include(api_router, "app.modules.auth.router:router")
 _safe_include(api_router, "app.modules.users.router:router")
 _safe_include(api_router, "app.modules.courses.routers.course_router:router")
 _safe_include(api_router, "app.modules.courses.routers.lesson_router:router")

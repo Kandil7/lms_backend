@@ -188,12 +188,12 @@ Settings are defined in `app/core/config.py` and loaded from `.env`.
 | `CERTIFICATES_DIR` | Local certificates folder | `certificates` |
 | `MAX_UPLOAD_MB` | Upload size limit | `100` |
 | `ALLOWED_UPLOAD_EXTENSIONS` | Allowed extensions (CSV) | `mp4,avi,mov,pdf,doc,docx,jpg,jpeg,png` |
-| `FILE_STORAGE_PROVIDER` | `local` or `s3` | `local` |
+| `FILE_STORAGE_PROVIDER` | `local` or `azure` | `local` |
 | `FILE_DOWNLOAD_URL_EXPIRE_SECONDS` | Signed URL TTL | `900` |
 
-### Optional S3
+### Optional Azure Blob
 
-`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `AWS_S3_BUCKET`, `AWS_S3_BUCKET_URL`
+`AZURE_STORAGE_CONNECTION_STRING`, `AZURE_STORAGE_ACCOUNT_NAME`, `AZURE_STORAGE_ACCOUNT_KEY`, `AZURE_STORAGE_ACCOUNT_URL`, `AZURE_STORAGE_CONTAINER_NAME`, `AZURE_STORAGE_CONTAINER_URL`
 
 ## 8. Authentication and Authorization
 
@@ -373,7 +373,7 @@ Defined task stubs:
 
 ### File Storage
 
-- Storage provider can be `local` or `s3`.
+- Storage provider can be `local` or `azure`.
 - Uploaded file metadata is stored in `uploaded_files`.
 - Static local files are mounted by FastAPI:
   - `/uploads`
@@ -457,7 +457,6 @@ docker compose logs --tail=200 api
 - Restrict `CORS_ORIGINS` and `TRUSTED_HOSTS`.
 - Use managed PostgreSQL/Redis.
 - Configure backups and monitoring.
-- Configure real S3 credentials if using `FILE_STORAGE_PROVIDER=s3`.
+- Configure real Azure Blob credentials if using `FILE_STORAGE_PROVIDER=azure`.
 - Run CI tests before merge.
 - Keep migrations and application version in sync.
-

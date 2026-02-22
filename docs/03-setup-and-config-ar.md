@@ -111,7 +111,7 @@ cp .env.example .env
 - `CERTIFICATES_DIR`
 - `MAX_UPLOAD_MB`
 - `ALLOWED_UPLOAD_EXTENSIONS`
-- `FILE_STORAGE_PROVIDER` (`local` أو `s3`)
+- `FILE_STORAGE_PROVIDER` (`local` أو `azure`)
 - `FILE_DOWNLOAD_URL_EXPIRE_SECONDS`
 
 ## 6. الفرق بين Local وDocker Networking
@@ -152,4 +152,3 @@ python scripts/seed_demo_data.py
 2. migration غير مطبقة.
 3. DATABASE_URL أو REDIS_URL غير مناسبين لطريقة التشغيل.
 4. SECRET_KEY ضعيف أو placeholder.
-

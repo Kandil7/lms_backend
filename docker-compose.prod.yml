@@ -7,18 +7,16 @@ services:
     environment:
       ENVIRONMENT: production
       DEBUG: "false"
-      DATABASE_URL: ${PROD_DATABASE_URL:-postgresql+psycopg2://lms:${POSTGRES_PASSWORD:-lms}@db:5432/lms}
+      DATABASE_URL: ${PROD_DATABASE_URL}
       REDIS_URL: ${PROD_REDIS_URL:-redis://redis:6379/0}
       CELERY_BROKER_URL: ${PROD_CELERY_BROKER_URL:-redis://redis:6379/1}
       CELERY_RESULT_BACKEND: ${PROD_CELERY_RESULT_BACKEND:-redis://redis:6379/2}
       TASKS_FORCE_INLINE: "false"
-    depends_on:
-      db:
-        condition: service_healthy
     restart: "no"
 
   api:
     build: .
+    user: "0:0"
     command:
       - /bin/sh
       - -c
@@ -31,19 +29,17 @@ services:
     environment:
       ENVIRONMENT: production
       DEBUG: "false"
-      DATABASE_URL: ${PROD_DATABASE_URL:-postgresql+psycopg2://lms:${POSTGRES_PASSWORD:-lms}@db:5432/lms}
+      DATABASE_URL: ${PROD_DATABASE_URL}
       REDIS_URL: ${PROD_REDIS_URL:-redis://redis:6379/0}
       CELERY_BROKER_URL: ${PROD_CELERY_BROKER_URL:-redis://redis:6379/1}
       CELERY_RESULT_BACKEND: ${PROD_CELERY_RESULT_BACKEND:-redis://redis:6379/2}
       TASKS_FORCE_INLINE: "false"
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     volumes:
       - uploads_data:/app/uploads
       - certificates_data:/app/certificates
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
       migrate:
@@ -62,6 +58,7 @@ services:
 
   celery-worker:
     build: .
+    user: "0:0"
     command:
       - /bin/sh
       - -c
@@ -74,7 +71,7 @@ services:
     environment:
       ENVIRONMENT: production
       DEBUG: "false"
-      DATABASE_URL: ${PROD_DATABASE_URL:-postgresql+psycopg2://lms:${POSTGRES_PASSWORD:-lms}@db:5432/lms}
+      DATABASE_URL: ${PROD_DATABASE_URL}
       REDIS_URL: ${PROD_REDIS_URL:-redis://redis:6379/0}
       CELERY_BROKER_URL: ${PROD_CELERY_BROKER_URL:-redis://redis:6379/1}
       CELERY_RESULT_BACKEND: ${PROD_CELERY_RESULT_BACKEND:-redis://redis:6379/2}
@@ -83,8 +80,6 @@ services:
       - uploads_data:/app/uploads
       - certificates_data:/app/certificates
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
       migrate:
@@ -93,6 +88,7 @@ services:
 
   celery-beat:
     build: .
+    user: "0:0"
     command:
       - /bin/sh
       - -c
@@ -105,7 +101,7 @@ services:
     environment:
       ENVIRONMENT: production
       DEBUG: "false"
-      DATABASE_URL: ${PROD_DATABASE_URL:-postgresql+psycopg2://lms:${POSTGRES_PASSWORD:-lms}@db:5432/lms}
+      DATABASE_URL: ${PROD_DATABASE_URL}
       REDIS_URL: ${PROD_REDIS_URL:-redis://redis:6379/0}
       CELERY_BROKER_URL: ${PROD_CELERY_BROKER_URL:-redis://redis:6379/1}
       CELERY_RESULT_BACKEND: ${PROD_CELERY_RESULT_BACKEND:-redis://redis:6379/2}
@@ -115,16 +111,44 @@ services:
       - certificates_data:/app/certificates
       - celerybeat_data:/tmp
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
     restart: unless-stopped
 
-  db:
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./ops/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save 60 1 --loglevel warning
+    expose:
+      - "6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  postgres-local:
     image: postgres:16-alpine
+    profiles: ["local-db"]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-lms}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lms}
@@ -140,20 +164,10 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
-    command: redis-server --save 60 1 --loglevel warning
-    expose:
-      - "6379"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-
 volumes:
   postgres_data:
   uploads_data:
   certificates_data:
   celerybeat_data:
+  caddy_data:
+  caddy_config:

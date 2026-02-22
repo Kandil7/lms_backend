@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.exceptions import ForbiddenException, NotFoundException
 from app.modules.files.models import UploadedFile
-from app.modules.files.storage import LocalStorageBackend, S3StorageBackend
+from app.modules.files.storage import AzureBlobStorageBackend, LocalStorageBackend
 from app.modules.files.storage.base import StorageBackend
 from app.utils.validators import ensure_allowed_extension, normalize_storage_folder
 
@@ -33,7 +33,25 @@ class FileService:
         ext = ensure_allowed_extension(file.filename or "", settings.ALLOWED_UPLOAD_EXTENSIONS)
         safe_filename = f"{uuid4().hex}.{ext}"
 
-        mime_type = file.content_type or "application/octet-stream"
+        # Server-side MIME type validation (security critical)
+        from app.utils.mime_utils import validate_file_content_type
+        
+        # Validate file content against expected extension and allowed extensions
+        if not validate_file_content_type(content, ext, settings.ALLOWED_UPLOAD_EXTENSIONS):
+            raise ValueError(f"File content does not match expected extension '{ext}'. Possible spoofing attempt.")
+
+        # Get MIME type from content for accurate detection
+        from app.utils.mime_utils import detect_mime_type_from_content
+        mime_type, detected_ext = detect_mime_type_from_content(content)
+        
+        # Use detected extension if it's more reliable than client-provided
+        if detected_ext and detected_ext.lower() != ext.lower():
+            # Only override if it's a common acceptable mismatch
+            from app.utils.mime_utils import _is_extension_mismatch_allowed
+            if _is_extension_mismatch_allowed(ext, detected_ext):
+                ext = detected_ext
+                safe_filename = f"{uuid4().hex}.{ext}"
+
         file_type = self._detect_file_type(mime_type, ext)
         backend = self._get_backend(self.default_provider)
 
@@ -110,16 +128,17 @@ class FileService:
         }
 
         try:
-            if settings.AWS_S3_BUCKET:
-                backends["s3"] = S3StorageBackend(
-                    bucket=settings.AWS_S3_BUCKET,
-                    region=settings.AWS_REGION,
-                    bucket_url=settings.AWS_S3_BUCKET_URL,
-                    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            if settings.AZURE_STORAGE_CONTAINER_NAME:
+                backends["azure"] = AzureBlobStorageBackend(
+                    container_name=settings.AZURE_STORAGE_CONTAINER_NAME,
+                    connection_string=settings.AZURE_STORAGE_CONNECTION_STRING,
+                    account_url=settings.AZURE_STORAGE_ACCOUNT_URL,
+                    account_name=settings.AZURE_STORAGE_ACCOUNT_NAME,
+                    account_key=settings.AZURE_STORAGE_ACCOUNT_KEY,
+                    container_url=settings.AZURE_STORAGE_CONTAINER_URL,
                 )
         except Exception as exc:
-            logger.warning("S3 backend is not available, falling back to local storage: %s", exc)
+            logger.warning("Azure storage backend is not available, falling back to local storage: %s", exc)
 
         return backends
 

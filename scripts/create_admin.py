@@ -15,11 +15,14 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app.core.database import session_scope
+from app.core.model_registry import load_all_models
 from app.modules.users.repositories.user_repository import UserRepository
 from app.core.security import hash_password
 
 
 def main() -> None:
+    load_all_models()
+
     email = os.getenv("ADMIN_EMAIL", "admin@example.com")
     password = os.getenv("ADMIN_PASSWORD", "AdminPass123")
     full_name = os.getenv("ADMIN_FULL_NAME", "System Admin")

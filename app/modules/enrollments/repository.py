@@ -19,7 +19,6 @@ class EnrollmentRepository:
     def get_by_id_for_update(self, enrollment_id: UUID) -> Enrollment | None:
         stmt = (
             select(Enrollment)
-            .options(joinedload(Enrollment.course))
             .where(Enrollment.id == enrollment_id)
             .with_for_update()
         )

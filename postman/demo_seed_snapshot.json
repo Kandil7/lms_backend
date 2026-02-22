@@ -1,0 +1,99 @@
+{
+  "generated_at": "2026-02-18T16:13:17.285527+00:00",
+  "credentials": {
+    "admin": {
+      "email": "admin@lms.local",
+      "password": "AdminPass123",
+      "full_name": "Demo Admin",
+      "role": "admin"
+    },
+    "instructor": {
+      "email": "instructor@lms.local",
+      "password": "InstructorPass123",
+      "full_name": "Demo Instructor",
+      "role": "instructor"
+    },
+    "student": {
+      "email": "student@lms.local",
+      "password": "StudentPass123",
+      "full_name": "Demo Student",
+      "role": "student"
+    }
+  },
+  "users": {
+    "admin": {
+      "id": "29833e1c-7ae5-4630-85fa-9402418eefc3",
+      "email": "admin@lms.local",
+      "full_name": "Demo Admin"
+    },
+    "instructor": {
+      "id": "0e26385f-ad32-499f-9a50-1c23b42805ee",
+      "email": "instructor@lms.local",
+      "full_name": "Demo Instructor"
+    },
+    "student": {
+      "id": "ad895501-c586-4982-bca7-cc3306a873f4",
+      "email": "student@lms.local",
+      "full_name": "Demo Student"
+    }
+  },
+  "course": {
+    "id": "afd71460-02de-4be1-8687-7ce35dbf77f9",
+    "slug": "python-lms-demo-course",
+    "title": "Python LMS Demo Course"
+  },
+  "lessons": [
+    {
+      "id": "ecb8a575-9925-4296-9b27-2fc124f67796",
+      "slug": "welcome-overview",
+      "title": "Welcome and Overview",
+      "lesson_type": "video"
+    },
+    {
+      "id": "8137c927-7a7a-4950-bba5-70a6f263eef6",
+      "slug": "python-basics",
+      "title": "Python Basics",
+      "lesson_type": "text"
+    },
+    {
+      "id": "c343da53-7215-424e-ade7-905eff3336aa",
+      "slug": "final-knowledge-check",
+      "title": "Final Knowledge Check",
+      "lesson_type": "quiz"
+    }
+  ],
+  "quiz": {
+    "id": "1d646176-1e8e-46b9-abd4-48d78af2ad4b",
+    "lesson_id": "c343da53-7215-424e-ade7-905eff3336aa",
+    "title": "Final Quiz"
+  },
+  "questions": [
+    {
+      "id": "4881de87-651a-4d0e-b16e-fb464c09b487",
+      "question_type": "multiple_choice",
+      "question_text": "What does LMS stand for?"
+    },
+    {
+      "id": "3fbf18d1-a4c7-4453-8040-5eccd55ffa8f",
+      "question_type": "short_answer",
+      "question_text": "Write the HTTP method used to fetch resources."
+    }
+  ],
+  "enrollment": {
+    "id": "d2c3115d-8110-49b2-ade5-503e27a201cd",
+    "student_id": "ad895501-c586-4982-bca7-cc3306a873f4",
+    "course_id": "afd71460-02de-4be1-8687-7ce35dbf77f9",
+    "status": "completed"
+  },
+  "attempt": {
+    "id": "b84ab224-0596-4b9b-9611-cbfca8e8f653",
+    "attempt_number": 1,
+    "status": "graded"
+  },
+  "certificate": {
+    "id": "def118d3-03cf-4246-aed8-530324c15385",
+    "certificate_number": "CERT-20260217-974E1F",
+    "is_revoked": false,
+    "pdf_path": "certificates/CERT-20260217-974E1F.pdf"
+  }
+}

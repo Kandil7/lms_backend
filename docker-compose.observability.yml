@@ -1,0 +1,60 @@
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: lms-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    volumes:
+      - ./ops/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./ops/observability/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: lms-alertmanager
+    env_file:
+      - .env.observability
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --config.expand-env
+    volumes:
+      - ./ops/observability/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    ports:
+      - "9093:9093"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.2.2
+    container_name: lms-grafana
+    env_file:
+      - .env.observability
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./ops/observability/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./ops/observability/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./ops/observability/grafana/dashboards:/etc/grafana/provisioning/dashboards/lms:ro
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+  alertmanager_data:
+  grafana_data:
+

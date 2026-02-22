@@ -187,7 +187,7 @@ Endpoints:
 
 ملاحظات:
 
-- يدعم Local/S3 storage provider.
+- يدعم Local/Azure Blob storage provider.
 - metadata تحفظ في جدول `uploaded_files`.
 
 ## 9. Module: Certificates (`app/modules/certificates`)
@@ -229,4 +229,3 @@ Endpoints:
 3. أضف repository method لو في استعلامات جديدة.
 4. أضف endpoint في router مع dependencies المناسبة.
 5. أضف tests تغطي success + authorization + validation cases.
-

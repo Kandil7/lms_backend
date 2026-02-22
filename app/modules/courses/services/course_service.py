@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import ForbiddenException, NotFoundException
 from app.core.permissions import Role
+from app.core.webhooks import emit_webhook_event
 from app.modules.courses.repositories.course_repository import CourseRepository
 from app.modules.courses.schemas.course import CourseCreate, CourseUpdate
 from app.utils.pagination import PageParams, paginate
@@ -109,6 +110,14 @@ class CourseService:
 
         course = self.repo.update(course, is_published=True)
         self._commit()
+        emit_webhook_event(
+            "course.published",
+            {
+                "course_id": str(course.id),
+                "instructor_id": str(course.instructor_id),
+                "published_at": course.updated_at.isoformat(),
+            },
+        )
         return course
 
     def delete_course(self, course_id: UUID, current_user) -> None:

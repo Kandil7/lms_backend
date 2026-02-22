@@ -11,8 +11,8 @@ from app.core.exceptions import ForbiddenException, UnauthorizedException
 from app.core.permissions import Permission, Role, has_permission
 from app.core.security import TokenType, decode_token
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/login")
-optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/login", auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/token")
+optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/token", auto_error=False)
 
 
 def get_pagination(

@@ -12,6 +12,7 @@ from app.core.cache import get_app_cache
 from app.core.config import settings
 from app.core.exceptions import ForbiddenException, NotFoundException
 from app.core.permissions import Role
+from app.core.webhooks import emit_webhook_event
 from app.modules.courses.repositories.lesson_repository import LessonRepository
 from app.modules.enrollments.repository import EnrollmentRepository
 from app.modules.enrollments.service import EnrollmentService
@@ -173,6 +174,18 @@ class AttemptService:
 
         self.db.commit()
         self.db.refresh(attempt)
+        emit_webhook_event(
+            "quiz.submitted",
+            {
+                "attempt_id": str(attempt.id),
+                "quiz_id": str(quiz.id),
+                "enrollment_id": str(enrollment.id),
+                "student_id": str(current_user.id),
+                "percentage": str(attempt.percentage) if attempt.percentage is not None else None,
+                "is_passed": attempt.is_passed,
+                "submitted_at": attempt.submitted_at.isoformat() if attempt.submitted_at else None,
+            },
+        )
         logger.info(
             "quiz_attempt_submitted quiz_id=%s attempt_id=%s enrollment_id=%s student_id=%s percentage=%s passed=%s",
             quiz.id,

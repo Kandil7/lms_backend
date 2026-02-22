@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -19,6 +20,7 @@ from app.modules.auth.schemas import (
     MfaLoginVerifyRequest,
     RefreshTokenRequest,
     ResetPasswordRequest,
+    TokenResponse,
     VerifyEmailConfirmRequest,
     VerifyEmailRequest,
 )
@@ -81,11 +83,18 @@ def register(payload: UserCreate, db: Session = Depends(get_db)) -> AuthResponse
 
 
 @router.post("/login", response_model=LoginResponse)
-def login(payload: UserLogin, db: Session = Depends(get_db)) -> LoginResponse:
+def login(
+    request: Request,
+    payload: UserLogin,
+    db: Session = Depends(get_db)
+) -> LoginResponse:
     auth_service = AuthService(db)
+    
+    # Get client IP address for account lockout
+    ip_address = request.client.host if request.client else "127.0.0.1"
 
     try:
-        user, tokens, mfa_challenge = auth_service.login(payload.email, payload.password)
+        user, tokens, mfa_challenge = auth_service.login(payload.email, payload.password, ip_address=ip_address)
     except InvalidCredentialsError as exc:
         raise UnauthorizedException(str(exc)) from exc
 
@@ -103,6 +112,24 @@ def login(payload: UserLogin, db: Session = Depends(get_db)) -> LoginResponse:
         )
 
     return AuthResponse(user=UserResponse.model_validate(user), tokens=tokens)
+
+
+@router.post("/token", response_model=TokenResponse, summary="OAuth2 token endpoint for Swagger Authorize")
+def oauth_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)) -> TokenResponse:
+    auth_service = AuthService(db)
+
+    try:
+        user, tokens, mfa_challenge = auth_service.login(form_data.username, form_data.password)
+    except InvalidCredentialsError as exc:
+        raise UnauthorizedException(str(exc)) from exc
+
+    if mfa_challenge:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="MFA is enabled for this account. Use /api/v1/auth/login then /api/v1/auth/login/mfa.",
+        )
+
+    return tokens
 
 
 @router.post("/login/mfa", response_model=AuthResponse)

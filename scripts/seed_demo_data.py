@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 from typing import Any
 from datetime import UTC, datetime
+
+from sqlalchemy import select
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -12,6 +15,8 @@ if str(ROOT) not in sys.path:
 
 from app.core.database import Base, engine, session_scope
 from app.core.security import hash_password
+from app.modules.certificates.models import Certificate
+from app.modules.certificates.service import CertificateService
 from app.modules.courses.repositories.course_repository import CourseRepository
 from app.modules.courses.repositories.lesson_repository import LessonRepository
 from app.modules.enrollments.repository import EnrollmentRepository
@@ -284,6 +289,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--create-tables", action="store_true", help="Create tables before seeding")
     parser.add_argument("--reset-passwords", action="store_true", help="Reset demo user passwords if they exist")
     parser.add_argument("--skip-attempt", action="store_true", help="Skip creating quiz attempt")
+    parser.add_argument(
+        "--json-output",
+        type=Path,
+        default=None,
+        help="Optional output path for seed snapshot JSON (relative to repo root if not absolute)",
+    )
     return parser.parse_args()
 
 
@@ -333,6 +344,89 @@ def main() -> None:
             )
 
         db.commit()
+
+        attempts = attempt_repo.list_by_enrollment(enrollment.id, quiz.id)
+        latest_attempt = attempts[-1] if attempts else None
+        questions = question_repo.list_by_quiz(quiz.id)
+        db.refresh(enrollment)
+        certificate = db.scalar(select(Certificate).where(Certificate.enrollment_id == enrollment.id))
+        if enrollment.status == "completed" and certificate is None:
+            certificate = CertificateService(db).issue_for_enrollment(enrollment, commit=False)
+
+        db.commit()
+        seed_snapshot = {
+            "generated_at": datetime.now(UTC).isoformat(),
+            "credentials": {
+                "admin": DEMO_USERS["admin"],
+                "instructor": DEMO_USERS["instructor"],
+                "student": DEMO_USERS["student"],
+            },
+            "users": {
+                "admin": {"id": str(admin.id), "email": admin.email, "full_name": admin.full_name},
+                "instructor": {"id": str(instructor.id), "email": instructor.email, "full_name": instructor.full_name},
+                "student": {"id": str(student.id), "email": student.email, "full_name": student.full_name},
+            },
+            "course": {
+                "id": str(course.id),
+                "slug": course.slug,
+                "title": course.title,
+            },
+            "lessons": [
+                {
+                    "id": str(lesson.id),
+                    "slug": lesson.slug,
+                    "title": lesson.title,
+                    "lesson_type": lesson.lesson_type,
+                }
+                for lesson in lessons
+            ],
+            "quiz": {
+                "id": str(quiz.id),
+                "lesson_id": str(quiz.lesson_id),
+                "title": quiz.title,
+            },
+            "questions": [
+                {
+                    "id": str(question.id),
+                    "question_type": question.question_type,
+                    "question_text": question.question_text,
+                }
+                for question in questions
+            ],
+            "enrollment": {
+                "id": str(enrollment.id),
+                "student_id": str(enrollment.student_id),
+                "course_id": str(enrollment.course_id),
+                "status": enrollment.status,
+            },
+            "attempt": (
+                {
+                    "id": str(latest_attempt.id),
+                    "attempt_number": latest_attempt.attempt_number,
+                    "status": latest_attempt.status,
+                }
+                if latest_attempt
+                else None
+            ),
+            "certificate": (
+                {
+                    "id": str(certificate.id),
+                    "certificate_number": certificate.certificate_number,
+                    "is_revoked": certificate.is_revoked,
+                    "pdf_path": certificate.pdf_path,
+                }
+                if certificate
+                else None
+            ),
+        }
+
+        if args.json_output is not None:
+            output_path = args.json_output
+            if not output_path.is_absolute():
+                output_path = ROOT / output_path
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(json.dumps(seed_snapshot, ensure_ascii=False, indent=2), encoding="utf-8")
+            print(f"Seed snapshot written to: {output_path}")
 
         print("Demo seed completed successfully.")
         print("Credentials:")
