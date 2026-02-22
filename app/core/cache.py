@@ -70,6 +70,86 @@ class AppCache:
 
         self._set_memory(full_key, payload, ttl)
 
+    def get_int(self, key: str) -> int | None:
+        if not self.enabled:
+            return None
+
+        full_key = self._build_key(key)
+        raw_value: str | None = None
+
+        if self._redis_enabled and self._redis is not None:
+            try:
+                redis_value = self._redis.get(full_key)
+                if isinstance(redis_value, str):
+                    raw_value = redis_value
+                elif isinstance(redis_value, bytes):
+                    raw_value = redis_value.decode("utf-8")
+            except RedisError as exc:
+                self._fallback_to_memory(exc)
+
+        if raw_value is None:
+            raw_value = self._get_memory(full_key)
+
+        if raw_value is None:
+            return None
+
+        try:
+            return int(raw_value)
+        except (TypeError, ValueError):
+            return None
+
+    def incr(self, key: str, amount: int = 1) -> int:
+        if not self.enabled:
+            return 0
+
+        full_key = self._build_key(key)
+        normalized_amount = int(amount)
+
+        if self._redis_enabled and self._redis is not None:
+            try:
+                return int(self._redis.incrby(full_key, normalized_amount))
+            except RedisError as exc:
+                self._fallback_to_memory(exc)
+
+        current = self.get_int(key) or 0
+        next_value = current + normalized_amount
+        self._set_memory(full_key, str(next_value), self.default_ttl_seconds)
+        return next_value
+
+    def expire(self, key: str, ttl_seconds: int) -> bool:
+        if not self.enabled:
+            return False
+
+        full_key = self._build_key(key)
+        ttl = max(1, int(ttl_seconds))
+
+        if self._redis_enabled and self._redis is not None:
+            try:
+                return bool(self._redis.expire(full_key, ttl))
+            except RedisError as exc:
+                self._fallback_to_memory(exc)
+
+        payload = self._get_memory(full_key)
+        if payload is None:
+            return False
+
+        self._set_memory(full_key, payload, ttl)
+        return True
+
+    def delete(self, key: str) -> None:
+        if not self.enabled:
+            return
+
+        full_key = self._build_key(key)
+
+        if self._redis_enabled and self._redis is not None:
+            try:
+                self._redis.delete(full_key)
+            except RedisError as exc:
+                self._fallback_to_memory(exc)
+
+        self._memory.pop(full_key, None)
+
     def delete_by_prefix(self, prefix: str) -> None:
         if not self.enabled:
             return

@@ -2,6 +2,14 @@
 
 Production-oriented LMS backend built as a modular monolith with FastAPI.
 
+## Live Environments
+- Production base URL: `https://egylms.duckdns.org`
+- Production API base: `https://egylms.duckdns.org/api/v1`
+- Production readiness endpoint: `https://egylms.duckdns.org/api/v1/ready`
+- Development base URL: `http://localhost:8000`
+- Development API docs: `http://localhost:8000/docs`
+- Production docs are disabled by default (`ENABLE_API_DOCS=false`).
+
 ## Documentation
 - Full technical documentation: `docs/FULL_PROJECT_DOCUMENTATION.md`
 - Documentation index: `docs/README.md`
@@ -121,10 +129,11 @@ Useful flags:
 
 Readiness endpoint:
 - `http://localhost:8000/api/v1/ready`
-- `https://<APP_DOMAIN>/api/v1/ready` in production with Caddy
+- `https://egylms.duckdns.org/api/v1/ready` (current production)
 
 Metrics endpoint:
 - `http://localhost:8000/metrics`
+- `https://egylms.duckdns.org/metrics` (production if exposed through Caddy)
 
 Services included in `docker-compose.yml`:
 - `api`

@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.modules.users.models import User
 
 _UNSET = object()
@@ -45,7 +46,9 @@ class UserRepository:
         email_verified_at: datetime | None | object = _UNSET,
     ) -> User:
         if email_verified_at is _UNSET:
-            email_verified_at = datetime.now(UTC)
+            email_verified_at = (
+                None if settings.REQUIRE_EMAIL_VERIFICATION_FOR_LOGIN else datetime.now(UTC)
+            )
 
         user = User(
             email=email.lower(),

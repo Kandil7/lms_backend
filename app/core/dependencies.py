@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from collections.abc import Callable
 from uuid import UUID
 
@@ -40,10 +39,7 @@ def get_current_user(
     if not user or not user.is_active:
         raise UnauthorizedException("Could not validate credentials")
     if settings.REQUIRE_EMAIL_VERIFICATION_FOR_LOGIN and user.email_verified_at is None:
-        user.email_verified_at = datetime.now(UTC)
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+        raise UnauthorizedException("Email is not verified")
 
     return user
 

@@ -143,7 +143,7 @@ class AuthService:
 
     def request_email_verification(self, email: str) -> tuple[str, str, str] | None:
         user = self.user_service.repo.get_by_email(email.lower())
-        if not user or not user.is_active or user.email_verified_at is not None:
+        if not user or not user.is_active:
             return None
 
         token = create_email_verification_token(subject=str(user.id))

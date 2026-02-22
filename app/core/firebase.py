@@ -119,11 +119,8 @@ def _initialize_firebase() -> bool:
         logger.debug("Firebase app already initialized")
         return True
 
-    # Check if firebase_admin is available
-    if firebase_admin is None:
-        error_msg = "Firebase Admin SDK not available. Install firebase-admin package."
-        logger.error(error_msg)
-        raise FirebaseInitializationError(error_msg)
+    firebase_admin_module = _get_firebase_admin_module()
+    credentials_module = _get_credentials_module()
 
     # Check for required credentials
     if not settings.FIREBASE_PROJECT_ID:
@@ -154,7 +151,7 @@ def _initialize_firebase() -> bool:
                 "client_email": settings.FIREBASE_CLIENT_EMAIL,
             }
 
-            cred = credentials.Certificate(service_account_config)
+            cred = credentials_module.Certificate(service_account_config)
             logger.info(
                 f"Initializing Firebase Admin SDK with service account for project: "
                 f"{settings.FIREBASE_PROJECT_ID}"
@@ -165,10 +162,10 @@ def _initialize_firebase() -> bool:
                 f"Initializing Firebase Admin SDK with default credentials for project: "
                 f"{settings.FIREBASE_PROJECT_ID}"
             )
-            cred = credentials.ApplicationDefault()
+            cred = credentials_module.ApplicationDefault()
 
         # Initialize Firebase app
-        firebase_admin.initialize_app(cred)
+        firebase_admin_module.initialize_app(cred)
         _firebase_app_initialized = True
         logger.info(
             f"Firebase Admin SDK initialized successfully for project: "
@@ -199,11 +196,35 @@ def _ensure_firebase_auth_available() -> None:
         raise FirebaseNotEnabledError(
             "Firebase is not enabled. Set FIREBASE_ENABLED=True to use Firebase Auth."
         )
-    if auth is None:
+    _get_auth_module()
+    _ensure_firebase_initialized()
+
+
+def _get_firebase_admin_module() -> Any:
+    """Return firebase_admin module or raise an explicit initialization error."""
+    if firebase_admin is None:
         raise FirebaseInitializationError(
             "Firebase Admin SDK not available. Install firebase-admin package."
         )
-    _ensure_firebase_initialized()
+    return firebase_admin
+
+
+def _get_credentials_module() -> Any:
+    """Return firebase_admin.credentials module or raise an explicit initialization error."""
+    if credentials is None:
+        raise FirebaseInitializationError(
+            "Firebase credentials module not available. Install firebase-admin package."
+        )
+    return credentials
+
+
+def _get_auth_module() -> Any:
+    """Return firebase_admin.auth module or raise an explicit initialization error."""
+    if auth is None:
+        raise FirebaseInitializationError(
+            "Firebase Auth module not available. Install firebase-admin package."
+        )
+    return auth
 
 
 def _to_iso_timestamp(value: Any) -> str | None:
@@ -253,6 +274,7 @@ class FirebaseAuthService:
             FirebaseNotEnabledError: If Firebase is not enabled.
         """
         _ensure_firebase_auth_available()
+        auth_module = _get_auth_module()
 
         logger.info(f"Generating email verification link for: {email}")
 
@@ -268,7 +290,7 @@ class FirebaseAuthService:
                 return mock_link
 
             # Generate the verification link using Firebase Admin SDK
-            link = auth.generate_email_verification_link(email)
+            link = auth_module.generate_email_verification_link(email)
             logger.info(f"Successfully generated email verification link for: {email}")
             return link
 
@@ -296,6 +318,7 @@ class FirebaseAuthService:
             FirebaseNotEnabledError: If Firebase is not enabled.
         """
         _ensure_firebase_auth_available()
+        auth_module = _get_auth_module()
 
         logger.info(f"Generating password reset link for: {email}")
 
@@ -311,7 +334,7 @@ class FirebaseAuthService:
                 return mock_link
 
             # Generate the password reset link using Firebase Admin SDK
-            link = auth.generate_password_reset_link(email)
+            link = auth_module.generate_password_reset_link(email)
             logger.info(f"Successfully generated password reset link for: {email}")
             return link
 
@@ -347,6 +370,7 @@ class FirebaseAuthService:
             FirebaseNotEnabledError: If Firebase is not enabled.
         """
         _ensure_firebase_auth_available()
+        auth_module = _get_auth_module()
 
         logger.info(f"Looking up user by email: {email}")
 
@@ -371,7 +395,7 @@ class FirebaseAuthService:
                 return mock_user
 
             # Get user from Firebase Auth
-            user = auth.get_user_by_email(email)
+            user = auth_module.get_user_by_email(email)
 
             # Convert user record to dictionary
             user_data = {
@@ -445,6 +469,7 @@ class FirebaseAuthService:
             FirebaseNotEnabledError: If Firebase is not enabled.
         """
         _ensure_firebase_auth_available()
+        auth_module = _get_auth_module()
 
         logger.debug("Verifying Firebase ID token")
 
@@ -467,7 +492,7 @@ class FirebaseAuthService:
                 return mock_decoded
 
             # Verify the ID token
-            decoded_token = auth.verify_id_token(id_token)
+            decoded_token = auth_module.verify_id_token(id_token)
 
             logger.info(
                 f"Successfully verified ID token for user: {decoded_token.get('uid')}"
@@ -522,11 +547,12 @@ class FirebaseAuthService:
             FirebaseNotEnabledError: If Firebase is not enabled.
         """
         _ensure_firebase_auth_available()
+        auth_module = _get_auth_module()
 
         logger.info(f"Creating custom token for user: {uid}")
 
         try:
-            custom_token = auth.create_custom_token(uid, additional_claims)
+            custom_token = auth_module.create_custom_token(uid, additional_claims)
             # Convert bytes to string if needed
             token_str = (
                 custom_token.decode("utf-8")
