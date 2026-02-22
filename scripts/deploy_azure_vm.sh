@@ -40,6 +40,20 @@ select_compose_cmd() {
 
 write_env_file() {
     local env_file="$1"
+    local db_auth db_user db_password
+
+    # Keep POSTGRES_* aligned with PROD_DATABASE_URL for config validators that
+    # may reconstruct DATABASE_URL in production.
+    db_auth="${PROD_DATABASE_URL#*://}"
+    db_auth="${db_auth%%@*}"
+    db_user="${db_auth%%:*}"
+    db_password="${db_auth#*:}"
+
+    if [[ -z "${db_user}" || -z "${db_password}" || "${db_auth}" == "${PROD_DATABASE_URL}" ]]; then
+        db_user="${POSTGRES_USER:-lms}"
+        db_password="${POSTGRES_PASSWORD:-lms}"
+    fi
+
     cat > "$env_file" <<EOF
 PROJECT_NAME=LMS Backend
 ENVIRONMENT=production
@@ -68,6 +82,9 @@ PROD_DATABASE_URL=${PROD_DATABASE_URL}
 SQLALCHEMY_ECHO=${SQLALCHEMY_ECHO:-false}
 DB_POOL_SIZE=${DB_POOL_SIZE:-20}
 DB_MAX_OVERFLOW=${DB_MAX_OVERFLOW:-40}
+POSTGRES_USER=${POSTGRES_USER:-${db_user}}
+POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-${db_password}}
+POSTGRES_DB=${POSTGRES_DB:-lms}
 SECRET_KEY=${SECRET_KEY}
 ALGORITHM=${ALGORITHM:-HS256}
 ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
