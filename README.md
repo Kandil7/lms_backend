@@ -58,7 +58,11 @@ Production-oriented LMS backend built as a modular monolith with FastAPI.
    ```bash
    python scripts/create_admin.py
    ```
-5. Run API:
+5. (Optional) create instructor in one command:
+   ```bash
+   python scripts/create_instructor.py
+   ```
+6. Run API:
    ```bash
    uvicorn app.main:app --reload
    ```
@@ -124,6 +128,7 @@ Useful flags:
 - `-NoBuild`
 - `-NoMigrate`
 - `-CreateAdmin`
+- `-CreateInstructor`
 - `-SeedDemoData`
 - `-FollowLogs`
 
@@ -209,6 +214,35 @@ Default demo credentials:
 - `admin@lms.local / AdminPass123`
 - `instructor@lms.local / InstructorPass123`
 - `student@lms.local / StudentPass123`
+
+## Create Instructor Account
+Fastest way (recommended):
+
+```bash
+python scripts/create_instructor.py
+```
+
+If API runs in Docker:
+
+```bash
+docker compose -f docker-compose.yml exec -T api python scripts/create_instructor.py
+```
+
+Customize via environment variables:
+
+```bash
+INSTRUCTOR_EMAIL=instructor@example.com \
+INSTRUCTOR_PASSWORD=StrongPass123 \
+INSTRUCTOR_FULL_NAME="Instructor One" \
+INSTRUCTOR_UPDATE_EXISTING=true \
+python scripts/create_instructor.py
+```
+
+Advanced/role-agnostic creation:
+
+```bash
+python scripts/create_user.py --email instructor@example.com --password StrongPass123 --full-name "Instructor One" --role instructor --update-existing
+```
 
 ## Postman Collection
 Generate Postman artifacts from OpenAPI:

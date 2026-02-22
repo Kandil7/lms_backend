@@ -6,6 +6,7 @@ set "NO_BUILD=0"
 set "NO_MIGRATE=0"
 set "SEED_DEMO_DATA=0"
 set "CREATE_ADMIN=0"
+set "CREATE_INSTRUCTOR=0"
 set "FOLLOW_LOGS=0"
 
 :parse_args
@@ -47,6 +48,16 @@ if /I "%~1"=="-CreateAdmin" (
 )
 if /I "%~1"=="--create-admin" (
     set "CREATE_ADMIN=1"
+    shift
+    goto parse_args
+)
+if /I "%~1"=="-CreateInstructor" (
+    set "CREATE_INSTRUCTOR=1"
+    shift
+    goto parse_args
+)
+if /I "%~1"=="--create-instructor" (
+    set "CREATE_INSTRUCTOR=1"
     shift
     goto parse_args
 )
@@ -143,6 +154,16 @@ if "%CREATE_ADMIN%"=="1" (
     )
 )
 
+if "%CREATE_INSTRUCTOR%"=="1" (
+    echo.
+    echo ==^> Creating instructor user
+    docker compose -f "%COMPOSE_FILE%" exec -T api python scripts/create_instructor.py
+    if errorlevel 1 (
+        popd
+        exit /b 1
+    )
+)
+
 if "%SEED_DEMO_DATA%"=="1" (
     echo.
     echo ==^> Seeding demo data
@@ -197,6 +218,7 @@ echo Options:
 echo   -NoBuild ^| --no-build
 echo   -NoMigrate ^| --no-migrate
 echo   -CreateAdmin ^| --create-admin
+echo   -CreateInstructor ^| --create-instructor
 echo   -SeedDemoData ^| --seed-demo-data
 echo   -FollowLogs ^| --follow-logs
 echo   -h ^| --help
