@@ -76,6 +76,9 @@ Set GitHub `Environment: production` secrets:
 - `EMAIL_FROM`
 - `SMTP_USE_TLS` (optional, default `true`)
 - `SMTP_USE_SSL` (optional, default `false`)
+- `FIREBASE_ENABLED` (optional, `true`/`false`)
+- `FIREBASE_FUNCTIONS_URL` (optional, enables Firebase email transport)
+- `FIREBASE_FUNCTIONS_API_KEY` (optional, used as `X-API-Key` header)
 - `SENTRY_DSN` (optional)
 - `PROD_REDIS_URL` (optional, defaults to VM Redis)
 - `PROD_CELERY_BROKER_URL` (optional, defaults to VM Redis)
@@ -117,4 +120,4 @@ python scripts/test_smtp_connection.py --to your-email@example.com
 
 Provider notes:
 - Supabase does not provide a production relay for your backend app; for Supabase Auth, configure custom SMTP with the same provider credentials.
-- Firebase custom SMTP requires Identity Platform; default Firebase Auth email flow is not a direct replacement for backend SMTP settings.
+- This backend can use Firebase Cloud Functions as email transport by setting `FIREBASE_FUNCTIONS_URL` (SMTP remains fallback).

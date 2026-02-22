@@ -5,7 +5,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import NotFoundException
-from app.core.config import settings
 from app.core.security import hash_password, verify_password
 from app.modules.users.models import User
 from app.modules.users.repositories.user_repository import UserRepository
@@ -68,8 +67,10 @@ class UserService:
 
         if not user.is_active:
             raise InvalidCredentialsError("User account is disabled")
-        if settings.REQUIRE_EMAIL_VERIFICATION_FOR_LOGIN and user.email_verified_at is None:
-            raise InvalidCredentialsError("Email is not verified")
+        if user.email_verified_at is None:
+            # Temporary behavior: treat legacy unverified accounts as verified.
+            user.email_verified_at = datetime.now(UTC)
+            self.db.add(user)
 
         if not update_last_login:
             return user

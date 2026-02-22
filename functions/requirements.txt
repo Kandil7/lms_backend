@@ -1,0 +1,4 @@
+# The Firebase Admin SDK to access Cloud Firestore.
+firebase-admin>=6.2.0
+# The Firebase Functions SDK to create Cloud Functions.
+firebase-functions>=0.1.0

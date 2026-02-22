@@ -1,5 +1,9 @@
 # Production Runbook
 
+Current scope note:
+- The payments module is deferred in the current backend release scope.
+- Payment-specific checklist items are only required when payments are explicitly reactivated.
+
 ## 0. Go-Live Checklist
 Use this checklist before approving production release.  
 Status values:
@@ -13,10 +17,11 @@ Status values:
 | Release commit + tag created from tested branch | No |  |  |  |
 | CI green (tests + security workflow) | No |  |  |  |
 | Alembic migration applied on staging and production | No |  |  |  |
-| MyFatoorah live credentials configured in secret manager | No |  |  |  |
-| `MYFATOORAH_WEBHOOK_SECRET` configured and verified | No |  |  |  |
-| MyFatoorah webhook endpoint reachable: `/api/v1/payments/webhooks/myfatoorah` | No |  |  |  |
-| Payment E2E tested (success, failed, refunded, duplicate webhook) | No |  |  |  |
+| Payments module activated for this release | No |  |  |  |
+| MyFatoorah live credentials configured in secret manager (only if payments active) | No |  |  |  |
+| `MYFATOORAH_WEBHOOK_SECRET` configured and verified (only if payments active) | No |  |  |  |
+| MyFatoorah webhook endpoint reachable: `/api/v1/payments/webhooks/myfatoorah` (only if payments active) | No |  |  |  |
+| Payment E2E tested (success, failed, refunded, duplicate webhook) (only if payments active) | No |  |  |  |
 | SMTP production config validated (send/receive) | No |  |  |  |
 | Backup task running daily with successful latest run | No |  |  |  |
 | Restore drill executed and validated | No |  |  |  |
@@ -123,7 +128,7 @@ curl -I http://localhost:5555
 - Keep `ENABLE_API_DOCS=false` in production.
 - Keep `STRICT_ROUTER_IMPORTS=true` in production.
 - Keep `TASKS_FORCE_INLINE=false` in production.
-- Keep `PAYMENTS_MOCK_MODE=false` in production.
+- If the deferred payments module is reactivated, keep payment sandbox/mock mode disabled in production.
 - Rotate credentials regularly (`SECRET_KEY`, DB, SMTP).
 - Review results of `.github/workflows/security.yml` on every PR.
 - Configure `SENTRY_DSN` for API/Celery error tracking.

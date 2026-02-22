@@ -2,6 +2,12 @@
 
 This folder contains detailed technical documentation for the LMS backend.
 
+## API Source Of Truth
+
+- Authoritative API reference: `docs/09-full-api-reference.md` (generated from live OpenAPI schema).
+- Curated overview: `docs/08-api-documentation.md`.
+- Current scope note: payments module is deferred and not part of active API routes.
+
 ## Arabic Guide (Recommended Reading Order)
 
 1. `docs/01-overview-ar.md`
@@ -12,6 +18,7 @@ This folder contains detailed technical documentation for the LMS backend.
 6. `docs/06-background-jobs-and-ops-ar.md`
 7. `docs/07-testing-and-quality-ar.md`
 8. `docs/08-api-documentation.md`
+9. `docs/09-full-api-reference.md`
 
 ## Existing Full Technical Guide (English)
 

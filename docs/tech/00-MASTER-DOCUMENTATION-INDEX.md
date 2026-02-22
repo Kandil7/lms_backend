@@ -64,7 +64,7 @@ This document provides a complete index and navigation guide for all technical d
 | 20 | **20-complete-configuration-reference.md** | Complete configuration reference |
 | 21 | **21-utilities-helpers.md** | Utilities and helpers |
 | 22 | **22-observability-metrics.md** | Metrics and observability |
-| 23 | **23-payments-module.md** | Payments module documentation |
+| 23 | **23-payments-module.md** | Payments module documentation (deferred module) |
 
 ### Comprehensive Guides (24-26)
 
@@ -85,9 +85,9 @@ This document provides a complete index and navigation guide for all technical d
 
 ### Working on a Specific Feature?
 
-- **Courses**: See `11-modules-complete-reference.md` → Courses section
-- **Payments**: See `23-payments-module.md`
-- **Quizzes**: See `11-modules-complete-reference.md` → Quizzes section
+- **Courses**: See `11-modules-complete-reference.md` -> Courses section
+- **Payments**: Deferred in the current backend scope; reference is `23-payments-module.md`
+- **Quizzes**: See `11-modules-complete-reference.md` -> Quizzes section
 
 ### Need to Add a New Feature?
 
@@ -188,12 +188,9 @@ This document provides a complete index and navigation guide for all technical d
 | QuizQuestion | Quiz questions | `05-database-design.md` |
 | QuizAttempt | Student attempts | `05-database-design.md` |
 
-### Payment Entities
+### Payment Entities (Deferred Module)
 
-| Entity | Description | Document |
-|--------|-------------|----------|
-| Payment | Payment records | `23-payments-module.md` |
-| Subscription | Subscription records | `23-payments-module.md` |
+- Payment entities are documented in `23-payments-module.md` but are currently out of active backend scope.
 
 ---
 
@@ -207,7 +204,7 @@ This document provides a complete index and navigation guide for all technical d
 | Database | `20-complete-configuration-reference.md` |
 | Security | `20-complete-configuration-reference.md` |
 | Redis | `20-complete-configuration-reference.md` |
-| AWS | `20-complete-configuration-reference.md` |
+| Azure/Storage | `20-complete-configuration-reference.md` |
 
 ---
 
@@ -233,7 +230,7 @@ pip install -r requirements.txt
 cp .env.example .env
 
 # 5. Start services
-docker-compose up -d db redis
+docker compose up -d db redis
 
 # 6. Run migrations
 alembic upgrade head
@@ -252,7 +249,7 @@ pytest
 pytest --cov=app --cov-report=html
 
 # Run specific test file
-pytest tests/unit/test_auth.py
+pytest tests/test_auth.py
 ```
 
 ### Code Style
@@ -275,14 +272,14 @@ ruff check .
 ### Development
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 ### Production
 
 ```bash
 # Build and deploy
-docker-compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 See `10-deployment-guide.md` for complete deployment guide.
@@ -332,3 +329,4 @@ This documentation provides a complete reference for the LMS Backend project:
 - ✅ Deployment guide
 
 For more information, see individual documents in `docs/tech/`.
+

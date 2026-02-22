@@ -3,6 +3,10 @@ import smtplib
 from email.message import EmailMessage
 
 from app.core.config import settings
+from app.core.firebase import (
+    FirebaseFunctionsError,
+    get_firebase_functions_service,
+)
 from app.tasks.celery_app import celery_app
 
 logger = logging.getLogger("app.tasks.email")
@@ -16,14 +20,35 @@ def _send_email(*, to_email: str, subject: str, body: str) -> str:
     message["Subject"] = subject
     message.set_content(body)
 
+    # Prefer Firebase Functions when configured (acts as SMTP transport).
+    if settings.FIREBASE_FUNCTIONS_URL:
+        firebase_service = get_firebase_functions_service()
+        if firebase_service:
+            try:
+                firebase_service.send_email_via_function(
+                    to_email=to_email, subject=subject, body=body
+                )
+                return f"email sent via Firebase Functions to <{to_email}>"
+            except FirebaseFunctionsError as exc:
+                logger.warning(
+                    "Firebase Functions send failed for <%s>; falling back to SMTP: %s",
+                    to_email,
+                    exc,
+                )
+
+    # Fall back to SMTP or dry-run mode
     if not settings.SMTP_HOST:
-        log_message = f"email processed in dry-run mode for <{to_email}> with subject '{subject}'"
+        log_message = (
+            f"email processed in dry-run mode for <{to_email}> with subject '{subject}'"
+        )
         logger.info(log_message)
         return log_message
 
     smtp_client: smtplib.SMTP | smtplib.SMTP_SSL
     if settings.SMTP_USE_SSL:
-        smtp_client = smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15)
+        smtp_client = smtplib.SMTP_SSL(
+            settings.SMTP_HOST, settings.SMTP_PORT, timeout=15
+        )
     else:
         smtp_client = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15)
 
@@ -65,7 +90,9 @@ def send_welcome_email(email: str, full_name: str) -> str:
     retry_jitter=True,
     retry_kwargs={"max_retries": 5},
 )
-def send_password_reset_email(email: str, full_name: str, reset_token: str, reset_url: str) -> str:
+def send_password_reset_email(
+    email: str, full_name: str, reset_token: str, reset_url: str
+) -> str:
     subject = "Reset your LMS password"
     body = (
         f"Hello {full_name},\n\n"
@@ -85,7 +112,9 @@ def send_password_reset_email(email: str, full_name: str, reset_token: str, rese
     retry_jitter=True,
     retry_kwargs={"max_retries": 5},
 )
-def send_email_verification_email(email: str, full_name: str, verification_token: str, verification_url: str) -> str:
+def send_email_verification_email(
+    email: str, full_name: str, verification_token: str, verification_url: str
+) -> str:
     subject = "Verify your LMS email"
     body = (
         f"Hello {full_name},\n\n"
@@ -105,7 +134,9 @@ def send_email_verification_email(email: str, full_name: str, verification_token
     retry_jitter=True,
     retry_kwargs={"max_retries": 5},
 )
-def send_mfa_login_code_email(email: str, full_name: str, code: str, expires_minutes: int) -> str:
+def send_mfa_login_code_email(
+    email: str, full_name: str, code: str, expires_minutes: int
+) -> str:
     subject = "Your LMS login verification code"
     body = (
         f"Hello {full_name},\n\n"
@@ -125,7 +156,9 @@ def send_mfa_login_code_email(email: str, full_name: str, code: str, expires_min
     retry_jitter=True,
     retry_kwargs={"max_retries": 5},
 )
-def send_mfa_setup_code_email(email: str, full_name: str, code: str, expires_minutes: int) -> str:
+def send_mfa_setup_code_email(
+    email: str, full_name: str, code: str, expires_minutes: int
+) -> str:
     subject = "Your LMS MFA setup code"
     body = (
         f"Hello {full_name},\n\n"

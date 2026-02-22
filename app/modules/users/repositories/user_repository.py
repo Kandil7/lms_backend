@@ -1,10 +1,12 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.modules.users.models import User
+
+_UNSET = object()
 
 
 class UserRepository:
@@ -40,8 +42,11 @@ class UserRepository:
         full_name: str,
         role: str,
         is_active: bool = True,
-        email_verified_at: datetime | None = None,
+        email_verified_at: datetime | None | object = _UNSET,
     ) -> User:
+        if email_verified_at is _UNSET:
+            email_verified_at = datetime.now(UTC)
+
         user = User(
             email=email.lower(),
             password_hash=password_hash,

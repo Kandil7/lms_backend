@@ -1,6 +1,8 @@
 # API Documentation
 
-This reference matches the current implementation in code and OpenAPI.
+This is a curated API overview.
+
+For the authoritative, generated endpoint list, use `docs/09-full-api-reference.md`.
 
 ## 1. API Overview
 
@@ -305,51 +307,11 @@ Verify response:
 }
 ```
 
-## 11. Payments Endpoints
+## 11. Payments Status (Deferred)
 
-- `POST /payments/create-payment-intent`
-- `POST /payments/create-subscription`
-- `GET /payments/my-payments`
-- `GET /payments/my-subscriptions`
-- `GET /payments/revenue/summary` (admin)
-- `POST /payments/webhooks/myfatoorah` (public MyFatoorah webhook endpoint)
-- `POST /payments/webhooks/paymob` (deprecated compatibility alias)
-
-`POST /payments/create-payment-intent` request:
-```json
-{
-  "enrollment_id": "uuid",
-  "amount": 499.99,
-  "currency": "EGP"
-}
-```
-
-`POST /payments/create-payment-intent` response:
-```json
-{
-  "client_secret": "myfatoorah_payment_token",
-  "payment_intent_id": "myfatoorah_invoice_id",
-  "checkout_url": "https://portal.myfatoorah.com/EN/KWT/PayInvoice/<token>",
-  "amount": 499.99,
-  "currency": "EGP",
-  "status": "pending"
-}
-```
-
-Webhook security:
-- header (optional unless secret configured): `X-MyFatoorah-Signature`
-- signature validated using `MYFATOORAH_WEBHOOK_SECRET` when configured
-
-Processed MyFatoorah transaction states:
-- `transaction.succeeded`
-- `transaction.failed`
-- `transaction.pending`
-- `transaction.refunded`
-
-Email notification behavior:
-- On successful payment webhook, the backend enqueues:
-  - `app.tasks.email_tasks.send_payment_confirmation_email`
-- Duplicate webhook events are idempotent and do not re-send confirmation email.
+- The payments module is currently deferred and not wired into the active API router.
+- No `/api/v1/payments/*` endpoints are active in the current production code path.
+- If payments is reactivated later, regenerate docs from OpenAPI and restore the payments section.
 
 ## 12. System Endpoints
 
@@ -365,7 +327,7 @@ Asynchronous email notifications are dispatched through Celery (`emails` queue) 
 - Enrollment confirmation.
 - Quiz submission results.
 - Course completion (after certificate issuance).
-- Payment confirmation (after successful MyFatoorah webhook).
+- Payment confirmation (only when the deferred payments module is reactivated).
 
 Periodic email tasks:
 - Weekly progress report (`app.tasks.email_tasks.send_weekly_progress_report`)
