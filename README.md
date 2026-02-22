@@ -223,6 +223,16 @@ Generated demo files:
 - `postman/LMS Backend Demo.postman_environment.json`
 - `postman/demo_seed_snapshot.json`
 
+## Full API Documentation
+Generate a complete Markdown API reference from the live OpenAPI schema:
+
+```bash
+python scripts/generate_full_api_documentation.py
+```
+
+Generated file:
+- `docs/09-full-api-reference.md`
+
 ## Production Hardening
 - CI pipeline: `.github/workflows/ci.yml` runs compile checks, dependency checks, coverage gate, and tests on Python 3.11 and 3.12.
 - Security pipeline: `.github/workflows/security.yml` runs `pip-audit` and `bandit` on push/PR and weekly schedule.
