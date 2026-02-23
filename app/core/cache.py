@@ -118,7 +118,8 @@ class AppCache:
 
         if self._redis_enabled and self._redis is not None:
             try:
-                return int(self._redis.incrby(full_key, normalized_amount))
+                result = self._redis.incrby(full_key, normalized_amount)
+                return int(result) if isinstance(result, (int, str)) else 0
             except RedisError as exc:
                 self._fallback_to_memory(exc)
 
