@@ -146,8 +146,8 @@ AZURE_STORAGE_CONTAINER_URL=$AzureStorageContainerUrl
         "find ""`$`{APP_DIR`}\"" -mindepth 1 -maxdepth 1 ! -name "".env"" -exec rm -rf {} +"
         "tar -xzf /tmp/lms_backend_release.tar.gz -C ""`$`{APP_DIR`}\"""
         "cd ""`$`{APP_DIR`}\"""
-        "chmod +x scripts/deploy_azure_vm.sh"
-        "DEPLOY_MODE=vm ./scripts/deploy_azure_vm.sh"
+        "chmod +x scripts/linux/deploy_azure_vm.sh"
+        "DEPLOY_MODE=vm ./scripts/linux/deploy_azure_vm.sh"
         "rm -f /tmp/lms_backend_release.tar.gz /tmp/lms_backend_deploy.env /tmp/lms_backend_remote_deploy.sh"
     )
     ($remoteScriptLines -join "`n") | Set-Content -Path $remoteScriptPath

@@ -11,9 +11,8 @@ Production-oriented LMS backend built as a modular monolith with FastAPI.
 - Production docs are disabled by default (`ENABLE_API_DOCS=false`).
 
 ## Documentation
-- Full technical documentation: `docs/FULL_PROJECT_DOCUMENTATION.md`
+- Full technical summary: `docs/tech/18-Complete-Project-Summary.md`
 - Documentation index: `docs/README.md`
-- Arabic detailed docs set: `docs/01-overview-ar.md` -> `docs/07-testing-and-quality-ar.md`
 - API reference (implementation-accurate): `docs/08-api-documentation.md`
 - Operations runbook: `docs/ops/01-production-runbook.md`
 - Staging checklist: `docs/ops/02-staging-release-checklist.md`
@@ -56,11 +55,11 @@ Production-oriented LMS backend built as a modular monolith with FastAPI.
    ```
 4. (Optional) create admin:
    ```bash
-   python scripts/create_admin.py
+   python scripts/user_management/create_admin.py
    ```
 5. (Optional) create instructor in one command:
    ```bash
-   python scripts/create_instructor.py
+   python scripts/user_management/create_instructor.py
    ```
 6. Run API:
    ```bash
@@ -101,27 +100,22 @@ Note: `docker-compose.prod.yml` uses `PROD_*` URLs (for DB/Redis/Celery) so loca
 
 PowerShell one-command startup (Windows):
 ```powershell
-.\scripts\run_project.ps1
-```
-
-Batch one-command startup (Windows):
-```bat
-scripts\run_project.bat
+.\scripts\helpers\run_project.ps1
 ```
 
 Demo one-command startup (Windows, includes seed + demo Postman JSON):
 ```bat
-run_demo.bat
+scripts\windows\run_demo.bat
 ```
 
 Staging one-command startup (Windows):
 ```bat
-run_staging.bat
+scripts\windows\run_staging.bat
 ```
 
 Observability one-command startup (Windows):
 ```bat
-run_observability.bat
+scripts\windows\run_observability.bat
 ```
 
 Useful flags:
@@ -159,49 +153,49 @@ pytest -q --cov=app --cov-report=term-missing --cov-fail-under=75
 
 Load test smoke baseline:
 ```bat
-run_load_test.bat
+scripts\windows\run_load_test.bat
 ```
 Optional authenticated flow:
 ```bat
-run_load_test.bat http://localhost:8000 20 60s localhost true
+scripts\windows\run_load_test.bat http://localhost:8000 20 60s localhost true
 ```
 
 Realistic sign-off scenario (student/instructor/admin):
 ```bat
-run_load_test_realistic.bat http://localhost:8001 10m localhost 8 3 1
+scripts\windows\run_load_test_realistic.bat http://localhost:8001 10m localhost 8 3 1
 ```
 
 ## Database Backup and Restore
 Create a backup (Windows):
 ```bat
-backup_db.bat
+scripts\windows\backup_db.bat
 ```
 
 Restore from backup (Windows):
 ```bat
-restore_db.bat backups\db\lms_YYYYMMDD_HHMMSS.dump --yes
+scripts\windows\restore_db.bat backups\db\lms_YYYYMMDD_HHMMSS.dump --yes
 ```
 
 Create a daily scheduled backup task (Windows):
 ```powershell
-.\scripts\setup_backup_task.ps1 -TaskName LMS-DB-Backup -Time 02:00
+.\scripts\maintenance\setup_backup_task.ps1 -TaskName LMS-DB-Backup -Time 02:00
 ```
 
 Run restore drill manually (Windows):
 ```bat
-restore_drill.bat -ComposeFile docker-compose.prod.yml
+scripts\windows\restore_drill.bat -ComposeFile docker-compose.prod.yml
 ```
 
 Create a weekly restore drill task (Windows):
 ```powershell
-.\scripts\setup_restore_drill_task.ps1 -TaskName LMS-DB-Restore-Drill -Time 03:30 -DaysOfWeek Sunday -ComposeFile docker-compose.prod.yml
+.\scripts\maintenance\setup_restore_drill_task.ps1 -TaskName LMS-DB-Restore-Drill -Time 03:30 -DaysOfWeek Sunday -ComposeFile docker-compose.prod.yml
 ```
 
 ## Demo Data Seed
 Use this script to create demo users, one published course, lessons, enrollment, quiz, and a graded attempt.
 
 ```bash
-python scripts/seed_demo_data.py
+python scripts/database/seed_demo_data.py
 ```
 
 Options:
@@ -219,13 +213,13 @@ Default demo credentials:
 Fastest way (recommended):
 
 ```bash
-python scripts/create_instructor.py
+python scripts/user_management/create_instructor.py
 ```
 
 If API runs in Docker:
 
 ```bash
-docker compose -f docker-compose.yml exec -T api python scripts/create_instructor.py
+docker compose -f docker-compose.yml exec -T api python scripts/user_management/create_instructor.py
 ```
 
 Customize via environment variables:
@@ -235,20 +229,20 @@ INSTRUCTOR_EMAIL=instructor@example.com \
 INSTRUCTOR_PASSWORD=StrongPass123 \
 INSTRUCTOR_FULL_NAME="Instructor One" \
 INSTRUCTOR_UPDATE_EXISTING=true \
-python scripts/create_instructor.py
+python scripts/user_management/create_instructor.py
 ```
 
 Advanced/role-agnostic creation:
 
 ```bash
-python scripts/create_user.py --email instructor@example.com --password StrongPass123 --full-name "Instructor One" --role instructor --update-existing
+python scripts/user_management/create_user.py --email instructor@example.com --password StrongPass123 --full-name "Instructor One" --role instructor --update-existing
 ```
 
 ## Postman Collection
 Generate Postman artifacts from OpenAPI:
 
 ```bash
-python scripts/generate_postman_collection.py
+python scripts/documentation/generate_postman_collection.py
 ```
 
 Generated files:
@@ -258,7 +252,7 @@ Generated files:
 Generate demo Postman artifacts from seeded data snapshot:
 
 ```bash
-python scripts/generate_demo_postman.py --seed-file postman/demo_seed_snapshot.json
+python scripts/documentation/generate_demo_postman.py --seed-file postman/demo_seed_snapshot.json
 ```
 
 Generated demo files:
@@ -270,7 +264,7 @@ Generated demo files:
 Generate a complete Markdown API reference from the live OpenAPI schema:
 
 ```bash
-python scripts/generate_full_api_documentation.py
+python scripts/documentation/generate_full_api_documentation.py
 ```
 
 Generated file:
@@ -333,8 +327,8 @@ SMTP provider quick start (Resend):
 
 SMTP connectivity check:
 ```bash
-python scripts/test_smtp_connection.py
-python scripts/test_smtp_connection.py --to your-email@example.com
+python scripts/testing/test_smtp_connection.py
+python scripts/testing/test_smtp_connection.py --to your-email@example.com
 ```
 
 ## Branch Strategy

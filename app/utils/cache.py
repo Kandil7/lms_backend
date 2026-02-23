@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timedelta
+import time
+from datetime import datetime
 from decimal import Decimal
-from typing import Any, Optional, TypeVar, cast
+from typing import Any, Optional, cast
 from uuid import UUID
 
 from redis import Redis
@@ -14,13 +15,13 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T")
-
 class CacheManager:
     """Redis-based cache manager for application data."""
     
     def __init__(self):
         self.redis_client: Optional[Redis] = None
+        self._memory_cache: dict[str, tuple[int, str]] = {}
+        self._redis_fallback_logged = False
         self._initialize_redis()
     
     def _initialize_redis(self) -> None:
@@ -43,61 +44,64 @@ class CacheManager:
                 self.redis_client.ping()
                 logger.info("Redis cache connected successfully")
         except RedisError as e:
-            logger.error(f"Failed to connect to Redis cache: {e}")
+            logger.warning(f"Redis cache unavailable, using in-memory fallback: {e}")
             self.redis_client = None
     
     def get(self, key: str) -> Optional[str]:
         """Get value from cache by key."""
-        if not self.redis_client:
-            return None
-        
-        try:
-            return self.redis_client.get(key)
-        except RedisError as e:
-            logger.error(f"Cache get error for key '{key}': {e}")
-            return None
+        if self.redis_client:
+            try:
+                value = self.redis_client.get(key)
+                if isinstance(value, bytes):
+                    return value.decode("utf-8")
+                return cast(Optional[str], value)
+            except RedisError as e:
+                self._fallback_to_memory(e)
+        return self._get_memory(key)
     
     def set(self, key: str, value: str, ttl_seconds: int) -> bool:
         """Set value in cache with TTL."""
-        if not self.redis_client:
-            return False
-        
-        try:
-            return bool(self.redis_client.setex(key, ttl_seconds, value))
-        except RedisError as e:
-            logger.error(f"Cache set error for key '{key}': {e}")
-            return False
+        ttl = max(1, int(ttl_seconds))
+        if self.redis_client:
+            try:
+                return bool(self.redis_client.setex(key, ttl, value))
+            except RedisError as e:
+                self._fallback_to_memory(e)
+
+        self._set_memory(key, value, ttl)
+        return True
     
     def delete(self, key: str) -> bool:
         """Delete key from cache."""
-        if not self.redis_client:
-            return False
-        
-        try:
-            return self.redis_client.delete(key) > 0
-        except RedisError as e:
-            logger.error(f"Cache delete error for key '{key}': {e}")
-            return False
+        deleted = False
+        if self.redis_client:
+            try:
+                deleted = self.redis_client.delete(key) > 0
+            except RedisError as e:
+                self._fallback_to_memory(e)
+
+        return self._memory_cache.pop(key, None) is not None or deleted
 
     def delete_by_prefix(self, prefix: str) -> int:
         """Delete all keys matching a prefix."""
-        if not self.redis_client:
-            return 0
-
         deleted = 0
-        try:
-            cursor = 0
-            pattern = f"{prefix}*"
-            while True:
-                cursor, keys = self.redis_client.scan(cursor=cursor, match=pattern, count=200)
-                if keys:
-                    deleted += int(self.redis_client.delete(*keys))
-                if cursor == 0:
-                    break
-            return deleted
-        except RedisError as e:
-            logger.error(f"Cache delete_by_prefix error for prefix '{prefix}': {e}")
-            return 0
+        if self.redis_client:
+            try:
+                cursor = 0
+                pattern = f"{prefix}*"
+                while True:
+                    cursor, keys = self.redis_client.scan(cursor=cursor, match=pattern, count=200)
+                    if keys:
+                        deleted += int(self.redis_client.delete(*keys))
+                    if cursor == 0:
+                        break
+            except RedisError as e:
+                self._fallback_to_memory(e)
+
+        memory_keys = [key for key in self._memory_cache if key.startswith(prefix)]
+        for key in memory_keys:
+            self._memory_cache.pop(key, None)
+        return deleted + len(memory_keys)
     
     def get_json(self, key: str) -> Optional[Any]:
         """Get JSON value from cache."""
@@ -137,6 +141,27 @@ class CacheManager:
     def get_assignment_cache_key(self, assignment_id: str, user_id: str) -> str:
         """Generate cache key for single assignment."""
         return f"{settings.CACHE_KEY_PREFIX}:assignments:single:{assignment_id}:{user_id}"
+
+    def _set_memory(self, key: str, value: str, ttl_seconds: int) -> None:
+        expires_at = int(time.time()) + ttl_seconds
+        self._memory_cache[key] = (expires_at, value)
+
+    def _get_memory(self, key: str) -> Optional[str]:
+        cached = self._memory_cache.get(key)
+        if not cached:
+            return None
+
+        expires_at, value = cached
+        if expires_at <= int(time.time()):
+            self._memory_cache.pop(key, None)
+            return None
+        return value
+
+    def _fallback_to_memory(self, exc: RedisError) -> None:
+        if not self._redis_fallback_logged:
+            logger.warning(f"Cache fallback to in-memory mode: {exc}")
+            self._redis_fallback_logged = True
+        self.redis_client = None
 
 
 # Global cache instance

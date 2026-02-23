@@ -105,11 +105,10 @@ def test_assignment_list_caching(client, monkeypatch):
     assert len(data3["assignments"]) == 1
     assert data3["assignments"][0]["title"] == "Updated Cache Assignment"
 
-    # Verify cache is now stale or empty
+    # Verify cache now reflects the updated assignment state
     cached_data_after_update = cache_manager.get_json(cache_key)
     if cached_data_after_update:
-        # Cache might still have old data, but it will be refreshed on next request
-        assert cached_data_after_update.get("assignments", [])[0].get("title") != "Updated Cache Assignment"
+        assert cached_data_after_update.get("assignments", [])[0].get("title") == "Updated Cache Assignment"
 
 
 def test_assignment_cache_invalidation_on_create(client, monkeypatch):

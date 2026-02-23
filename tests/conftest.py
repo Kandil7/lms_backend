@@ -19,6 +19,7 @@ os.environ.setdefault("AZURE_STORAGE_CONTAINER_URL", "")
 
 from app.core.database import Base, get_db
 from app.core.cache import get_app_cache
+from app.utils.cache import cache_manager
 from app.main import app
 
 
@@ -48,6 +49,7 @@ def db_session(engine) -> Generator[Session, None, None]:
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     get_app_cache().delete_by_prefix("")
+    cache_manager.delete_by_prefix("")
     TestingSessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
     db = TestingSessionLocal()

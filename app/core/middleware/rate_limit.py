@@ -2,6 +2,7 @@ import logging
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
+from threading import Lock
 
 from app.core.exceptions import UnauthorizedException
 from app.core.security import TokenType, decode_token
@@ -14,6 +15,11 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 logger = logging.getLogger("app.rate_limit")
+
+# Maximum number of rate limit keys to keep in memory
+MAX_IN_MEMORY_KEYS = 10000
+# Cleanup interval in seconds (every 5 minutes)
+CLEANUP_INTERVAL_SECONDS = 300
 
 
 @dataclass(slots=True)
@@ -51,7 +57,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._redis_fallback_logged = False
 
         if self._redis_enabled and redis_url:
-            self._redis = Redis.from_url(redis_url, encoding="utf-8", decode_responses=True)
+            self._redis = Redis.from_url(
+                redis_url, encoding="utf-8", decode_responses=True
+            )
 
     async def dispatch(self, request: Request, call_next):
         if self._is_excluded(request.url.path):
@@ -77,7 +85,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             except Exception as exc:
                 if self._should_fallback_to_memory(exc):
                     if not self._redis_fallback_logged:
-                        logger.warning("Redis rate-limit fallback to in-memory mode: %s", exc)
+                        logger.warning(
+                            "Redis rate-limit fallback to in-memory mode: %s", exc
+                        )
                         self._redis_fallback_logged = True
                     self._redis_enabled = False
                     self._redis = None
@@ -93,7 +103,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         )
 
     def _is_excluded(self, path: str) -> bool:
-        return any(path == excluded or path.startswith(f"{excluded}/") for excluded in self.excluded_paths)
+        return any(
+            path == excluded or path.startswith(f"{excluded}/")
+            for excluded in self.excluded_paths
+        )
 
     async def _dispatch_with_redis(
         self,
@@ -123,11 +136,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         if count > limit:
             response = self._rate_limited_response(reset_epoch)
-            self._set_rate_limit_headers(response, limit=limit, remaining=0, reset_epoch=reset_epoch)
+            self._set_rate_limit_headers(
+                response, limit=limit, remaining=0, reset_epoch=reset_epoch
+            )
             return response
 
         response = await call_next(request)
-        self._set_rate_limit_headers(response, limit=limit, remaining=remaining, reset_epoch=reset_epoch)
+        self._set_rate_limit_headers(
+            response, limit=limit, remaining=remaining, reset_epoch=reset_epoch
+        )
         return response
 
     async def _dispatch_in_memory(
@@ -146,9 +163,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             window.popleft()
 
         if len(window) >= limit:
-            reset_epoch = int(window[0] + period_seconds) if window else int(now + period_seconds)
+            reset_epoch = (
+                int(window[0] + period_seconds) if window else int(now + period_seconds)
+            )
             response = self._rate_limited_response(reset_epoch)
-            self._set_rate_limit_headers(response, limit=limit, remaining=0, reset_epoch=reset_epoch)
+            self._set_rate_limit_headers(
+                response, limit=limit, remaining=0, reset_epoch=reset_epoch
+            )
             return response
 
         window.append(now)
@@ -156,17 +177,24 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         reset_epoch = int(window[0] + period_seconds)
 
         response = await call_next(request)
-        self._set_rate_limit_headers(response, limit=limit, remaining=remaining, reset_epoch=reset_epoch)
+        self._set_rate_limit_headers(
+            response, limit=limit, remaining=remaining, reset_epoch=reset_epoch
+        )
         return response
 
-    def _set_rate_limit_headers(self, response: Response, *, limit: int, remaining: int, reset_epoch: int) -> None:
+    def _set_rate_limit_headers(
+        self, response: Response, *, limit: int, remaining: int, reset_epoch: int
+    ) -> None:
         response.headers["X-RateLimit-Limit"] = str(limit)
         response.headers["X-RateLimit-Remaining"] = str(remaining)
         response.headers["X-RateLimit-Reset"] = str(reset_epoch)
 
     def _resolve_rule(self, path: str) -> RateLimitRule | None:
         for rule in self.custom_rules:
-            if any(path == prefix or path.startswith(f"{prefix}/") for prefix in rule.path_prefixes):
+            if any(
+                path == prefix or path.startswith(f"{prefix}/")
+                for prefix in rule.path_prefixes
+            ):
                 return rule
         return None
 
@@ -187,7 +215,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not token:
             return None
         try:
-            payload = decode_token(token, expected_type=TokenType.ACCESS, check_blacklist=False)
+            payload = decode_token(
+                token, expected_type=TokenType.ACCESS, check_blacklist=False
+            )
         except UnauthorizedException:
             return None
         except Exception:

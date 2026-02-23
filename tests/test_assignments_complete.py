@@ -32,6 +32,8 @@ def test_assignment_grading_workflow(client, monkeypatch):
     )
     assert course_response.status_code == 201
     course_id = course_response.json()["id"]
+    publish_response = client.post(f"/api/v1/courses/{course_id}/publish", headers=instructor_headers)
+    assert publish_response.status_code == 200, publish_response.text
 
     # Create assignment
     assignment_data = {
@@ -200,7 +202,10 @@ def test_assignment_progress_tracking(client, monkeypatch):
         headers=instructor_headers,
         json=course_data,
     )
+    assert course_response.status_code == 201
     course_id = course_response.json()["id"]
+    publish_response = client.post(f"/api/v1/courses/{course_id}/publish", headers=instructor_headers)
+    assert publish_response.status_code == 200, publish_response.text
 
     assignment_data = {
         "title": "Progress Test Assignment",
@@ -240,7 +245,7 @@ def test_assignment_progress_tracking(client, monkeypatch):
     assert enrollment_get_response.status_code == 200
     initial_enrollment = enrollment_get_response.json()
     assert initial_enrollment["status"] == "active"
-    assert initial_enrollment["progress_percentage"] == 0.0
+    assert float(initial_enrollment["progress_percentage"]) == 0.0
 
     # Submit assignment
     submission_data = {

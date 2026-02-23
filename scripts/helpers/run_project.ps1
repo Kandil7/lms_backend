@@ -53,17 +53,17 @@ if (-not $NoMigrate) {
 
 if ($CreateAdmin) {
     Write-Step "Creating admin user"
-    & docker compose -f docker-compose.yml exec -T api python scripts/create_admin.py
+    & docker compose -f docker-compose.yml exec -T api python scripts/user_management/create_admin.py
 }
 
 if ($CreateInstructor) {
     Write-Step "Creating instructor user"
-    & docker compose -f docker-compose.yml exec -T api python scripts/create_instructor.py
+    & docker compose -f docker-compose.yml exec -T api python scripts/user_management/create_instructor.py
 }
 
 if ($SeedDemoData) {
     Write-Step "Seeding demo data"
-    & docker compose -f docker-compose.yml exec -T api python scripts/seed_demo_data.py
+    & docker compose -f docker-compose.yml exec -T api python scripts/database/seed_demo_data.py
 }
 
 Write-Step "Waiting for API readiness endpoint"

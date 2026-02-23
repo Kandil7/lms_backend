@@ -39,7 +39,7 @@ jobs:
         run: |
           python -m compileall app scripts
           python -m pip check
-          python scripts/generate_postman_collection.py
+          python scripts/documentation/generate_postman_collection.py
           python -m json.tool "postman/LMS Backend.postman_collection.json" > /dev/null
           python -m json.tool "postman/LMS Backend.postman_environment.json" > /dev/null
 
