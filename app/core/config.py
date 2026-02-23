@@ -158,6 +158,16 @@ class Settings(BaseSettings):
         default_factory=lambda: ["/api/v1/files/upload"]
     )
 
+    ASSIGNMENT_RATE_LIMIT_REQUESTS_PER_MINUTE: int = 60
+    ASSIGNMENT_RATE_LIMIT_WINDOW_SECONDS: int = 60
+    ASSIGNMENT_RATE_LIMIT_PATHS: CsvList = Field(
+        default_factory=lambda: [
+            "/api/v1/assignments",
+            "/api/v1/assignments/submit",
+            "/api/v1/assignments/submissions",
+        ]
+    )
+
     UPLOAD_DIR: str = "uploads"
     CERTIFICATES_DIR: str = "certificates"
     MAX_UPLOAD_MB: int = 100
@@ -174,7 +184,7 @@ class Settings(BaseSettings):
             "png",
         ]
     )
-    FILE_STORAGE_PROVIDER: Literal["local", "azure"] = "local"
+    FILE_STORAGE_PROVIDER: Literal["local", "azure"] = "azure"
     FILE_DOWNLOAD_URL_EXPIRE_SECONDS: int = 900
 
     @field_validator("CORS_ORIGINS", mode="before")
@@ -379,6 +389,20 @@ class Settings(BaseSettings):
             raise ValueError(
                 "TASKS_FORCE_INLINE must be false when ENVIRONMENT=production"
             )
+
+        if self.FILE_STORAGE_PROVIDER == "azure":
+            has_container = bool((self.AZURE_STORAGE_CONTAINER_NAME or "").strip())
+            has_connection_string = bool((self.AZURE_STORAGE_CONNECTION_STRING or "").strip())
+            has_account_url = bool((self.AZURE_STORAGE_ACCOUNT_URL or "").strip())
+
+            if not has_container:
+                raise ValueError(
+                    "AZURE_STORAGE_CONTAINER_NAME is required when FILE_STORAGE_PROVIDER=azure in production"
+                )
+            if not has_connection_string and not has_account_url:
+                raise ValueError(
+                    "Either AZURE_STORAGE_CONNECTION_STRING or AZURE_STORAGE_ACCOUNT_URL is required when FILE_STORAGE_PROVIDER=azure in production"
+                )
 
         return self
 

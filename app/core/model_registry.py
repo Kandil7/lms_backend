@@ -15,3 +15,4 @@ def load_all_models() -> None:
     import app.modules.quizzes.models.attempt  # noqa: F401
     import app.modules.files.models  # noqa: F401
     import app.modules.certificates.models  # noqa: F401
+    import app.modules.assignments.models  # noqa: F401

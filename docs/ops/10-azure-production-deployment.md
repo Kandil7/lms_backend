@@ -87,7 +87,7 @@ Set GitHub `Environment: production` secrets:
 - `AZURE_CLIENT_ID` (optional)
 - `AZURE_TENANT_ID` (optional)
 - `AZURE_CLIENT_SECRET` (optional)
-- `FILE_STORAGE_PROVIDER` (optional, `local` or `azure`)
+- `FILE_STORAGE_PROVIDER` (optional, defaults to `azure`; can be `local` or `azure`)
 - `AZURE_STORAGE_CONNECTION_STRING` (optional)
 - `AZURE_STORAGE_ACCOUNT_NAME` (optional)
 - `AZURE_STORAGE_ACCOUNT_KEY` (optional)

@@ -68,7 +68,7 @@ services:
       - >
         mkdir -p /app/uploads /app/certificates /tmp &&
         chown -R nobody:nogroup /app/uploads /app/certificates /tmp &&
-        celery -A app.tasks.celery_app.celery_app worker --loglevel=info --queues=emails,progress,certificates --uid=nobody
+        celery -A app.tasks.celery_app.celery_app worker --loglevel=info --queues=emails,progress,certificates,webhooks --uid=nobody
     env_file:
       - .env
     environment:

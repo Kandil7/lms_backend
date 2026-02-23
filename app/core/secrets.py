@@ -195,8 +195,8 @@ class SecretsManager:
             elif self._source == SecretSource.AZURE_KEY_VAULT and hasattr(self, '_azure_client') and self._azure_client:
                 # Try to get from Azure Key Vault
                 try:
-                    # Azure Key Vault uses different naming convention - prefix with 'lms-' for production
-                    azure_key = f"lms-{key.lower()}"
+                    # Key Vault secret names support alphanumeric and hyphen only.
+                    azure_key = f"lms-{key.lower().replace('_', '-')}"
                     secret = self._azure_client.get_secret(azure_key)
                     return secret.value
                 except Exception as azure_error:

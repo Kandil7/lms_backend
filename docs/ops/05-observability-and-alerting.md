@@ -1,5 +1,7 @@
 # Observability and Alerting Guide
 
+> **Note**: For comprehensive observability documentation including detailed metrics, dashboards, and advanced configuration, see [docs/ops/13-observability-guide.md](13-observability-guide.md).
+
 ## 1. Components
 - Prometheus for metrics scraping and alert rules.
 - Grafana for dashboards.

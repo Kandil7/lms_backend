@@ -57,8 +57,14 @@ services:
         - CMD-SHELL
         - >
           python -c "import os,urllib.request,sys;
-          req=urllib.request.Request('http://localhost:8000/api/v1/ready', headers={'Host': os.getenv('APP_DOMAIN', 'localhost')});
-          sys.exit(0 if urllib.request.urlopen(req, timeout=3).status == 200 else 1)"
+          host = os.getenv('APP_DOMAIN', 'api');
+          port = os.getenv('API_PORT', '8000');
+          req=urllib.request.Request(f'http://{host}:{port}/api/v1/ready', headers={'Host': os.getenv('APP_DOMAIN', 'localhost')});
+          try:
+              response = urllib.request.urlopen(req, timeout=3);
+              sys.exit(0 if response.status == 200 else 1)
+          except Exception as e:
+              sys.exit(1)"
       interval: 15s
       timeout: 5s
       retries: 5
@@ -73,7 +79,7 @@ services:
       - >
         mkdir -p /app/uploads /app/certificates /tmp &&
         chown -R nobody:nogroup /app/uploads /app/certificates /tmp &&
-        celery -A app.tasks.celery_app.celery_app worker --loglevel=info --queues=emails,progress,certificates --uid=nobody
+        celery -A app.tasks.celery_app.celery_app worker --loglevel=info --queues=emails,progress,certificates,webhooks --uid=nobody
     env_file:
       - .env
     environment:

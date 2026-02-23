@@ -1,6 +1,4 @@
-import pytest
-from datetime import datetime, timedelta
-from typing import Dict
+from uuid import uuid4
 
 from tests.helpers import auth_headers, register_user
 
@@ -82,6 +80,8 @@ def test_get_assignment(client, monkeypatch):
         json=course_data,
     )
     course_id = course_response.json()["id"]
+    publish_response = client.post(f"/api/v1/courses/{course_id}/publish", headers=instructor_headers)
+    assert publish_response.status_code == 200, publish_response.text
 
     # Create assignment
     assignment_data = {
@@ -123,7 +123,7 @@ def test_student_cannot_create_assignment(client, monkeypatch):
     # Try to create assignment (should fail)
     assignment_data = {
         "title": "Student Assignment",
-        "course_id": "some-id",
+        "course_id": str(uuid4()),
         "status": "draft",
         "is_published": False,
     }
@@ -162,6 +162,8 @@ def test_submit_assignment(client, monkeypatch):
         json=course_data,
     )
     course_id = course_response.json()["id"]
+    publish_response = client.post(f"/api/v1/courses/{course_id}/publish", headers=instructor_headers)
+    assert publish_response.status_code == 200, publish_response.text
 
     # Create assignment
     assignment_data = {
@@ -242,6 +244,8 @@ def test_instructor_can_view_submissions(client, monkeypatch):
         json=course_data,
     )
     course_id = course_response.json()["id"]
+    publish_response = client.post(f"/api/v1/courses/{course_id}/publish", headers=instructor_headers)
+    assert publish_response.status_code == 200, publish_response.text
 
     # Create assignment
     assignment_data = {

@@ -1,8 +1,8 @@
-from .routers.routers import router as assignments_router
-from .services.services import AssignmentService, SubmissionService
-from .repositories.repositories import AssignmentRepository, SubmissionRepository
-from .models.models import Assignment, Submission
-from .schemas.schemas import AssignmentCreate, AssignmentUpdate, SubmissionCreate, SubmissionUpdate, AssignmentResponse, SubmissionResponse
+from .routers import assignments_router
+from .services import AssignmentService, SubmissionService
+from .repositories import AssignmentRepository, SubmissionRepository
+from .models import Assignment, Submission
+from .schemas import AssignmentCreate, AssignmentUpdate, SubmissionCreate, SubmissionUpdate, AssignmentResponse, SubmissionResponse
 
 __all__ = [
     "assignments_router",

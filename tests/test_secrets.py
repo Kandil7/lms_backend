@@ -6,6 +6,22 @@ from unittest.mock import patch, MagicMock
 from app.core.secrets import SecretSource, SecretsManager, get_secret, initialize_secrets_manager
 
 
+@pytest.fixture(autouse=True)
+def reset_secret_env(monkeypatch):
+    keys = [
+        "SECRET_TEST_KEY",
+        "TEST_KEY",
+        "VAULT_ADDR",
+        "VAULT_TOKEN",
+        "VAULT_NAMESPACE",
+    ]
+    for key in keys:
+        monkeypatch.delenv(key, raising=False)
+    yield
+    for key in keys:
+        monkeypatch.delenv(key, raising=False)
+
+
 class TestSecretsManager:
     def test_initialization_env_var(self):
         """Test initialization with environment variable source."""
@@ -136,6 +152,33 @@ class TestSecretsManager:
         
         with pytest.raises(RuntimeError, match="Secrets manager not initialized"):
             manager.get_secret("TEST_KEY")
+
+    def test_get_secret_azure_key_vault_name_normalization(self):
+        """Azure Key Vault secret names should map underscores to hyphens."""
+        manager = SecretsManager()
+        manager._initialized = True
+        manager._source = SecretSource.AZURE_KEY_VAULT
+        manager._azure_client = MagicMock()
+        manager._azure_client.get_secret.return_value = MagicMock(value="azure-secret-value")
+
+        result = manager.get_secret("AZURE_STORAGE_CONNECTION_STRING")
+
+        assert result == "azure-secret-value"
+        manager._azure_client.get_secret.assert_called_once_with(
+            "lms-azure-storage-connection-string"
+        )
+
+    def test_get_secret_azure_key_vault_fallback_default(self):
+        """Azure Key Vault lookup errors should return default."""
+        manager = SecretsManager()
+        manager._initialized = True
+        manager._source = SecretSource.AZURE_KEY_VAULT
+        manager._azure_client = MagicMock()
+        manager._azure_client.get_secret.side_effect = Exception("kv lookup failed")
+
+        result = manager.get_secret("AZURE_STORAGE_ACCOUNT_KEY", default="fallback")
+
+        assert result == "fallback"
 
 
 class TestGlobalFunctions:

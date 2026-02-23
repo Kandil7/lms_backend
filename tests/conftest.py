@@ -8,6 +8,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 os.environ.setdefault("ALLOW_PUBLIC_ROLE_REGISTRATION", "true")
+os.environ["SENTRY_DSN"] = ""
 
 from app.core.database import Base, get_db
 from app.core.cache import get_app_cache

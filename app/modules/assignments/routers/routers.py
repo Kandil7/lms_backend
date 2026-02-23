@@ -1,122 +1,129 @@
-from datetime import datetime
-from typing import List, Optional
-import uuid
+from __future__ import annotations
+
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.modules.assignments.models import Assignment, Submission
-from app.modules.assignments.schemas import AssignmentCreate, AssignmentUpdate, SubmissionCreate, SubmissionUpdate, AssignmentResponse, AssignmentListResponse, SubmissionResponse, SubmissionListResponse
-from app.modules.assignments.services import AssignmentService, SubmissionService
 from app.core.dependencies import get_current_user
-from app.modules.users.models import User
+from app.modules.assignments.models import Assignment, Submission
+from app.modules.assignments.schemas import (
+    AssignmentCreate,
+    AssignmentListResponse,
+    AssignmentResponse,
+    AssignmentUpdate,
+    SubmissionCreate,
+    SubmissionGradeRequest,
+    SubmissionListResponse,
+    SubmissionResponse,
+    SubmissionUpdate,
+)
+from app.modules.assignments.services import AssignmentService, SubmissionService
 from app.modules.courses.models import Course
 from app.modules.enrollments.models import Enrollment
-from app.core.config import settings
-
+from app.modules.users.models import User
 
 router = APIRouter(prefix="/assignments", tags=["assignments"])
 
 
+def _as_assignment_response(item: Assignment) -> AssignmentResponse:
+    return AssignmentResponse.model_validate(item)
+
+
+def _as_submission_response(item: Submission) -> SubmissionResponse:
+    return SubmissionResponse.model_validate(item)
+
+
 @router.post("", response_model=AssignmentResponse, status_code=status.HTTP_201_CREATED)
-async def create_assignment(
+def create_assignment(
     assignment_data: AssignmentCreate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Create a new assignment"""
-    # Verify user is instructor and owns the course
+    db: Session = Depends(get_db),
+) -> AssignmentResponse:
     if current_user.role != "instructor":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only instructors can create assignments")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only instructors can create assignments",
+        )
 
-    # Verify course exists and belongs to current user
-    try:
-        course_id_uuid = uuid.UUID(assignment_data.course_id)
-    except ValueError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid course ID format")
-
-    result = await db.execute(select(Course).where(Course.id == course_id_uuid))
-    course = result.scalar_one_or_none()
-    if not course:
+    course = db.scalar(select(Course).where(Course.id == assignment_data.course_id))
+    if course is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
-    if course.instructor_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have permission to create assignments for this course")
 
-    service = AssignmentService(db)
-    assignment = await service.create_assignment(assignment_data, str(current_user.id))
-    return assignment
+    if course.instructor_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to create assignments for this course",
+        )
+
+    assignment = AssignmentService(db).create_assignment(assignment_data, current_user.id)
+    return _as_assignment_response(assignment)
 
 
 @router.get("/{assignment_id}", response_model=AssignmentResponse)
-async def get_assignment(
-    assignment_id: str,
+def get_assignment(
+    assignment_id: UUID,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Get assignment by ID"""
-    service = AssignmentService(db)
-    assignment = await service.get_assignment(assignment_id)
-    if not assignment:
+    db: Session = Depends(get_db),
+) -> AssignmentResponse:
+    assignment = AssignmentService(db).get_assignment(assignment_id)
+    if assignment is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
-    
-    # Check permissions
+
     if current_user.role == "student":
-        # Student can only access assignments in their enrolled courses
-        result = await db.execute(
+        enrollment = db.scalar(
             select(Enrollment).where(
                 Enrollment.student_id == current_user.id,
-                Enrollment.course_id == assignment.course_id
+                Enrollment.course_id == assignment.course_id,
             )
         )
-        enrollment = result.scalar_one_or_none()
-        if not enrollment:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have access to this assignment")
-    elif current_user.role == "instructor":
-        # Instructor can only access assignments they created
-        if assignment.instructor_id != current_user.id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have access to this assignment")
-    
-    return assignment
+        if enrollment is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have access to this assignment",
+            )
+    elif current_user.role == "instructor" and assignment.instructor_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have access to this assignment",
+        )
+
+    return _as_assignment_response(assignment)
 
 
 @router.get("/course/{course_id}", response_model=AssignmentListResponse)
-async def get_assignments_by_course(
-    course_id: str,
+def get_assignments_by_course(
+    course_id: UUID,
     skip: int = 0,
     limit: int = 100,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Get assignments for a course"""
-    # Verify user has access to the course
-    try:
-        course_id_uuid = uuid.UUID(course_id)
-    except ValueError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid course ID format")
-
+    db: Session = Depends(get_db),
+) -> AssignmentListResponse:
     if current_user.role == "student":
-        result = await db.execute(
+        enrollment = db.scalar(
             select(Enrollment).where(
                 Enrollment.student_id == current_user.id,
-                Enrollment.course_id == course_id_uuid
+                Enrollment.course_id == course_id,
             )
         )
-        enrollment = result.scalar_one_or_none()
-        if not enrollment:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have access to this course")
+        if enrollment is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have access to this course",
+            )
     elif current_user.role == "instructor":
-        result = await db.execute(select(Course).where(Course.id == course_id_uuid))
-        course = result.scalar_one_or_none()
-        if not course or course.instructor_id != current_user.id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have access to this course")
+        course = db.scalar(select(Course).where(Course.id == course_id))
+        if course is None or course.instructor_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have access to this course",
+            )
 
-    service = AssignmentService(db)
-    assignments, total = await service.get_assignments_by_course(str(course_id_uuid), skip, limit)
-
+    assignments, total = AssignmentService(db).get_assignments_by_course(course_id, skip, limit)
     return AssignmentListResponse(
-        assignments=[AssignmentResponse.from_orm(a) for a in assignments],
+        assignments=[_as_assignment_response(item) for item in assignments],
         total=total,
         page=skip // limit + 1,
         page_size=limit,
@@ -124,283 +131,225 @@ async def get_assignments_by_course(
 
 
 @router.put("/{assignment_id}", response_model=AssignmentResponse)
-async def update_assignment(
-    assignment_id: str,
+def update_assignment(
+    assignment_id: UUID,
     update_data: AssignmentUpdate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Update assignment"""
+    db: Session = Depends(get_db),
+) -> AssignmentResponse:
     service = AssignmentService(db)
-    assignment = await service.get_assignment(assignment_id)
-    if not assignment:
+    assignment = service.get_assignment(assignment_id)
+    if assignment is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
 
-    # Only instructor who created the assignment can update it
     if current_user.role != "instructor" or assignment.instructor_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have permission to update this assignment")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to update this assignment",
+        )
 
-    updated_assignment = await service.update_assignment(assignment_id, update_data)
-    if not updated_assignment:
+    updated_assignment = service.update_assignment(assignment_id, update_data)
+    if updated_assignment is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to update assignment")
 
-    return updated_assignment
+    return _as_assignment_response(updated_assignment)
 
 
 @router.delete("/{assignment_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_assignment(
-    assignment_id: str,
+def delete_assignment(
+    assignment_id: UUID,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Delete assignment"""
+    db: Session = Depends(get_db),
+) -> None:
     service = AssignmentService(db)
-    assignment = await service.get_assignment(assignment_id)
-    if not assignment:
+    assignment = service.get_assignment(assignment_id)
+    if assignment is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
 
-    # Only instructor who created the assignment can delete it
     if current_user.role != "instructor" or assignment.instructor_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have permission to delete this assignment")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to delete this assignment",
+        )
 
-    success = await service.delete_assignment(assignment_id)
+    success = service.delete_assignment(assignment_id)
     if not success:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to delete assignment")
 
 
-# Submissions router
-submissions_router = APIRouter(prefix="/submissions", tags=["submissions"])
-
-
 @router.post("/submit", response_model=SubmissionResponse, status_code=status.HTTP_201_CREATED)
-async def submit_assignment(
+def submit_assignment(
     submission_data: SubmissionCreate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Submit an assignment"""
+    db: Session = Depends(get_db),
+) -> SubmissionResponse:
     if current_user.role != "student":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only students can submit assignments")
-    
-    # Verify enrollment exists and assignment belongs to the same course
-    result = await db.execute(
-        select(Enrollment).where(
-            Enrollment.student_id == current_user.id,
-            Enrollment.id == submission_data.enrollment_id
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only students can submit assignments",
         )
-    )
-    enrollment = result.scalar_one_or_none()
-    if not enrollment:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Enrollment not found")
-    
-    result = await db.execute(
-        select(Assignment).where(
-            Assignment.id == submission_data.assignment_id,
-            Assignment.course_id == enrollment.course_id
-        )
-    )
-    assignment = result.scalar_one_or_none()
-    if not assignment:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found or does not belong to your course")
-    
+
     service = SubmissionService(db)
-    submission = await service.create_submission(submission_data, str(current_user.id))
-    return submission
-
-
-@router.get("/{submission_id}", response_model=SubmissionResponse)
-async def get_submission(
-    submission_id: str,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Get submission by ID"""
-    service = SubmissionService(db)
-    submission = await service.get_submission(submission_id)
-    if not submission:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
-    
-    # Check permissions
-    if current_user.role == "student":
-        # Student can only access their own submissions
-        if str(submission.enrollment_id) != str(current_user.id):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have access to this submission")
-    elif current_user.role == "instructor":
-        # Instructor can only access submissions for assignments they created
-        result = await db.execute(
-            select(Assignment).where(
-                Assignment.id == submission.assignment_id,
-                Assignment.instructor_id == current_user.id
-            )
-        )
-        assignment = result.scalar_one_or_none()
-        if not assignment:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have access to this submission")
-    
-    return submission
-
-
-@router.get("/assignment/{assignment_id}", response_model=SubmissionListResponse)
-async def get_submissions_by_assignment(
-    assignment_id: str,
-    skip: int = 0,
-    limit: int = 100,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Get submissions for an assignment"""
-    if current_user.role != "instructor":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only instructors can view submissions for an assignment")
-
-    # Verify assignment exists and belongs to current user
     try:
-        assignment_id_uuid = uuid.UUID(assignment_id)
-    except ValueError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid assignment ID format")
-
-    result = await db.execute(
-        select(Assignment).where(
-            Assignment.id == assignment_id_uuid,
-            Assignment.instructor_id == current_user.id
-        )
-    )
-    assignment = result.scalar_one_or_none()
-    if not assignment:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found or you don't have access")
-
-    service = SubmissionService(db)
-    submissions, total = await service.get_submissions_by_assignment(str(assignment_id_uuid), skip, limit)
-
-    return SubmissionListResponse(
-        submissions=[SubmissionResponse.from_orm(s) for s in submissions],
-        total=total,
-        page=skip // limit + 1,
-        page_size=limit,
-    )
+        submission = service.create_submission(submission_data, current_user.id)
+    except ValueError as exc:
+        detail = str(exc)
+        if detail == "Enrollment not found":
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail) from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail) from exc
+    return _as_submission_response(submission)
 
 
-@router.get("/enrollment/{enrollment_id}", response_model=SubmissionListResponse)
-async def get_submissions_by_enrollment(
-    enrollment_id: str,
+@router.get("/submissions/{submission_id}", response_model=SubmissionResponse)
+def get_submission(
+    submission_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> SubmissionResponse:
+    submission = SubmissionService(db).get_submission(submission_id)
+    if submission is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+
+    if current_user.role == "student":
+        if submission.enrollment.student_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have access to this submission",
+            )
+    elif current_user.role == "instructor":
+        if submission.assignment.instructor_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have access to this submission",
+            )
+
+    return _as_submission_response(submission)
+
+
+@router.get("/submissions/assignment/{assignment_id}", response_model=SubmissionListResponse)
+def get_submissions_by_assignment(
+    assignment_id: UUID,
     skip: int = 0,
     limit: int = 100,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Get submissions for an enrollment"""
-    # Verify enrollment belongs to current user
-    if current_user.role == "student":
-        try:
-            enrollment_id_uuid = uuid.UUID(enrollment_id)
-        except ValueError:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid enrollment ID format")
-        if enrollment_id_uuid != current_user.id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only access your own submissions")
-    elif current_user.role == "instructor":
-        # Instructor can access submissions for enrollments in their courses
-        result = await db.execute(
-            select(Enrollment).where(
-                Enrollment.id == enrollment_id,
-                Enrollment.course.has(instructor_id=current_user.id)
-            )
+    db: Session = Depends(get_db),
+) -> SubmissionListResponse:
+    if current_user.role != "instructor":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only instructors can view submissions for an assignment",
         )
-        enrollment = result.scalar_one_or_none()
-        if not enrollment:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have access to this enrollment")
 
-    service = SubmissionService(db)
-    submissions, total = await service.get_submissions_by_enrollment(enrollment_id, skip, limit)
+    assignment = AssignmentService(db).get_assignment(assignment_id)
+    if assignment is None or assignment.instructor_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assignment not found or you don't have access",
+        )
 
+    submissions, total = SubmissionService(db).get_submissions_by_assignment(assignment_id, skip, limit)
     return SubmissionListResponse(
-        submissions=[SubmissionResponse.from_orm(s) for s in submissions],
+        submissions=[_as_submission_response(item) for item in submissions],
         total=total,
         page=skip // limit + 1,
         page_size=limit,
     )
 
 
-@router.put("/{submission_id}", response_model=SubmissionResponse)
-async def update_submission(
-    submission_id: str,
+@router.get("/submissions/enrollment/{enrollment_id}", response_model=SubmissionListResponse)
+def get_submissions_by_enrollment(
+    enrollment_id: UUID,
+    skip: int = 0,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> SubmissionListResponse:
+    enrollment = db.scalar(select(Enrollment).where(Enrollment.id == enrollment_id))
+    if enrollment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Enrollment not found")
+
+    if current_user.role == "student":
+        if enrollment.student_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only access your own submissions",
+            )
+    elif current_user.role == "instructor":
+        course = db.scalar(
+            select(Course.id).where(
+                Course.id == enrollment.course_id,
+                Course.instructor_id == current_user.id,
+            )
+        )
+        if course is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have access to this enrollment",
+            )
+
+    submissions, total = SubmissionService(db).get_submissions_by_enrollment(enrollment_id, skip, limit)
+    return SubmissionListResponse(
+        submissions=[_as_submission_response(item) for item in submissions],
+        total=total,
+        page=skip // limit + 1,
+        page_size=limit,
+    )
+
+
+@router.put("/submissions/{submission_id}", response_model=SubmissionResponse)
+def update_submission(
+    submission_id: UUID,
     update_data: SubmissionUpdate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Update submission (grading/feedback)"""
+    db: Session = Depends(get_db),
+) -> SubmissionResponse:
     service = SubmissionService(db)
-    submission = await service.get_submission(submission_id)
-    if not submission:
+    submission = service.get_submission(submission_id)
+    if submission is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
 
-    # Only instructor who created the assignment can update submissions
-    try:
-        assignment_id_uuid = uuid.UUID(submission.assignment_id)
-    except ValueError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid assignment ID format")
-
-    result = await db.execute(
-        select(Assignment).where(
-            Assignment.id == assignment_id_uuid,
-            Assignment.instructor_id == current_user.id
+    if current_user.role != "instructor" or submission.assignment.instructor_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to update this submission",
         )
-    )
-    assignment = result.scalar_one_or_none()
-    if not assignment:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have permission to update this submission")
 
-    updated_submission = await service.update_submission(submission_id, update_data)
-    if not updated_submission:
+    updated_submission = service.update_submission(submission_id, update_data)
+    if updated_submission is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to update submission")
 
-    return updated_submission
+    return _as_submission_response(updated_submission)
 
 
 @router.post("/submissions/{submission_id}/grade", response_model=SubmissionResponse)
-async def grade_submission(
-    submission_id: str,
-    grade: float,
-    max_grade: float,
-    feedback: str = "",
-    feedback_attachments: List[str] = [],
+def grade_submission(
+    submission_id: UUID,
+    payload: SubmissionGradeRequest,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Grade a submission with feedback and attachments"""
+    db: Session = Depends(get_db),
+) -> SubmissionResponse:
     if current_user.role != "instructor":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only instructors can grade submissions")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only instructors can grade submissions",
+        )
 
     service = SubmissionService(db)
-    submission = await service.get_submission(submission_id)
-    if not submission:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
-
-    # Verify instructor owns the assignment
     try:
-        assignment_id_uuid = uuid.UUID(submission.assignment_id)
-    except ValueError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid assignment ID format")
-
-    result = await db.execute(
-        select(Assignment).where(
-            Assignment.id == assignment_id_uuid,
-            Assignment.instructor_id == current_user.id
+        submission = service.grade_submission(
+            submission_id,
+            grade=payload.grade,
+            max_grade=payload.max_grade,
+            feedback=payload.feedback,
+            feedback_attachments=payload.feedback_attachments,
+            instructor_id=current_user.id,
         )
-    )
-    assignment = result.scalar_one_or_none()
-    if not assignment:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have permission to grade this submission")
+    except ValueError as exc:
+        detail = str(exc)
+        if detail == "Submission not found":
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail) from exc
+        if "permission" in detail.lower():
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail) from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail) from exc
 
-    # Validate grade range
-    if grade < 0 or grade > max_grade:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Grade must be between 0 and {max_grade}"
-        )
-
-    try:
-        graded_submission = await service.grade_submission(
-            submission_id, grade, max_grade, feedback, feedback_attachments, current_user
-        )
-        return graded_submission
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return _as_submission_response(submission)

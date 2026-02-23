@@ -1,238 +1,182 @@
-# LMS Backend - Comprehensive Technical Documentation
+# Master Comprehensive Documentation Index
 
-## Project Overview
-
-This document provides complete technical documentation for the LMS (Learning Management System) Backend project. The LMS Backend is a production-oriented system built as a modular monolith using FastAPI, designed to support full online learning platform functionality including user management, course creation, enrollment tracking, quiz assessments, certificate issuance, and comprehensive analytics.
-
-The project follows clean architecture principles with clear separation between core infrastructure, modules, API layers, and background tasks. It implements industry-standard security practices, observability features, and deployment patterns suitable for production environments.
+This document provides a complete index of all technical documentation in the LMS Backend project. All documentation is organized by category for easy navigation.
 
 ---
 
-## Documentation Index
+## Complete Documentation List
 
-This master index provides quick navigation to all technical documentation files within the docs/tech/ directory. Each document covers specific aspects of the project in exhaustive detail.
+### 1. Getting Started (Root docs/)
 
-### Getting Started
-
-| Document | Description |
-|----------|-------------|
-| [01-Complete-Project-Overview.md](01-Complete-Project-Overview.md) | Comprehensive project overview including tech stack, architecture, and core capabilities |
-| [02-Complete-Architecture-Decisions.md](02-Complete-Architecture-Decisions.md) | Detailed explanation of architectural decisions and the reasoning behind each choice |
-| [03-Complete-Setup-And-Configuration.md](03-Complete-Setup-And-Configuration.md) | Step-by-step setup guide for development, staging, and production environments |
-| [04-Complete-Build-And-Run-Guide.md](04-Complete-Build-And-Run-Guide.md) | Complete instructions for building and running the project locally and in containers |
-
-### Core Infrastructure
-
-| Document | Description |
-|----------|-------------|
-| [05-Complete-Core-Modules-Reference.md](05-Complete-Core-Modules-Reference.md) | Detailed reference for all core infrastructure modules |
-| [06-Complete-Database-And-Migrations.md](07-Complete-Database-And-Migrations.md) | Database schema design, migrations, and data model documentation |
-| [07-Complete-Security-And-Authentication.md](06-Complete-Security-And-Authentication.md) | Security implementation details including JWT, rate limiting, and protection mechanisms |
-| [08-Complete-Background-Jobs-Celery.md](08-Complete-Background-Jobs-Celery.md) | Celery task configuration, task types, and async processing patterns |
-
-### Module Reference
-
-| Document | Description |
-|----------|-------------|
-| [09-Complete-Modules-Detailed.md](09-Complete-Modules-Detailed.md) | Comprehensive documentation of all application modules |
-| [10-Complete-API-Routes-Reference.md](10-Complete-API-Routes-Reference.md) | Complete API endpoint reference with request/response schemas |
-| [11-Complete-Services-Repositories.md](11-Complete-Services-Repositories.md) | Service layer and repository pattern implementation details |
-
-### Operations and Deployment
-
-| Document | Description |
-|----------|-------------|
-| [12-Complete-Operations-Infrastructure.md](12-Complete-Operations-Infrastructure.md) | Production operations, Docker configuration, and infrastructure setup |
-| [13-Complete-Deployment-Guide.md](13-Complete-Deployment-Guide.md) | Deployment procedures for various environments |
-| [14-Complete-Scripts-Reference.md](14-Complete-Scripts-Reference.md) | Complete reference for all scripts in the scripts/ directory |
-| [15-Complete-GitHub-Workflows.md](15-Complete-GitHub-Workflows.md) | CI/CD pipeline documentation and GitHub Actions workflows |
-
-### Quality Assurance
-
-| Document | Description |
-|----------|-------------|
-| [16-Complete-Testing-Strategy.md](16-Complete-Testing-Strategy.md) | Testing approach, test types, and coverage requirements |
-| [17-Complete-File-By-File-Documentation.md](17-Complete-File-By-File-Documentation.md) | Exhaustive file-by-file documentation of entire project |
+| # | File | Description |
+|---|------|-------------|
+| 1 | [README.md](../README.md) | Main documentation index |
+| 2 | [01-overview-ar.md](../01-overview-ar.md) | Arabic: Project overview |
+| 3 | [02-architecture-ar.md](../02-architecture-ar.md) | Arabic: Architecture |
+| 4 | [03-setup-and-config-ar.md](../03-setup-and-config-ar.md) | Arabic: Setup & configuration |
+| 5 | [04-modules-and-api-ar.md](../04-modules-and-api-ar.md) | Arabic: Modules & API |
+| 6 | [05-database-and-data-model-ar.md](../05-database-and-data-model-ar.md) | Arabic: Database model |
+| 7 | [06-background-jobs-and-ops-ar.md](../06-background-jobs-and-ops-ar.md) | Arabic: Background jobs |
+| 8 | [07-testing-and-quality-ar.md](../07-testing-and-quality-ar.md) | Arabic: Testing & quality |
+| 9 | [08-api-documentation.md](../08-api-documentation.md) | API documentation overview |
+| 10 | [09-full-api-reference.md](../09-full-api-reference.md) | Full API reference (generated) |
+| 11 | [HOW_TO_BUILD_PROJECT.md](../HOW_TO_BUILD_PROJECT.md) | How to build the project |
+| 12 | [CLIENT_APP_IMPLEMENTATION_PLAN.md](../CLIENT_APP_IMPLEMENTATION_PLAN.md) | Client app plan |
+| 13 | [FULL_PROJECT_DOCUMENTATION.md](../FULL_PROJECT_DOCUMENTATION.md) | Full project docs |
+| 14 | [COMPLETE_MODULE_DOCUMENTATION.md](../COMPLETE_MODULE_DOCUMENTATION.md) | Module docs |
 
 ---
 
-## Technology Stack Summary
+### 2. Core Technical Guides (docs/tech/)
 
-The LMS Backend utilizes a carefully selected technology stack optimized for performance, maintainability, and production readiness:
+#### Must-Read Guides
 
-**Framework and Runtime**: FastAPI serves as the primary web framework, chosen for its async capabilities, automatic OpenAPI documentation generation, and excellent performance characteristics. The application runs on Python 3.11+ with Uvicorn as the ASGI server.
+| # | File | Description |
+|---|------|-------------|
+| 1 | [01-tech-stack-and-choices.md](01-tech-stack-and-choices.md) | Core stack and storage choices |
+| 2 | [18-Complete-Project-Summary.md](18-Complete-Project-Summary.md) | Quick reference summary |
+| 3 | [17-Complete-File-By-File-Documentation.md](17-Complete-File-By-File-Documentation.md) | Every file explained |
+| 4 | [04-Complete-Build-And-Run-Guide.md](04-Complete-Build-And-Run-Guide.md) | Build & run |
+| 5 | [02-Complete-Architecture-Decisions.md](02-Complete-Architecture-Decisions.md) | Why decisions made |
 
-**Database**: PostgreSQL 16 provides the primary data store with SQLAlchemy 2.0 as the ORM. Alembic handles database migrations, enabling version-controlled schema changes. The database connection pool is configured with appropriate sizing for production workloads.
+#### API & Modules
 
-**Caching and Message Broker**: Redis 7 serves dual purposes as an in-memory cache for frequently accessed data and as the message broker for Celery task queue. This eliminates the need for separate systems and simplifies infrastructure.
+| # | File | Description |
+|---|------|-------------|
+| 1 | [10-Complete-API-Routes-Reference.md](10-Complete-API-Routes-Reference.md) | All API endpoints |
+| 2 | [09-Complete-Modules-Detailed.md](09-Complete-Modules-Detailed.md) | All modules explained |
 
-**Background Processing**: Celery 5.4 manages asynchronous task processing with dedicated queues for different task types (emails, progress tracking, certificate generation, webhooks). The architecture supports horizontal scaling of workers.
+#### Security
 
-**Container Orchestration**: Docker and Docker Compose provide containerization for all services. The production setup uses Caddy as a reverse proxy with automatic HTTPS certificate management via Let's Encrypt.
+| # | File | Description |
+|---|------|-------------|
+| 1 | [06-Complete-Security-And-Authentication.md](06-Complete-Security-And-Authentication.md) | Security implementation |
+| 2 | [SECURITY_IMPLEMENTATION_GUIDE.md](SECURITY_IMPLEMENTATION_GUIDE.md) | Security guide |
 
-**Observability**: Prometheus client library exposes application metrics, while Sentry provides error tracking and performance monitoring. The observability stack includes Grafana for visualization.
+#### Operations & Infrastructure
 
----
+| # | File | Description |
+|---|------|-------------|
+| 1 | [12-Complete-Operations-Infrastructure.md](12-Complete-Operations-Infrastructure.md) | Operations guide |
+| 2 | [11-Complete-Ops-Infrastructure-Config.md](11-Complete-Ops-Infrastructure-Config.md) | Ops configs |
+| 3 | [13-Complete-Docker-Configuration.md](13-Complete-Docker-Configuration.md) | Docker configs |
+| 4 | [08-Complete-Background-Jobs-Celery.md](08-Complete-Background-Jobs-Celery.md) | Celery tasks |
 
-## Module Architecture
+#### Development & CI/CD
 
-The application follows a modular monolith architecture where related functionality is grouped into vertical modules. Each module typically contains:
-
-- **Models**: SQLAlchemy ORM models defining database schema
-- **Schemas**: Pydantic models for request validation and response serialization
-- **Repositories**: Data access layer implementing database operations
-- **Services**: Business logic layer containing core functionality
-- **Routers**: FastAPI route handlers exposing API endpoints
-
-This pattern promotes code organization, separation of concerns, and makes the codebase navigable and maintainable despite being a monolithic application.
-
----
-
-## Project Structure Overview
-
-The project root contains the following primary directories:
-
-- **app/**: Main application code including core infrastructure and modules
-- **alembic/**: Database migration files
-- **scripts/**: Utility scripts for deployment, data management, and development
-- **tests/**: Test suite including unit, integration, and performance tests
-- **ops/**: Infrastructure configuration files (Caddy, observability)
-- **.github/workflows/**: GitHub Actions CI/CD pipelines
-- **docs/**: Technical documentation in multiple languages
-- **postman/**: Postman collections for API testing
-- **certificates/**: Generated certificate PDFs
-- **uploads/**: User-uploaded course materials
+| # | File | Description |
+|---|------|-------------|
+| 1 | [07-Complete-Testing-Strategy.md](07-Complete-Testing-Strategy.md) | Testing strategy |
+| 2 | [14-Complete-Scripts-Reference.md](14-Complete-Scripts-Reference.md) | All scripts explained |
+| 3 | [15-Complete-GitHub-Workflows.md](15-Complete-GitHub-Workflows.md) | CI/CD pipelines |
 
 ---
 
-## Quick Start Commands
+### 3. Operations Guides (docs/ops/)
 
-### Local Development
+| # | File | Description |
+|---|------|-------------|
+| 1 | [01-production-runbook.md](../ops/01-production-runbook.md) | Production runbook |
+| 2 | [02-staging-release-checklist.md](../ops/02-staging-release-checklist.md) | Staging checklist |
+| 3 | [03-launch-readiness-tracker.md](../ops/03-launch-readiness-tracker.md) | Launch tracker |
+| 4 | [04-uat-and-bug-bash-plan.md](../ops/04-uat-and-bug-bash-plan.md) | UAT plan |
+| 5 | [05-observability-and-alerting.md](../ops/05-observability-and-alerting.md) | Observability |
+| 6 | [06-backup-and-restore-drill-policy.md](../ops/06-backup-and-restore-drill-policy.md) | Backup policy |
+| 7 | [07-security-signoff-and-hardening.md](../ops/07-security-signoff-and-hardening.md) | Security hardening |
+| 8 | [08-performance-capacity-signoff.md](../ops/08-performance-capacity-signoff.md) | Performance |
+| 9 | [09-sla-slo-incident-support-policy.md](../ops/09-sla-slo-incident-support-policy.md) | SLA/SLO |
+| 10 | [10-azure-production-deployment.md](../ops/10-azure-production-deployment.md) | Azure deployment |
+| 11 | [11-smtp-provider-selection.md](../ops/11-smtp-provider-selection.md) | SMTP selection |
 
+---
+
+### 4. Legal & Templates
+
+| Location | File | Description |
+|----------|------|-------------|
+| docs/legal/ | [privacy-policy-template.md](../legal/privacy-policy-template.md) | Privacy policy |
+| docs/legal/ | [terms-of-service-template.md](../legal/terms-of-service-template.md) | Terms of service |
+| docs/legal/ | [data-retention-and-deletion-policy.md](../legal/data-retention-and-deletion-policy.md) | Data policy |
+| docs/templates/ | [uat-scenario-template.md](../templates/uat-scenario-template.md) | UAT template |
+| docs/templates/ | [bug-bash-report-template.md](../templates/bug-bash-report-template.md) | Bug bash template |
+
+---
+
+## Recommended Reading Order
+
+### For New Developers
+
+1. **Start Here**: [18-Complete-Project-Summary.md](18-Complete-Project-Summary.md) - Quick overview
+2. **Setup**: [04-Complete-Build-And-Run-Guide.md](04-Complete-Build-And-Run-Guide.md) - How to build
+3. **Architecture**: [02-Complete-Architecture-Decisions.md](02-Complete-Architecture-Decisions.md) - Why decisions
+4. **Modules**: [09-Complete-Modules-Detailed.md](09-Complete-Modules-Detailed.md) - How modules work
+5. **API**: [10-Complete-API-Routes-Reference.md](10-Complete-API-Routes-Reference.md) - Endpoints
+6. **File Reference**: [17-Complete-File-By-File-Documentation.md](17-Complete-File-By-File-Documentation.md) - Every file
+
+### For Operations Team
+
+1. **Runbook**: [01-production-runbook.md](../ops/01-production-runbook.md)
+2. **Operations**: [12-Complete-Operations-Infrastructure.md](12-Complete-Operations-Infrastructure.md)
+3. **Docker**: [13-Complete-Docker-Configuration.md](13-Complete-Docker-Configuration.md)
+4. **Monitoring**: [11-Complete-Ops-Infrastructure-Config.md](11-Complete-Ops-Infrastructure-Config.md)
+5. **Security**: [06-Complete-Security-And-Authentication.md](06-Complete-Security-And-Authentication.md)
+
+### For Arabic Readers
+
+Follow the numbered Arabic guides in docs/:
+- 01-overview-ar.md
+- 02-architecture-ar.md
+- 03-setup-and-config-ar.md
+- 04-modules-and-api-ar.md
+- 05-database-and-data-model-ar.md
+- 06-background-jobs-and-ops-ar.md
+- 07-testing-and-quality-ar.md
+
+---
+
+## Quick Command Reference
+
+### Development
 ```bash
-# Install dependencies
 pip install -r requirements.txt
-
-# Copy environment template
 cp .env.example .env
-
-# Run database migrations
 alembic upgrade head
-
-# Start development server
 uvicorn app.main:app --reload
+```
 
-# Run tests
+### Docker
+```bash
+docker compose up --build
+```
+
+### Tests
+```bash
 pytest -q --cov=app --cov-fail-under=75
 ```
 
-### Docker Development
-
+### Production
 ```bash
-# Start all services
-docker compose up --build
-
-# Start with demo data
-docker compose up --build
-python scripts/seed_demo_data.py --create-tables
-```
-
-### Production Deployment
-
-```bash
-# Configure production environment
-cp .env.example .env
-# Edit .env with production values
-
-# Deploy with Docker
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 ---
 
-## API Documentation
+## Documentation Coverage
 
-Interactive API documentation is available at the following endpoints when the application is running:
+This documentation covers:
 
-- **Swagger UI**: `/docs` - Interactive API documentation with request/response visualization
-- **ReDoc**: `/redoc` - Alternative API documentation format
-- **OpenAPI Schema**: `/openapi.json` - Raw OpenAPI specification in JSON format
-
-Note: API documentation is disabled in production by default for security reasons. Set `ENABLE_API_DOCS=true` in development or staging environments to access these features.
-
----
-
-## Configuration Reference
-
-The application uses environment variables for configuration. Key configuration categories include:
-
-- **Application**: Project name, version, environment, debug mode
-- **Database**: PostgreSQL connection URL, pool settings
-- **Security**: JWT secret key, token expiration times, rate limiting
-- **Email**: SMTP configuration for transactional emails
-- **Storage**: Local or Azure Blob storage for file uploads
-- **Observability**: Sentry DSN, Prometheus metrics settings
-- **Webhooks**: Webhook URLs and signing secrets for event notifications
-
-See [03-Complete-Setup-And-Configuration.md](03-Complete-Setup-And-Configuration.md) for complete configuration options.
+- ✅ Every file in the project
+- ✅ Every script in scripts/
+- ✅ Every module (auth, users, courses, enrollments, quizzes, certificates, files, analytics)
+- ✅ Every GitHub workflow (CI, Security, Deploy)
+- ✅ Every Docker configuration
+- ✅ Every ops configuration (Caddy, Prometheus, Grafana)
+- ✅ The functions/ directory (Firebase)
+- ✅ Every architectural decision with rationale
+- ✅ Security implementation details
+- ✅ Testing strategy and coverage
+- ✅ Background job processing with Celery
 
 ---
 
-## Security Features
-
-The LMS Backend implements comprehensive security measures:
-
-- **Authentication**: JWT-based authentication with access and refresh tokens
-- **Authorization**: Role-based access control (RBAC) with three roles: admin, instructor, student
-- **Password Security**: Bcrypt hashing with salt for secure password storage
-- **Rate Limiting**: Configurable rate limiting with Redis backend and in-memory fallback
-- **Security Headers**: HTTP security headers via middleware (HSTS, X-Frame-Options, etc.)
-- **Input Validation**: Pydantic models validate all incoming requests
-- **SQL Injection Prevention**: ORM usage prevents SQL injection vulnerabilities
-- **CORS**: Configurable cross-origin resource sharing settings
-
----
-
-## Monitoring and Observability
-
-The application includes comprehensive observability features:
-
-- **Metrics**: Prometheus-compatible metrics endpoint at `/metrics`
-- **Health Checks**: Readiness and liveness probes at `/api/v1/ready` and `/api/v1/health`
-- **Error Tracking**: Sentry integration for exception tracking and performance monitoring
-- **Request Logging**: All requests logged with timing information
-- **Structured Logging**: JSON-formatted logs for production environments
-
----
-
-## CI/CD Pipeline
-
-GitHub Actions workflows handle continuous integration and deployment:
-
-- **CI Workflow** (ci.yml): Runs on every push and pull request, executing static checks, unit tests, and coverage verification across Python 3.11 and 3.12
-- **Security Workflow** (security.yml): Runs pip-audit, bandit security scanning, and gitleaks secret detection
-- **Deploy Workflow** (deploy-azure-vm.yml): Deploys to Azure Virtual Machine on main branch merges
-
----
-
-## Support and Contributing
-
-For technical questions or contributions:
-
-1. Review the relevant documentation in docs/tech/
-2. Check existing GitHub issues
-3. Review API documentation at /docs when running locally
-4. Examine test files in tests/ for implementation patterns
-
----
-
-## Version Information
-
-- **Current Version**: 1.0.0
-- **Python Support**: 3.11, 3.12
-- **Database**: PostgreSQL 16
-- **Last Updated**: 2026
-
----
-
-*This documentation is part of the LMS Backend project. For the most up-to-date information, refer to the source code and inline documentation.*
+*For questions, refer to the relevant section or examine the source code.*

@@ -1,299 +1,300 @@
-from datetime import datetime
-from typing import List, Optional, Tuple
-import uuid
+from __future__ import annotations
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy.orm import joinedload
+from datetime import UTC, datetime
+from typing import Any
+from uuid import UUID
 
-from app.core.database import get_db
+from app.core.config import settings
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, joinedload
+
 from app.modules.assignments.models import Assignment, Submission
 from app.modules.assignments.schemas import AssignmentCreate, AssignmentUpdate, SubmissionCreate, SubmissionUpdate
-from app.modules.users.models import User
-from app.modules.courses.models import Course
 from app.modules.enrollments.models import Enrollment
+from app.utils.cache import cache_manager
 
 
 class AssignmentService:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: Session):
         self.db = db
 
-    async def create_assignment(self, assignment_data: AssignmentCreate, instructor_id: str) -> Assignment:
-        """Create a new assignment"""
+    def create_assignment(self, payload: AssignmentCreate, instructor_id: UUID) -> Assignment:
         assignment = Assignment(
-            title=assignment_data.title,
-            description=assignment_data.description,
-            instructions=assignment_data.instructions,
-            course_id=assignment_data.course_id,
+            title=payload.title,
+            description=payload.description,
+            instructions=payload.instructions,
+            course_id=payload.course_id,
             instructor_id=instructor_id,
-            status=assignment_data.status,
-            is_published=assignment_data.is_published,
-            due_date=assignment_data.due_date,
-            max_points=assignment_data.max_points,
-            grading_type=assignment_data.grading_type,
-            assignment_metadata=assignment_data.assignment_metadata,
+            status=payload.status,
+            is_published=payload.is_published,
+            due_date=payload.due_date,
+            max_points=payload.max_points,
+            grading_type=payload.grading_type,
+            assignment_metadata=payload.assignment_metadata,
         )
         self.db.add(assignment)
-        await self.db.commit()
-        await self.db.refresh(assignment)
+        self.db.commit()
+        self.db.refresh(assignment)
+
+        self._invalidate_assignments_list_cache(payload.course_id)
+
         return assignment
 
-    async def get_assignment(self, assignment_id: str) -> Optional[Assignment]:
-        """Get assignment by ID"""
-        result = await self.db.execute(
+    def get_assignment(self, assignment_id: UUID) -> Assignment | None:
+        stmt = (
             select(Assignment)
             .options(joinedload(Assignment.course), joinedload(Assignment.instructor))
             .where(Assignment.id == assignment_id)
         )
-        return result.scalar_one_or_none()
+        return self.db.scalar(stmt)
 
-    async def get_assignments_by_course(self, course_id: str, skip: int = 0, limit: int = 100) -> Tuple[List[Assignment], int]:
-        """Get assignments for a course"""
-        query = select(Assignment).where(Assignment.course_id == course_id)
-        total_result = await self.db.execute(select(func.count()).select_from(query.subquery()))
-        total = total_result.scalar_one()
+    def get_assignments_by_course(self, course_id: UUID, skip: int, limit: int) -> tuple[list[Assignment], int]:
+        cache_key = cache_manager.get_assignment_list_cache_key(str(course_id), skip, limit, "anonymous")
 
-        result = await self.db.execute(
-            query
-            .options(joinedload(Assignment.course), joinedload(Assignment.instructor))
+        if settings.CACHE_ENABLED:
+            cached_data = cache_manager.get_json(cache_key)
+            if isinstance(cached_data, dict):
+                assignments_data = cached_data.get("assignments")
+                total = cached_data.get("total", 0)
+                if isinstance(assignments_data, list):
+                    try:
+                        assignments = [
+                            self._assignment_from_cache_record(record)
+                            for record in assignments_data
+                            if isinstance(record, dict)
+                        ]
+                        return assignments, int(total)
+                    except (TypeError, ValueError, KeyError):
+                        cache_manager.delete(cache_key)
+
+        base_stmt = select(Assignment).where(Assignment.course_id == course_id)
+        total = self.db.scalar(select(func.count()).select_from(base_stmt.subquery())) or 0
+        rows = self.db.scalars(
+            base_stmt.options(joinedload(Assignment.course), joinedload(Assignment.instructor))
             .offset(skip)
             .limit(limit)
-        )
-        assignments = result.scalars().all()
-        return assignments, total
+        ).all()
 
-    async def update_assignment(self, assignment_id: str, update_data: AssignmentUpdate) -> Optional[Assignment]:
-        """Update assignment"""
-        result = await self.db.execute(
-            select(Assignment).where(Assignment.id == assignment_id)
-        )
-        assignment = result.scalar_one_or_none()
-        if not assignment:
+        if settings.CACHE_ENABLED and rows:
+            cache_data = {
+                "assignments": [
+                    self._assignment_to_cache_record(item)
+                    for item in rows
+                ],
+                "total": int(total),
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
+
+            cache_manager.set_json(cache_key, cache_data, settings.COURSE_CACHE_TTL_SECONDS)
+
+        return list(rows), int(total)
+
+    def update_assignment(self, assignment_id: UUID, payload: AssignmentUpdate) -> Assignment | None:
+        assignment = self.db.scalar(select(Assignment).where(Assignment.id == assignment_id))
+        if assignment is None:
             return None
-
-        for field, value in update_data.dict(exclude_unset=True).items():
+        for field, value in payload.model_dump(exclude_unset=True).items():
             setattr(assignment, field, value)
+        assignment.updated_at = datetime.now(UTC)
+        self.db.commit()
+        self.db.refresh(assignment)
 
-        assignment.updated_at = datetime.utcnow()
-        await self.db.commit()
-        await self.db.refresh(assignment)
+        self._invalidate_assignments_list_cache(assignment.course_id)
+
         return assignment
 
-    async def delete_assignment(self, assignment_id: str) -> bool:
-        """Delete assignment"""
-        result = await self.db.execute(
-            select(Assignment).where(Assignment.id == assignment_id)
-        )
-        assignment = result.scalar_one_or_none()
-        if not assignment:
+    def delete_assignment(self, assignment_id: UUID) -> bool:
+        assignment = self.db.scalar(select(Assignment).where(Assignment.id == assignment_id))
+        if assignment is None:
             return False
+        course_id = assignment.course_id
+        self.db.delete(assignment)
+        self.db.commit()
 
-        await self.db.delete(assignment)
-        await self.db.commit()
+        self._invalidate_assignments_list_cache(course_id)
+
         return True
 
-    async def grade_submission(
-        self,
-        submission_id: str,
-        grade: float,
-        max_grade: float,
-        feedback: str,
-        feedback_attachments: List[str],
-        current_user: User,
-    ) -> Submission:
-        """Grade a submission with feedback and attachments"""
-        # Get submission
-        result = await self.db.execute(
+    @staticmethod
+    def _assignment_to_cache_record(assignment: Assignment) -> dict[str, Any]:
+        return {
+            "id": str(assignment.id),
+            "title": assignment.title,
+            "description": assignment.description,
+            "instructions": assignment.instructions,
+            "course_id": str(assignment.course_id),
+            "instructor_id": str(assignment.instructor_id),
+            "status": assignment.status,
+            "is_published": assignment.is_published,
+            "due_date": assignment.due_date.isoformat() if assignment.due_date else None,
+            "max_points": assignment.max_points,
+            "grading_type": assignment.grading_type,
+            "assignment_metadata": assignment.assignment_metadata,
+            "created_at": assignment.created_at.isoformat(),
+            "updated_at": assignment.updated_at.isoformat(),
+        }
+
+    @staticmethod
+    def _assignment_from_cache_record(record: dict[str, Any]) -> Assignment:
+        created_at_raw = record.get("created_at")
+        updated_at_raw = record.get("updated_at")
+        if not isinstance(created_at_raw, str) or not isinstance(updated_at_raw, str):
+            raise ValueError("Invalid cached assignment timestamps")
+
+        due_date_raw = record.get("due_date")
+        due_date = datetime.fromisoformat(due_date_raw) if isinstance(due_date_raw, str) and due_date_raw else None
+
+        return Assignment(
+            id=UUID(str(record["id"])),
+            title=str(record["title"]),
+            description=record.get("description"),
+            instructions=record.get("instructions"),
+            course_id=UUID(str(record["course_id"])),
+            instructor_id=UUID(str(record["instructor_id"])),
+            status=str(record["status"]),
+            is_published=bool(record["is_published"]),
+            due_date=due_date,
+            max_points=record.get("max_points"),
+            grading_type=record.get("grading_type"),
+            assignment_metadata=record.get("assignment_metadata"),
+            created_at=datetime.fromisoformat(created_at_raw),
+            updated_at=datetime.fromisoformat(updated_at_raw),
+        )
+
+    @staticmethod
+    def _invalidate_assignments_list_cache(course_id: UUID) -> None:
+        if not settings.CACHE_ENABLED:
+            return
+        prefix = f"{settings.CACHE_KEY_PREFIX}:assignments:list:{course_id}:"
+        cache_manager.delete_by_prefix(prefix)
+
+
+class SubmissionService:
+    def __init__(self, db: Session):
+        self.db = db
+
+    def create_submission(self, payload: SubmissionCreate, student_id: UUID) -> Submission:
+        enrollment = self.db.scalar(
+            select(Enrollment).where(
+                Enrollment.id == payload.enrollment_id,
+                Enrollment.student_id == student_id,
+            )
+        )
+        if enrollment is None:
+            raise ValueError("Enrollment not found")
+
+        assignment = self.db.scalar(
+            select(Assignment).where(
+                Assignment.id == payload.assignment_id,
+                Assignment.course_id == enrollment.course_id,
+            )
+        )
+        if assignment is None:
+            raise ValueError("Assignment not found or does not belong to the course")
+
+        submission = Submission(
+            enrollment_id=payload.enrollment_id,
+            assignment_id=payload.assignment_id,
+            submitted_at=payload.submitted_at or datetime.now(UTC),
+            status=payload.status,
+            content=payload.content,
+            file_urls=payload.file_urls,
+            submission_type=payload.submission_type,
+            submission_metadata=payload.submission_metadata,
+        )
+        self.db.add(submission)
+        try:
+            self.db.commit()
+        except IntegrityError as exc:
+            self.db.rollback()
+            raise ValueError("A submission already exists for this assignment and enrollment") from exc
+        self.db.refresh(submission)
+        return submission
+
+    def get_submission(self, submission_id: UUID) -> Submission | None:
+        stmt = (
             select(Submission)
             .options(joinedload(Submission.assignment), joinedload(Submission.enrollment))
             .where(Submission.id == submission_id)
         )
-        submission = result.scalar_one_or_none()
-        if not submission:
+        return self.db.scalar(stmt)
+
+    def get_submissions_by_assignment(self, assignment_id: UUID, skip: int, limit: int) -> tuple[list[Submission], int]:
+        base_stmt = select(Submission).where(Submission.assignment_id == assignment_id)
+        total = self.db.scalar(select(func.count()).select_from(base_stmt.subquery())) or 0
+        rows = self.db.scalars(
+            base_stmt.options(joinedload(Submission.assignment), joinedload(Submission.enrollment))
+            .offset(skip)
+            .limit(limit)
+        ).all()
+        return list(rows), int(total)
+
+    def get_submissions_by_enrollment(self, enrollment_id: UUID, skip: int, limit: int) -> tuple[list[Submission], int]:
+        base_stmt = select(Submission).where(Submission.enrollment_id == enrollment_id)
+        total = self.db.scalar(select(func.count()).select_from(base_stmt.subquery())) or 0
+        rows = self.db.scalars(
+            base_stmt.options(joinedload(Submission.assignment), joinedload(Submission.enrollment))
+            .offset(skip)
+            .limit(limit)
+        ).all()
+        return list(rows), int(total)
+
+    def update_submission(self, submission_id: UUID, payload: SubmissionUpdate) -> Submission | None:
+        submission = self.db.scalar(select(Submission).where(Submission.id == submission_id))
+        if submission is None:
+            return None
+        for field, value in payload.model_dump(exclude_unset=True).items():
+            setattr(submission, field, value)
+        if payload.status == "graded" and submission.graded_at is None:
+            submission.graded_at = datetime.now(UTC)
+        if payload.status == "returned" and submission.returned_at is None:
+            submission.returned_at = datetime.now(UTC)
+        submission.updated_at = datetime.now(UTC)
+        self.db.commit()
+        self.db.refresh(submission)
+        return submission
+
+    def delete_submission(self, submission_id: UUID) -> bool:
+        submission = self.db.scalar(select(Submission).where(Submission.id == submission_id))
+        if submission is None:
+            return False
+        self.db.delete(submission)
+        self.db.commit()
+        return True
+
+    def grade_submission(
+        self,
+        submission_id: UUID,
+        *,
+        grade: float,
+        max_grade: float,
+        feedback: str,
+        feedback_attachments: list[str],
+        instructor_id: UUID,
+    ) -> Submission:
+        if grade < 0 or grade > max_grade:
+            raise ValueError(f"Grade must be between 0 and {int(max_grade) if max_grade.is_integer() else max_grade}")
+
+        submission = self.db.scalar(
+            select(Submission)
+            .options(joinedload(Submission.assignment), joinedload(Submission.enrollment))
+            .where(Submission.id == submission_id)
+        )
+        if submission is None:
             raise ValueError("Submission not found")
 
-        # Verify instructor owns the assignment
-        if (
-            current_user.role != "instructor" 
-            or str(submission.assignment.instructor_id) != str(current_user.id)
-        ):
+        if submission.assignment.instructor_id != instructor_id:
             raise ValueError("You don't have permission to grade this submission")
 
-        # Update submission with grading information
         submission.grade = grade
         submission.max_grade = max_grade
         submission.feedback = feedback
         submission.feedback_attachments = feedback_attachments
         submission.status = "graded"
-        submission.graded_at = datetime.utcnow()
-
-        # Update enrollment progress if assignment is graded
-        await self._update_enrollment_progress_on_grade(submission.enrollment_id, submission.assignment_id)
-
-        await self.db.commit()
-        await self.db.refresh(submission)
+        submission.graded_at = datetime.now(UTC)
+        submission.updated_at = datetime.now(UTC)
+        submission.enrollment.last_accessed_at = datetime.now(UTC)
+        self.db.commit()
+        self.db.refresh(submission)
         return submission
-
-    async def _update_enrollment_progress_on_grade(
-        self, enrollment_id: str, assignment_id: str
-    ) -> None:
-        """Update enrollment progress when an assignment is graded"""
-        # Get assignment to check if it's part of the course structure
-        result = await self.db.execute(
-            select(Assignment).where(Assignment.id == assignment_id)
-        )
-        assignment = result.scalar_one_or_none()
-        if not assignment:
-            return
-
-        # Get enrollment
-        result = await self.db.execute(
-            select(Enrollment).where(Enrollment.id == enrollment_id)
-        )
-        enrollment = result.scalar_one_or_none()
-        if not enrollment:
-            return
-
-        # Get lesson associated with this assignment (if any)
-        # In our current model, assignments are directly linked to courses, not lessons
-        # So we'll treat assignments as separate progress items
-        
-        # For now, we'll just ensure the enrollment is updated
-        # In a more sophisticated system, we might want to track assignment completion separately
-        enrollment.last_accessed_at = datetime.utcnow()
-        await self.db.commit()
-        await self.db.refresh(enrollment)
-
-
-class SubmissionService:
-    def __init__(self, db: AsyncSession):
-        self.db = db
-        self.assignment_service = AssignmentService(db)
-
-    async def create_submission(self, submission_data: SubmissionCreate, student_id: str) -> Submission:
-        """Create a new submission"""
-        # Verify enrollment exists
-        result = await self.db.execute(
-            select(Enrollment).where(
-                Enrollment.student_id == student_id,
-                Enrollment.id == submission_data.enrollment_id
-            )
-        )
-        enrollment = result.scalar_one_or_none()
-        if not enrollment:
-            raise ValueError("Enrollment not found")
-
-        # Verify assignment exists and belongs to the same course as enrollment
-        result = await self.db.execute(
-            select(Assignment).where(
-                Assignment.id == submission_data.assignment_id,
-                Assignment.course_id == enrollment.course_id
-            )
-        )
-        assignment = result.scalar_one_or_none()
-        if not assignment:
-            raise ValueError("Assignment not found or does not belong to the course")
-
-        submission = Submission(
-            enrollment_id=submission_data.enrollment_id,
-            assignment_id=submission_data.assignment_id,
-            submitted_at=submission_data.submitted_at or datetime.utcnow(),
-            status=submission_data.status,
-            content=submission_data.content,
-            file_urls=submission_data.file_urls,
-            submission_type=submission_data.submission_type,
-            submission_metadata=submission_data.submission_metadata,
-        )
-        self.db.add(submission)
-        await self.db.commit()
-        await self.db.refresh(submission)
-        return submission
-
-    async def get_submission(self, submission_id: str) -> Optional[Submission]:
-        """Get submission by ID"""
-        result = await self.db.execute(
-            select(Submission)
-            .options(joinedload(Submission.assignment), joinedload(Submission.enrollment))
-            .where(Submission.id == submission_id)
-        )
-        return result.scalar_one_or_none()
-
-    async def get_submissions_by_assignment(self, assignment_id: str, skip: int = 0, limit: int = 100) -> Tuple[List[Submission], int]:
-        """Get submissions for an assignment"""
-        query = select(Submission).where(Submission.assignment_id == assignment_id)
-        total_result = await self.db.execute(select(func.count()).select_from(query.subquery()))
-        total = total_result.scalar_one()
-
-        result = await self.db.execute(
-            query
-            .options(joinedload(Submission.assignment), joinedload(Submission.enrollment))
-            .offset(skip)
-            .limit(limit)
-        )
-        submissions = result.scalars().all()
-        return submissions, total
-
-    async def get_submissions_by_enrollment(self, enrollment_id: str, skip: int = 0, limit: int = 100) -> Tuple[List[Submission], int]:
-        """Get submissions for an enrollment"""
-        query = select(Submission).where(Submission.enrollment_id == enrollment_id)
-        total_result = await self.db.execute(select(func.count()).select_from(query.subquery()))
-        total = total_result.scalar_one()
-
-        result = await self.db.execute(
-            query
-            .options(joinedload(Submission.assignment), joinedload(Submission.enrollment))
-            .offset(skip)
-            .limit(limit)
-        )
-        submissions = result.scalars().all()
-        return submissions, total
-
-    async def update_submission(self, submission_id: str, update_data: SubmissionUpdate) -> Optional[Submission]:
-        """Update submission"""
-        result = await self.db.execute(
-            select(Submission).where(Submission.id == submission_id)
-        )
-        submission = result.scalar_one_or_none()
-        if not submission:
-            return None
-
-        for field, value in update_data.dict(exclude_unset=True).items():
-            setattr(submission, field, value)
-
-        if update_data.status == "graded" and not submission.graded_at:
-            submission.graded_at = datetime.utcnow()
-        elif update_data.status == "returned" and not submission.returned_at:
-            submission.returned_at = datetime.utcnow()
-
-        submission.updated_at = datetime.utcnow()
-        await self.db.commit()
-        await self.db.refresh(submission)
-        return submission
-
-    async def delete_submission(self, submission_id: str) -> bool:
-        """Delete submission"""
-        result = await self.db.execute(
-            select(Submission).where(Submission.id == submission_id)
-        )
-        submission = result.scalar_one_or_none()
-        if not submission:
-            return False
-
-        await self.db.delete(submission)
-        await self.db.commit()
-        return True
-
-    async def grade_submission(
-        self,
-        submission_id: str,
-        grade: float,
-        max_grade: float,
-        feedback: str,
-        feedback_attachments: List[str],
-        current_user: User,
-    ) -> Submission:
-        """Grade a submission with feedback and attachments"""
-        # Use assignment service for grading logic
-        return await self.assignment_service.grade_submission(
-            submission_id, grade, max_grade, feedback, feedback_attachments, current_user
-        )

@@ -1,4 +1,7 @@
 from tests.helpers import auth_headers, register_user
+import pytest
+
+from app.modules.files.service import FileService
 
 
 def test_file_upload_list_and_download(client):
@@ -51,3 +54,23 @@ def test_file_upload_rejects_path_traversal_folder(client):
     )
     assert upload.status_code == 400, upload.text
     assert upload.json()["detail"] == "Invalid folder path"
+
+
+def test_file_service_fail_closed_in_production_when_azure_unavailable(db_session, monkeypatch):
+    monkeypatch.setattr("app.modules.files.service.settings.ENVIRONMENT", "production")
+    monkeypatch.setattr("app.modules.files.service.settings.FILE_STORAGE_PROVIDER", "azure")
+    monkeypatch.setattr("app.modules.files.service.settings.AZURE_STORAGE_CONTAINER_NAME", "lms-files")
+    monkeypatch.setattr("app.modules.files.service.settings.AZURE_STORAGE_CONNECTION_STRING", "DefaultEndpointsProtocol=https")
+    monkeypatch.setattr("app.modules.files.service.settings.AZURE_STORAGE_ACCOUNT_URL", "")
+    monkeypatch.setattr("app.modules.files.service.settings.AZURE_STORAGE_ACCOUNT_NAME", "")
+    monkeypatch.setattr("app.modules.files.service.settings.AZURE_STORAGE_ACCOUNT_KEY", "")
+    monkeypatch.setattr("app.modules.files.service.settings.AZURE_STORAGE_CONTAINER_URL", "")
+
+    class BrokenAzureBackend:
+        def __init__(self, **kwargs):
+            raise ValueError("simulated azure init failure")
+
+    monkeypatch.setattr("app.modules.files.service.AzureBlobStorageBackend", BrokenAzureBackend)
+
+    with pytest.raises(RuntimeError, match="Azure storage backend is not available in production"):
+        FileService(db_session)

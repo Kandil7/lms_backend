@@ -38,7 +38,7 @@ Production-oriented LMS backend built as a modular monolith with FastAPI.
 - `enrollments`: enrollment lifecycle, lesson progress aggregation, reviews.
 - `quizzes`: quiz/question authoring, attempts, grading.
 - `analytics`: student dashboard, course analytics, instructor and system overview.
-- `files`: upload/list/download with local storage backend.
+- `files`: upload/list/download with Azure Blob (default) and local fallback backend.
 - `certificates`: automatic issuance on completion, verify/download/revoke.
 
 ## Local Setup
@@ -307,7 +307,7 @@ Important environment flags:
 - `WEBHOOK_TARGET_URLS`
 - `WEBHOOK_SIGNING_SECRET`
 - `WEBHOOK_TIMEOUT_SECONDS`
-- `FILE_STORAGE_PROVIDER=local` (or `azure`)
+- `FILE_STORAGE_PROVIDER=azure` (or `local`)
 - `FILE_DOWNLOAD_URL_EXPIRE_SECONDS=900`
 - `AUTH_RATE_LIMIT_REQUESTS_PER_MINUTE`
 - `AUTH_RATE_LIMIT_WINDOW_SECONDS`
@@ -344,6 +344,6 @@ python scripts/test_smtp_connection.py --to your-email@example.com
 - Merge style: `--no-ff` from feature branches into `develop`, then `develop` into `main`.
 
 ## Notes
-- Local uploads are served from `/uploads/*`.
+- If `FILE_STORAGE_PROVIDER=local`, uploads are served from `/uploads/*`.
 - Certificate files are stored in `certificates/` and downloadable through certificate endpoints.
 - First migration is provided in `alembic/versions/0001_initial_schema.py`.

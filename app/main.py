@@ -89,6 +89,13 @@ rate_limit_rules: list[RateLimitRule] = [
         period_seconds=settings.FILE_UPLOAD_RATE_LIMIT_WINDOW_SECONDS,
         key_mode="user_or_ip",
     ),
+    RateLimitRule(
+        name="assignments",
+        path_prefixes=settings.ASSIGNMENT_RATE_LIMIT_PATHS,
+        limit=settings.ASSIGNMENT_RATE_LIMIT_REQUESTS_PER_MINUTE,
+        period_seconds=settings.ASSIGNMENT_RATE_LIMIT_WINDOW_SECONDS,
+        key_mode="user_or_ip",
+    ),
 ]
 
 app.add_middleware(

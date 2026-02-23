@@ -138,6 +138,8 @@ class FileService:
                     container_url=settings.AZURE_STORAGE_CONTAINER_URL,
                 )
         except Exception as exc:
+            if settings.ENVIRONMENT == "production" and settings.FILE_STORAGE_PROVIDER == "azure":
+                raise RuntimeError("Azure storage backend is not available in production") from exc
             logger.warning("Azure storage backend is not available, falling back to local storage: %s", exc)
 
         return backends
@@ -145,6 +147,11 @@ class FileService:
     def _select_default_provider(self) -> str:
         if settings.FILE_STORAGE_PROVIDER in self.backends:
             return settings.FILE_STORAGE_PROVIDER
+
+        if settings.ENVIRONMENT == "production":
+            raise RuntimeError(
+                f"Configured FILE_STORAGE_PROVIDER='{settings.FILE_STORAGE_PROVIDER}' is unavailable in production"
+            )
 
         if settings.FILE_STORAGE_PROVIDER != "local":
             logger.warning(

@@ -21,7 +21,7 @@ services:
   celery-worker:
     build: .
     container_name: lms-celery-worker
-    command: celery -A app.tasks.celery_app.celery_app worker --loglevel=info --queues=emails,progress,certificates
+    command: celery -A app.tasks.celery_app.celery_app worker --loglevel=info --queues=emails,progress,certificates,webhooks
     env_file:
       - .env
     environment:

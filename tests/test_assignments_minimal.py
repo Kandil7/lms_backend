@@ -1,6 +1,4 @@
-import pytest
 from tests.helpers import auth_headers, register_user
-from app.modules.assignments.schemas import AssignmentCreate
 
 def test_basic_assignment_creation(client):
     """Test basic assignment creation without complex grading"""
@@ -46,8 +44,4 @@ def test_basic_assignment_creation(client):
         json=assignment_data,
     )
 
-    print(f"Status: {response.status_code}")
-    print(f"Response: {response.text}")
-    
-    # This should work if UUID conversion is fixed
-    assert response.status_code == 201 or response.status_code == 400, f"Expected 201 or 400, got {response.status_code}"
+    assert response.status_code == 201

@@ -31,6 +31,8 @@ def test_grade_submission_success(client, monkeypatch):
         json=course_data,
     )
     course_id = course_response.json()["id"]
+    publish_response = client.post(f"/api/v1/courses/{course_id}/publish", headers=instructor_headers)
+    assert publish_response.status_code == 200, publish_response.text
 
     # Create assignment
     assignment_data = {
@@ -127,6 +129,8 @@ def test_grade_submission_invalid_grade_range(client, monkeypatch):
         json=course_data,
     )
     course_id = course_response.json()["id"]
+    publish_response = client.post(f"/api/v1/courses/{course_id}/publish", headers=instructor_headers)
+    assert publish_response.status_code == 200, publish_response.text
 
     assignment_data = {
         "title": "Invalid Grade Assignment",
@@ -222,6 +226,8 @@ def test_student_cannot_grade_submission(client, monkeypatch):
         json=course_data,
     )
     course_id = course_response.json()["id"]
+    publish_response = client.post(f"/api/v1/courses/{course_id}/publish", headers=instructor_headers)
+    assert publish_response.status_code == 200, publish_response.text
 
     assignment_data = {
         "title": "Student Grade Assignment",
@@ -314,6 +320,8 @@ def test_instructor_cannot_grade_others_assignment(client, monkeypatch):
         json=course_data,
     )
     course_id = course_response.json()["id"]
+    publish_response = client.post(f"/api/v1/courses/{course_id}/publish", headers=instructor1_headers)
+    assert publish_response.status_code == 200, publish_response.text
 
     assignment_data = {
         "title": "Instructor 1 Assignment",
@@ -397,6 +405,8 @@ def test_grade_submission_updates_enrollment_progress(client, monkeypatch):
         json=course_data,
     )
     course_id = course_response.json()["id"]
+    publish_response = client.post(f"/api/v1/courses/{course_id}/publish", headers=instructor_headers)
+    assert publish_response.status_code == 200, publish_response.text
 
     assignment_data = {
         "title": "Progress Test Assignment",
@@ -436,7 +446,7 @@ def test_grade_submission_updates_enrollment_progress(client, monkeypatch):
     assert enrollment_get_response.status_code == 200
     initial_enrollment = enrollment_get_response.json()
     assert initial_enrollment["status"] == "active"
-    assert initial_enrollment["progress_percentage"] == 0.0
+    assert float(initial_enrollment["progress_percentage"]) == 0.0
 
     # Submit assignment
     submission_data = {

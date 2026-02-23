@@ -1,101 +1,108 @@
-from datetime import datetime
-from typing import List, Optional
+from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from datetime import datetime
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AssignmentBase(BaseModel):
     title: str = Field(..., max_length=255)
-    description: Optional[str] = None
-    instructions: Optional[str] = None
-    due_date: Optional[datetime] = None
-    max_points: Optional[int] = None
-    grading_type: Optional[str] = None
-    assignment_metadata: Optional[dict] = None
+    description: str | None = None
+    instructions: str | None = None
+    due_date: datetime | None = None
+    max_points: int | None = None
+    grading_type: str | None = None
+    assignment_metadata: dict | None = None
 
 
 class AssignmentCreate(AssignmentBase):
-    course_id: str  # UUID as string
+    course_id: UUID
     status: str = "draft"
     is_published: bool = False
 
 
 class AssignmentUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    instructions: Optional[str] = None
-    due_date: Optional[datetime] = None
-    max_points: Optional[int] = None
-    grading_type: Optional[str] = None
-    status: Optional[str] = None
-    is_published: Optional[bool] = None
-    assignment_metadata: Optional[dict] = None
+    title: str | None = Field(default=None, max_length=255)
+    description: str | None = None
+    instructions: str | None = None
+    due_date: datetime | None = None
+    max_points: int | None = None
+    grading_type: str | None = None
+    status: str | None = None
+    is_published: bool | None = None
+    assignment_metadata: dict | None = None
 
 
 class AssignmentResponse(AssignmentBase):
-    id: str  # UUID as string
-    course_id: str  # UUID as string
-    instructor_id: str  # UUID as string
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    course_id: UUID
+    instructor_id: UUID
     status: str
     is_published: bool
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
-
 
 class AssignmentListResponse(BaseModel):
-    assignments: List[AssignmentResponse]
+    assignments: list[AssignmentResponse]
     total: int
     page: int
     page_size: int
 
 
 class SubmissionBase(BaseModel):
-    content: Optional[str] = None
-    file_urls: Optional[List[str]] = None
-    submission_type: Optional[str] = None
-    submission_metadata: Optional[dict] = None
+    content: str | None = None
+    file_urls: list[str] | None = None
+    submission_type: str | None = None
+    submission_metadata: dict | None = None
 
 
 class SubmissionCreate(SubmissionBase):
-    assignment_id: str  # UUID as string
-    enrollment_id: str  # UUID as string
-    submitted_at: Optional[datetime] = None
+    assignment_id: UUID
+    enrollment_id: UUID
+    submitted_at: datetime | None = None
     status: str = "submitted"
 
 
 class SubmissionUpdate(BaseModel):
-    grade: Optional[float] = None
-    max_grade: Optional[float] = None
-    feedback: Optional[str] = None
-    feedback_attachments: Optional[List[str]] = None
-    status: Optional[str] = None
-    graded_at: Optional[datetime] = None
-    returned_at: Optional[datetime] = None
+    grade: float | None = None
+    max_grade: float | None = None
+    feedback: str | None = None
+    feedback_attachments: list[str] | None = None
+    status: str | None = None
+    graded_at: datetime | None = None
+    returned_at: datetime | None = None
+
+
+class SubmissionGradeRequest(BaseModel):
+    grade: float
+    max_grade: float
+    feedback: str = ""
+    feedback_attachments: list[str] = Field(default_factory=list)
 
 
 class SubmissionResponse(SubmissionBase):
-    id: str  # UUID as string
-    assignment_id: str  # UUID as string
-    enrollment_id: str  # UUID as string
-    submitted_at: datetime
-    graded_at: Optional[datetime] = None
-    returned_at: Optional[datetime] = None
-    status: str
-    grade: Optional[float] = None
-    max_grade: Optional[float] = None
-    feedback: Optional[str] = None
-    feedback_attachments: Optional[List[str]] = None
-    submission_metadata: Optional[dict] = None
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+    id: UUID
+    assignment_id: UUID
+    enrollment_id: UUID
+    submitted_at: datetime
+    graded_at: datetime | None = None
+    returned_at: datetime | None = None
+    status: str
+    grade: float | None = None
+    max_grade: float | None = None
+    feedback: str | None = None
+    feedback_attachments: list[str] | None = None
+    submission_metadata: dict | None = None
 
 
 class SubmissionListResponse(BaseModel):
-    submissions: List[SubmissionResponse]
+    submissions: list[SubmissionResponse]
     total: int
     page: int
     page_size: int

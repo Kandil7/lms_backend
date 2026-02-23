@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from datetime import datetime
 import uuid
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, func
-from sqlalchemy import JSON, Uuid, Float
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Float, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -21,7 +23,6 @@ class Assignment(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
-    
     course_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("courses.id", ondelete="CASCADE"),
@@ -34,17 +35,18 @@ class Assignment(Base):
         nullable=False,
         index=True,
     )
-
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="draft", index=True)
     is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
     due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
-    max_points: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    max_points: Mapped[int | None] = mapped_column(nullable=True)
     grading_type: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
     assignment_metadata: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
-
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
     course = relationship("Course", back_populates="assignments")
@@ -75,22 +77,24 @@ class Submission(Base):
         nullable=False,
         index=True,
     )
-
     submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     graded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     returned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="submitted", index=True)
-    
     grade: Mapped[float | None] = mapped_column(Float, nullable=True)
     max_grade: Mapped[float | None] = mapped_column(Float, nullable=True)
     feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
     feedback_attachments: Mapped[list | None] = mapped_column(JSON, nullable=True)
     submission_metadata: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
-
-    # Student-submitted content
     content: Mapped[str | None] = mapped_column(Text, nullable=True)
     file_urls: Mapped[list | None] = mapped_column(JSON, nullable=True)
     submission_type: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
     enrollment = relationship("Enrollment", back_populates="submissions")
     assignment = relationship("Assignment", back_populates="submissions")

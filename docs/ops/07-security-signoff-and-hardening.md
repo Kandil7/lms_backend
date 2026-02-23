@@ -1,5 +1,7 @@
 # Security Sign-off and Hardening
 
+> **Note**: For comprehensive secrets management documentation, see [docs/ops/24-secrets-management-guide.md](24-secrets-management-guide.md). For Azure Key Vault integration details, see [docs/ops/25-azure-key-vault-integration.md](25-azure-key-vault-integration.md).
+
 ## 1. Security Sign-off Gate
 
 ### 1.1 Required Security Scans
