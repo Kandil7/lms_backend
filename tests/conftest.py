@@ -9,6 +9,13 @@ from sqlalchemy.orm import Session, sessionmaker
 
 os.environ.setdefault("ALLOW_PUBLIC_ROLE_REGISTRATION", "true")
 os.environ["SENTRY_DSN"] = ""
+os.environ.setdefault("FILE_STORAGE_PROVIDER", "local")
+os.environ.setdefault("AZURE_STORAGE_CONNECTION_STRING", "")
+os.environ.setdefault("AZURE_STORAGE_ACCOUNT_NAME", "")
+os.environ.setdefault("AZURE_STORAGE_ACCOUNT_KEY", "")
+os.environ.setdefault("AZURE_STORAGE_ACCOUNT_URL", "")
+os.environ.setdefault("AZURE_STORAGE_CONTAINER_NAME", "")
+os.environ.setdefault("AZURE_STORAGE_CONTAINER_URL", "")
 
 from app.core.database import Base, get_db
 from app.core.cache import get_app_cache

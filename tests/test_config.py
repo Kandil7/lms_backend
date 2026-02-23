@@ -67,3 +67,32 @@ def test_production_azure_storage_requires_connection_string_or_account_url() ->
             AZURE_STORAGE_CONNECTION_STRING="",
             AZURE_STORAGE_ACCOUNT_URL="",
         )
+
+
+def test_production_loads_azure_storage_secrets_when_env_values_blank(monkeypatch) -> None:
+    monkeypatch.setattr("app.core.config.initialize_secrets_manager", lambda *args, **kwargs: True)
+
+    secrets = {
+        "AZURE_STORAGE_CONNECTION_STRING": "DefaultEndpointsProtocol=https;AccountName=test;AccountKey=test;EndpointSuffix=core.windows.net",
+        "AZURE_STORAGE_CONTAINER_NAME": "lms-files",
+    }
+
+    def fake_get_secret(key: str, default=None, *args, **kwargs):
+        return secrets.get(key, default)
+
+    monkeypatch.setattr("app.core.config.get_secret", fake_get_secret)
+
+    settings = Settings(
+        ENVIRONMENT="production",
+        DEBUG=False,
+        SECRET_KEY="x" * 64,
+        TASKS_FORCE_INLINE=False,
+        ACCESS_TOKEN_BLACKLIST_FAIL_CLOSED=True,
+        FILE_STORAGE_PROVIDER="azure",
+        AZURE_STORAGE_CONNECTION_STRING="",
+        AZURE_STORAGE_ACCOUNT_URL="",
+        AZURE_STORAGE_CONTAINER_NAME="",
+    )
+
+    assert settings.AZURE_STORAGE_CONNECTION_STRING == secrets["AZURE_STORAGE_CONNECTION_STRING"]
+    assert settings.AZURE_STORAGE_CONTAINER_NAME == secrets["AZURE_STORAGE_CONTAINER_NAME"]

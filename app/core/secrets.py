@@ -86,35 +86,32 @@ class SecretsManager:
                     # Try different authentication methods in order of preference
                     credential = None
                     auth_methods = []
+                    scope = "https://vault.azure.net/.default"
                     
                     # 1. Managed Identity (for Azure VMs, App Services, etc.)
                     try:
                         credential = ManagedIdentityCredential()
-                        # Test credential by getting a secret
-                        test_client = SecretClient(vault_url=vault_url, credential=credential)
-                        test_client.get_secret("test-secret")
+                        credential.get_token(scope)
                         auth_methods.append("Managed Identity")
                     except Exception as mi_error:
                         logger.debug(f"Managed Identity authentication failed: {mi_error}")
+                        credential = None
                     
                     # 2. Environment variables (AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET)
                     if credential is None:
                         try:
                             credential = EnvironmentCredential()
-                            # Test credential
-                            test_client = SecretClient(vault_url=vault_url, credential=credential)
-                            test_client.get_secret("test-secret")
+                            credential.get_token(scope)
                             auth_methods.append("Environment Variables")
                         except Exception as env_error:
                             logger.debug(f"Environment variables authentication failed: {env_error}")
+                            credential = None
                     
                     # 3. DefaultAzureCredential (fallback that tries multiple methods)
                     if credential is None:
                         try:
                             credential = DefaultAzureCredential()
-                            # Test credential
-                            test_client = SecretClient(vault_url=vault_url, credential=credential)
-                            test_client.get_secret("test-secret")
+                            credential.get_token(scope)
                             auth_methods.append("DefaultAzureCredential")
                         except Exception as default_error:
                             logger.warning(f"All Azure authentication methods failed: {default_error}")
@@ -168,12 +165,12 @@ class SecretsManager:
             # First try environment variables (fastest)
             env_key = f"SECRET_{key.upper()}"
             env_value = os.getenv(env_key)
-            if env_value is not None:
+            if env_value not in (None, ""):
                 return env_value
 
             # Try direct environment variable (legacy)
             direct_env_value = os.getenv(key)
-            if direct_env_value is not None:
+            if direct_env_value not in (None, ""):
                 return direct_env_value
 
             # Then try configured secret source

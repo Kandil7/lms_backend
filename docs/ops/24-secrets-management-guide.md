@@ -43,6 +43,27 @@ secret/data/lms/
 - `SENTRY_DSN`: Sentry DSN
 - `AZURE_STORAGE_ACCOUNT_NAME`, `AZURE_STORAGE_ACCOUNT_KEY`: Azure Blob credentials
 
+### 2.3 Azure Key Vault (Production on Azure)
+
+**Configuration:**
+- Set `AZURE_KEYVAULT_URL` (example: `https://your-vault-name.vault.azure.net/`).
+- Ensure app identity/user has secret read permissions (RBAC role like `Key Vault Secrets Officer` for setup and a read role for runtime identity).
+
+**Secret naming format used by application:**
+- Prefix: `lms-`
+- Key mapping: lowercase + replace `_` with `-`
+- Example:
+  - App key: `AZURE_STORAGE_CONNECTION_STRING`
+  - Key Vault secret name: `lms-azure-storage-connection-string`
+
+**Recommended Azure storage secrets in Key Vault:**
+- `lms-azure-storage-connection-string`
+- `lms-azure-storage-account-name`
+- `lms-azure-storage-account-key`
+- `lms-azure-storage-account-url`
+- `lms-azure-storage-container-name`
+- `lms-azure-storage-container-url`
+
 ## 3. Secret Loading Priority
 
 The application follows this priority order:

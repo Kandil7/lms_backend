@@ -346,26 +346,47 @@ class Settings(BaseSettings):
                     self.SENTRY_DSN = sentry_dsn
 
             # Load Azure storage credentials from secrets
-            if self.AZURE_STORAGE_CONNECTION_STRING is None:
+            if not (self.AZURE_STORAGE_CONNECTION_STRING or "").strip():
                 azure_connection_string = get_secret(
                     "AZURE_STORAGE_CONNECTION_STRING",
                     default=self.AZURE_STORAGE_CONNECTION_STRING,
                 )
                 if azure_connection_string:
                     self.AZURE_STORAGE_CONNECTION_STRING = azure_connection_string
-            if self.AZURE_STORAGE_ACCOUNT_NAME is None:
+            if not (self.AZURE_STORAGE_ACCOUNT_NAME or "").strip():
                 azure_account_name = get_secret(
                     "AZURE_STORAGE_ACCOUNT_NAME",
                     default=self.AZURE_STORAGE_ACCOUNT_NAME,
                 )
                 if azure_account_name:
                     self.AZURE_STORAGE_ACCOUNT_NAME = azure_account_name
-            if self.AZURE_STORAGE_ACCOUNT_KEY is None:
+            if not (self.AZURE_STORAGE_ACCOUNT_KEY or "").strip():
                 azure_account_key = get_secret(
                     "AZURE_STORAGE_ACCOUNT_KEY", default=self.AZURE_STORAGE_ACCOUNT_KEY
                 )
                 if azure_account_key:
                     self.AZURE_STORAGE_ACCOUNT_KEY = azure_account_key
+            if not (self.AZURE_STORAGE_ACCOUNT_URL or "").strip():
+                azure_account_url = get_secret(
+                    "AZURE_STORAGE_ACCOUNT_URL",
+                    default=self.AZURE_STORAGE_ACCOUNT_URL,
+                )
+                if azure_account_url:
+                    self.AZURE_STORAGE_ACCOUNT_URL = azure_account_url
+            if not (self.AZURE_STORAGE_CONTAINER_NAME or "").strip():
+                azure_container_name = get_secret(
+                    "AZURE_STORAGE_CONTAINER_NAME",
+                    default=self.AZURE_STORAGE_CONTAINER_NAME,
+                )
+                if azure_container_name:
+                    self.AZURE_STORAGE_CONTAINER_NAME = azure_container_name
+            if not (self.AZURE_STORAGE_CONTAINER_URL or "").strip():
+                azure_container_url = get_secret(
+                    "AZURE_STORAGE_CONTAINER_URL",
+                    default=self.AZURE_STORAGE_CONTAINER_URL,
+                )
+                if azure_container_url:
+                    self.AZURE_STORAGE_CONTAINER_URL = azure_container_url
 
         # Validate required production settings
         insecure_values = {
