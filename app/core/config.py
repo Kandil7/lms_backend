@@ -73,7 +73,7 @@ class Settings(BaseSettings):
     MFA_LOGIN_CODE_EXPIRE_MINUTES: int = 10
     MFA_LOGIN_CODE_LENGTH: int = 6
     ACCESS_TOKEN_BLACKLIST_ENABLED: bool = True
-    ACCESS_TOKEN_BLACKLIST_FAIL_CLOSED: bool = False
+    ACCESS_TOKEN_BLACKLIST_FAIL_CLOSED: bool = True  # Must be true in production for security
     ACCESS_TOKEN_BLACKLIST_PREFIX: str = "auth:blacklist:access"
     SECURITY_HEADERS_ENABLED: bool = True
 

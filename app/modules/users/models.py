@@ -6,6 +6,8 @@ from sqlalchemy import JSON, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+from app.modules.instructors.models import Instructor
+from app.modules.admin.models import Admin
 
 
 class User(Base):
@@ -36,3 +38,5 @@ class User(Base):
     assignments = relationship("Assignment", back_populates="instructor")
     payments = relationship("Payment", back_populates="user", cascade="all, delete-orphan")
     orders = relationship("Order", back_populates="user", cascade="all, delete-orphan")
+    instructor = relationship("Instructor", back_populates="user", uselist=False)
+    admin = relationship("Admin", back_populates="user", uselist=False)
