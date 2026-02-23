@@ -37,6 +37,8 @@ async def lifespan(_: FastAPI):
     yield
 
 
+from fastapi.openapi.utils import get_openapi
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
@@ -46,6 +48,79 @@ app = FastAPI(
     redoc_url="/redoc" if settings.API_DOCS_EFFECTIVE_ENABLED else None,
     openapi_url="/openapi.json" if settings.API_DOCS_EFFECTIVE_ENABLED else None,
 )
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+    
+    # Add security schemes for JWT and cookie-based authentication
+    openapi_schema["components"]["securitySchemes"] = {
+        "OAuth2PasswordBearer": {
+            "type": "oauth2",
+            "flows": {
+                "password": {
+                    "tokenUrl": f"{settings.API_V1_PREFIX}/auth/token",
+                    "scopes": {}
+                }
+            }
+        },
+        "AccessTokenCookie": {
+            "type": "apiKey",
+            "in": "cookie",
+            "name": "access_token"
+        },
+        "RefreshTokenCookie": {
+            "type": "apiKey",
+            "in": "cookie",
+            "name": "refresh_token"
+        }
+    }
+    
+    # Apply security to protected endpoints
+    # Identify endpoints that require authentication
+    protected_endpoints = [
+        "/auth/login-cookie",
+        "/auth/refresh-cookie",
+        "/auth/logout-cookie",
+        "/users/me",
+        "/instructors/",
+        "/admin/",
+        "/courses/",
+        "/enrollments/",
+        "/quizzes/",
+        "/assignments/",
+        "/analytics/",
+        "/certificates/",
+        "/payments/",
+        "/files/"
+    ]
+    
+    for path in openapi_schema["paths"]:
+        for method in openapi_schema["paths"][path]:
+            # Apply security to paths that match protected patterns
+            if any(protected_path in path for protected_path in protected_endpoints):
+                if "security" not in openapi_schema["paths"][path][method]:
+                    # Use cookie-based auth for production, JWT for development
+                    if settings.ENVIRONMENT == "production":
+                        openapi_schema["paths"][path][method]["security"] = [
+                            {"AccessTokenCookie": []}
+                        ]
+                    else:
+                        openapi_schema["paths"][path][method]["security"] = [
+                            {"OAuth2PasswordBearer": []}
+                        ]
+    
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
 
 app.add_middleware(
     CORSMiddleware,

@@ -1,0 +1,53 @@
+{
+  "timestamp": "2026-02-23T21:33:31.673942",
+  "summary": {
+    "total": 7,
+    "passed": 7,
+    "failed": 0,
+    "success": true
+  },
+  "results": [
+    {
+      "test": "Instructor Registration - Valid Data",
+      "status": "PASS",
+      "details": "All constraints satisfied",
+      "timestamp": "2026-02-23T21:33:31.672933"
+    },
+    {
+      "test": "Instructor Registration - Weak Password",
+      "status": "PASS",
+      "details": "Correctly rejects weak password",
+      "timestamp": "2026-02-23T21:33:31.672933"
+    },
+    {
+      "test": "Admin Setup - Valid Data",
+      "status": "PASS",
+      "details": "All constraints satisfied",
+      "timestamp": "2026-02-23T21:33:31.672933"
+    },
+    {
+      "test": "HttpOnly Cookie Configuration",
+      "status": "PASS",
+      "details": "Proper security settings",
+      "timestamp": "2026-02-23T21:33:31.672933"
+    },
+    {
+      "test": "CSP Policy",
+      "status": "PASS",
+      "details": "Comprehensive security policy",
+      "timestamp": "2026-02-23T21:33:31.672933"
+    },
+    {
+      "test": "Error Handling - 401",
+      "status": "PASS",
+      "details": "Consistent unauthorized response",
+      "timestamp": "2026-02-23T21:33:31.672933"
+    },
+    {
+      "test": "Error Handling - 400",
+      "status": "PASS",
+      "details": "Consistent bad request response",
+      "timestamp": "2026-02-23T21:33:31.672933"
+    }
+  ]
+}
