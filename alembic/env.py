@@ -26,6 +26,7 @@ def import_models() -> None:
         "app.modules.quizzes.models",
         "app.modules.files.models",
         "app.modules.certificates.models",
+        "app.modules.assignments.models",
     ]
 
     for module in modules:

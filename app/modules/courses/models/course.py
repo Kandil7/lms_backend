@@ -46,3 +46,4 @@ class Course(Base):
     instructor = relationship("User", back_populates="courses")
     lessons = relationship("Lesson", back_populates="course", cascade="all, delete-orphan")
     enrollments = relationship("Enrollment", back_populates="course", cascade="all, delete-orphan")
+    assignments = relationship("Assignment", back_populates="course", cascade="all, delete-orphan")

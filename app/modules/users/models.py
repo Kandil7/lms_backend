@@ -33,3 +33,4 @@ class User(Base):
     refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
     courses = relationship("Course", back_populates="instructor")
     enrollments = relationship("Enrollment", back_populates="student")
+    assignments = relationship("Assignment", back_populates="instructor")

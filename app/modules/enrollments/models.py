@@ -59,6 +59,7 @@ class Enrollment(Base):
     )
     quiz_attempts = relationship("QuizAttempt", back_populates="enrollment", cascade="all, delete-orphan")
     certificates = relationship("Certificate", back_populates="enrollment", cascade="all, delete-orphan")
+    submissions = relationship("Submission", back_populates="enrollment", cascade="all, delete-orphan")
 
 
 class LessonProgress(Base):

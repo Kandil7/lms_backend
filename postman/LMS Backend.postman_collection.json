@@ -120,6 +120,290 @@
       ]
     },
     {
+      "name": "Assignments",
+      "item": [
+        {
+          "name": "Create Assignment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/assignments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": {},\n  \"description\": {},\n  \"instructions\": {},\n  \"due_date\": {},\n  \"max_points\": {},\n  \"grading_type\": {},\n  \"assignment_metadata\": {},\n  \"course_id\": \"{{course_id}}\",\n  \"status\": {},\n  \"is_published\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Submissions By Assignment",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/assignments/assignment/{{assignment_id}}?skip=0&limit=100",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Assignments By Course",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/assignments/course/{{course_id}}?skip=0&limit=100",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Submissions By Enrollment",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/assignments/enrollment/{{enrollment_id}}?skip=0&limit=100",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Grade Submission",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/assignments/submissions/{{submission_id}}/grade?grade={{grade}}&max_grade={{max_grade}}&feedback=",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  \"string\"\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Assignment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/assignments/submit",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": {},\n  \"file_urls\": {},\n  \"submission_type\": {},\n  \"submission_metadata\": {},\n  \"assignment_id\": \"{{assignment_id}}\",\n  \"enrollment_id\": \"{{enrollment_id}}\",\n  \"submitted_at\": {},\n  \"status\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Assignment",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/assignments/{{assignment_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Assignment",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/assignments/{{assignment_id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": {},\n  \"description\": {},\n  \"instructions\": {},\n  \"due_date\": {},\n  \"max_points\": {},\n  \"grading_type\": {},\n  \"status\": {},\n  \"is_published\": {},\n  \"assignment_metadata\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Assignment",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{base_url}}/api/v1/assignments/{{assignment_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Submission",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/assignments/{{submission_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Submission",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/assignments/{{submission_id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"grade\": {},\n  \"max_grade\": {},\n  \"feedback\": {},\n  \"feedback_attachments\": {},\n  \"status\": {},\n  \"graded_at\": {},\n  \"returned_at\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Auth",
       "item": [
         {
@@ -418,6 +702,15 @@
                 }
               }
             }
+          },
+          "response": []
+        },
+        {
+          "name": "OAuth2 token endpoint for Swagger Authorize",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/api/v1/auth/token"
           },
           "response": []
         },
@@ -1623,6 +1916,10 @@
       "value": "student"
     },
     {
+      "key": "assignment_id",
+      "value": ""
+    },
+    {
       "key": "attempt_id",
       "value": ""
     },
@@ -1660,6 +1957,10 @@
     },
     {
       "key": "quiz_id",
+      "value": ""
+    },
+    {
+      "key": "submission_id",
       "value": ""
     },
     {
