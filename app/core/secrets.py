@@ -11,16 +11,21 @@ The implementation follows the principle of least privilege and secure secret ha
 
 import os
 import logging
-from typing import Optional, Dict, Any, Union
+from importlib import import_module
+from importlib.util import find_spec
+from typing import Optional, Dict, Any
 from enum import Enum
 
-# Try to import vault client - will be None if not available
-try:
-    import hvac
-    HAS_VAULT = True
-except ImportError:
-    HAS_VAULT = False
-    hvac = None
+# Detect optional dependency without static import (keeps Pylance clean).
+HAS_VAULT = find_spec("hvac") is not None
+# Keep module-level symbol for tests/backward compatibility.
+hvac: Any | None = None
+if HAS_VAULT:
+    try:
+        hvac = import_module("hvac")
+    except Exception:
+        hvac = None
+        HAS_VAULT = False
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +42,10 @@ class SecretsManager:
     """Centralized secrets manager for secure secret retrieval."""
     
     def __init__(self):
-        self._vault_client = None
-        self._source = None
+        self._vault_client: Any | None = None
+        self._azure_client: Any | None = None
+        self._gcp_client: Any | None = None
+        self._source: SecretSource | None = None
         self._initialized = False
         
     def initialize(self, source: str = "env_var", **kwargs) -> bool:
@@ -54,7 +61,15 @@ class SecretsManager:
         try:
             self._source = SecretSource(source)
 
-            if self._source == SecretSource.VAULT and HAS_VAULT:
+            if self._source == SecretSource.VAULT:
+                hvac_module = hvac
+                if hvac_module is None and not HAS_VAULT:
+                    raise ValueError(
+                        "Vault dependencies not installed. Install with: pip install hvac"
+                    )
+                if hvac_module is None:
+                    hvac_module = import_module("hvac")
+
                 # Initialize Vault client
                 vault_url = kwargs.get('vault_url') or os.getenv('VAULT_ADDR')
                 vault_token = kwargs.get('vault_token') or os.getenv('VAULT_TOKEN')
@@ -63,15 +78,18 @@ class SecretsManager:
                 if not vault_url:
                     raise ValueError("Vault URL must be provided for Vault source")
 
-                self._vault_client = hvac.Client(
+                vault_client = hvac_module.Client(
                     url=vault_url,
                     token=vault_token,
                     namespace=vault_namespace
                 )
+                if vault_client is None:
+                    raise ValueError("Failed to initialize Vault client")
 
                 # Test connection
-                if not self._vault_client.is_authenticated():
+                if not vault_client.is_authenticated():
                     raise ValueError("Failed to authenticate with Vault")
+                self._vault_client = vault_client
 
             elif self._source == SecretSource.AZURE_KEY_VAULT:
                 # Initialize Azure Key Vault client
@@ -130,8 +148,8 @@ class SecretsManager:
             elif self._source == SecretSource.GCP_SECRET_MANAGER:
                 # Initialize GCP Secret Manager client
                 try:
-                    from google.cloud import secretmanager
-                    self._gcp_client = secretmanager.SecretManagerServiceClient()
+                    secretmanager_module = import_module("google.cloud.secretmanager")
+                    self._gcp_client = secretmanager_module.SecretManagerServiceClient()
                 except ImportError:
                     raise ValueError("GCP Secret Manager dependencies not installed. Install with: pip install google-cloud-secret-manager")
 
@@ -189,11 +207,11 @@ class SecretsManager:
                     # Fall back to environment variables (already tried above)
                     pass
 
-            elif self._source == SecretSource.AZURE_KEY_VAULT and hasattr(self, '_azure_client') and self._azure_client:
+            elif self._source == SecretSource.AZURE_KEY_VAULT and self._azure_client:
                 # Try to get from Azure Key Vault
+                azure_key = f"lms-{key.lower().replace('_', '-')}"
                 try:
                     # Key Vault secret names support alphanumeric and hyphen only.
-                    azure_key = f"lms-{key.lower().replace('_', '-')}"
                     secret = self._azure_client.get_secret(azure_key)
                     return secret.value
                 except Exception as azure_error:
