@@ -52,6 +52,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.custom_rules = custom_rules or []
 
         self._requests: dict[str, deque[float]] = defaultdict(deque)
+        self._lock = Lock()
+        self._last_cleanup_time = time.time()
         self._redis: Redis | None = None
         self._redis_enabled = use_redis and bool(redis_url)
         self._redis_fallback_logged = False
@@ -157,6 +159,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         period_seconds: int,
     ) -> Response:
         now = time.time()
+
+        # Periodic cleanup of expired keys to prevent memory leak
+        self._maybe_cleanup(now)
+
         window = self._requests[key]
 
         while window and now - window[0] > period_seconds:
@@ -181,6 +187,42 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             response, limit=limit, remaining=remaining, reset_epoch=reset_epoch
         )
         return response
+
+    def _maybe_cleanup(self, now: float) -> None:
+        """Clean up expired rate limit keys if enough time has passed."""
+        if now - self._last_cleanup_time < CLEANUP_INTERVAL_SECONDS:
+            return
+
+        with self._lock:
+            # Double-check after acquiring lock
+            if now - self._last_cleanup_time < CLEANUP_INTERVAL_SECONDS:
+                return
+
+            self._last_cleanup_time = now
+
+            # Clean up expired entries
+            expired_keys = []
+            for key, window in self._requests.items():
+                # Remove expired timestamps from the window
+                while window and now - window[0] > self.period_seconds:
+                    window.popleft()
+                # If window is empty, mark key for deletion
+                if not window:
+                    expired_keys.append(key)
+
+            for key in expired_keys:
+                self._requests.pop(key, None)
+
+            # Log if we had to clean up
+            if expired_keys:
+                logger.debug(f"Cleaned up {len(expired_keys)} expired rate limit keys")
+
+            # If still too many keys, log warning
+            if len(self._requests) > MAX_IN_MEMORY_KEYS:
+                logger.warning(
+                    f"Rate limit in-memory store has {len(self._requests)} keys, "
+                    f"consider using Redis for rate limiting"
+                )
 
     def _set_rate_limit_headers(
         self, response: Response, *, limit: int, remaining: int, reset_epoch: int

@@ -33,10 +33,12 @@ if /I "%DRY_RUN%"=="true" (
 
 set "DB_USER=%POSTGRES_USER%"
 set "DB_NAME=%POSTGRES_DB%"
+set "COMPOSE_FILE=%LMS_COMPOSE_FILE%"
 if "%DB_USER%"=="" set "DB_USER=lms"
 if "%DB_NAME%"=="" set "DB_NAME=lms"
+if "%COMPOSE_FILE%"=="" set "COMPOSE_FILE=docker-compose.yml"
 
 echo [restore_db] Restoring %BACKUP_FILE% into database %DB_NAME%...
-type "%BACKUP_FILE%" | docker compose exec -T db pg_restore -U %DB_USER% -d %DB_NAME% --clean --if-exists --no-owner --no-privileges
+type "%BACKUP_FILE%" | docker compose -f "%COMPOSE_FILE%" exec -T db pg_restore -U %DB_USER% -d %DB_NAME% --clean --if-exists --no-owner --no-privileges
 exit /b %ERRORLEVEL%
 

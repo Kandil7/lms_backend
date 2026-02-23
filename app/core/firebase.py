@@ -119,6 +119,14 @@ def _initialize_firebase() -> bool:
         logger.debug("Firebase app already initialized")
         return True
 
+    # Security check: prevent emulator in production
+    emulator_host = settings.FIREBASE_AUTH_EMULATOR_HOST
+    if emulator_host and settings.ENVIRONMENT == "production":
+        raise FirebaseInitializationError(
+            f"Firebase Auth emulator is not allowed in production environment. "
+            f"Remove FIREBASE_AUTH_EMULATOR_HOST setting to proceed."
+        )
+
     firebase_admin_module = _get_firebase_admin_module()
     credentials_module = _get_credentials_module()
 
@@ -129,7 +137,6 @@ def _initialize_firebase() -> bool:
         raise FirebaseInitializationError(error_msg)
 
     # Handle Firebase Auth emulator for development
-    emulator_host = settings.FIREBASE_AUTH_EMULATOR_HOST
     if emulator_host:
         os.environ["FIREBASE_AUTH_EMULATOR_HOST"] = emulator_host
         logger.info(f"Firebase Auth emulator enabled: {emulator_host}")
@@ -794,7 +801,9 @@ def get_firebase_functions_service() -> FirebaseFunctionsService | None:
     global _firebase_functions_service
 
     if not settings.FIREBASE_FUNCTIONS_URL:
-        logger.debug("Firebase Functions URL not set, returning None for functions service")
+        logger.debug(
+            "Firebase Functions URL not set, returning None for functions service"
+        )
         return None
 
     if _firebase_functions_service is None:

@@ -6,8 +6,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$projectRoot = Resolve-Path (Join-Path $scriptDir "..")
-$backupScript = Join-Path $projectRoot "backup_db.bat"
+$projectRoot = Resolve-Path (Join-Path $scriptDir "..\..")
+$backupScript = Join-Path $projectRoot "scripts\windows\backup_db.bat"
 
 if (-not (Test-Path $backupScript)) {
     throw "backup_db.bat not found at $backupScript"

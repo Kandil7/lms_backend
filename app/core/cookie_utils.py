@@ -4,6 +4,7 @@ from fastapi import Response
 
 from app.core.config import settings
 
+
 def set_http_only_cookie(
     response: Response,
     name: str,
@@ -17,7 +18,7 @@ def set_http_only_cookie(
 ) -> None:
     """
     Set an HTTP-only cookie with secure defaults for production.
-    
+
     Args:
         response: FastAPI Response object
         name: Cookie name
@@ -30,8 +31,8 @@ def set_http_only_cookie(
         samesite: SameSite policy ('lax', 'strict', or 'none')
     """
     # Use APP_DOMAIN from settings if available and not overridden
-    effective_domain = domain or getattr(settings, 'APP_DOMAIN', None)
-    
+    effective_domain = domain or getattr(settings, "APP_DOMAIN", None)
+
     response.set_cookie(
         key=name,
         value=value,
@@ -55,12 +56,15 @@ def delete_http_only_cookie(
     """
     Delete an HTTP-only cookie by setting it to empty with max_age=0.
     """
+    # Use APP_DOMAIN from settings if available and not overridden
+    effective_domain = domain or getattr(settings, "APP_DOMAIN", None)
+
     response.set_cookie(
         key=name,
         value="",
         max_age=0,
         path=path,
-        domain=domain,
+        domain=effective_domain,
         secure=True,
         httponly=True,
         samesite="lax",

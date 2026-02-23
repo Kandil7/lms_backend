@@ -1,4 +1,7 @@
 from enum import Enum
+import logging
+
+logger = logging.getLogger("app.permissions")
 
 
 class Role(str, Enum):
@@ -41,5 +44,10 @@ def has_permission(role: str, permission: Permission) -> bool:
     try:
         role_enum = Role(role)
     except ValueError:
+        logger.debug(f"Unknown role '{role}' - denying permission '{permission}'")
         return False
-    return permission in ROLE_PERMISSIONS.get(role_enum, set())
+
+    has_perm = permission in ROLE_PERMISSIONS.get(role_enum, set())
+    if not has_perm:
+        logger.debug(f"Role '{role}' lacks permission '{permission}'")
+    return has_perm

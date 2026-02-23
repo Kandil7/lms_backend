@@ -10,7 +10,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$projectRoot = Resolve-Path (Join-Path $scriptDir "..")
+$projectRoot = Resolve-Path (Join-Path $scriptDir "..\..")
 
 if ([System.IO.Path]::IsPathRooted($ComposeFile)) {
     $composePath = $ComposeFile
@@ -72,7 +72,7 @@ Write-Host "Compose file: $composePath"
 Write-Host "Drill DB: $drillDbName"
 
 try {
-    $backupScript = Join-Path $projectRoot "backup_db.bat"
+    $backupScript = Join-Path $projectRoot "scripts\windows\backup_db.bat"
     if (-not (Test-Path $backupScript)) {
         throw "backup_db.bat not found at $backupScript"
     }

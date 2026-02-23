@@ -152,6 +152,7 @@ class Settings(BaseSettings):
         ]
     )
     MAX_FAILED_LOGIN_ATTEMPTS: int = 5
+    ACCOUNT_LOCKOUT_DURATION_SECONDS: int = 900  # 15 minutes
     FILE_UPLOAD_RATE_LIMIT_REQUESTS_PER_HOUR: int = 100
     FILE_UPLOAD_RATE_LIMIT_WINDOW_SECONDS: int = 3600
     FILE_UPLOAD_RATE_LIMIT_PATHS: CsvList = Field(
@@ -284,6 +285,9 @@ class Settings(BaseSettings):
         # In production, load sensitive values from secrets manager
         if self.ENVIRONMENT == "production":
             # Initialize secrets manager for production
+            secrets_manager_initialized = False
+            secrets_manager_source = None
+
             try:
                 # Try to initialize with Azure Key Vault first (preferred for Azure deployments)
                 success = initialize_secrets_manager(
@@ -291,7 +295,9 @@ class Settings(BaseSettings):
                     vault_url=os.getenv("AZURE_KEYVAULT_URL")
                     or os.getenv("AZURE_KEYVAULT_ENDPOINT"),
                 )
-                if not success:
+                if success:
+                    secrets_manager_source = "azure_key_vault"
+                else:
                     # Fall back to Vault
                     success = initialize_secrets_manager(
                         "vault",
@@ -299,12 +305,26 @@ class Settings(BaseSettings):
                         vault_token=os.getenv("VAULT_TOKEN"),
                         vault_namespace=os.getenv("VAULT_NAMESPACE"),
                     )
-                if not success:
+                    if success:
+                        secrets_manager_source = "vault"
+
+                if success:
+                    secrets_manager_initialized = True
+                else:
                     # Fall back to environment variables (for development/staging)
                     initialize_secrets_manager("env_var")
+                    secrets_manager_source = "env_var"
             except Exception as e:
-                logger.warning(f"Failed to initialize secrets manager: {e}")
-                # Continue with environment variables as fallback
+                logger.error(f"Failed to initialize secrets manager: {e}")
+                # In production, fail fast if secrets manager fails to initialize
+                raise ValueError(
+                    f"Failed to initialize secrets manager in production: {e}. "
+                    "Ensure required secrets provider (Azure Key Vault or Vault) is properly configured."
+                ) from e
+
+            logger.info(
+                f"Secrets manager initialized with source: {secrets_manager_source}"
+            )
 
             # Override sensitive values from secrets manager
             if (
@@ -413,7 +433,9 @@ class Settings(BaseSettings):
 
         if self.FILE_STORAGE_PROVIDER == "azure":
             has_container = bool((self.AZURE_STORAGE_CONTAINER_NAME or "").strip())
-            has_connection_string = bool((self.AZURE_STORAGE_CONNECTION_STRING or "").strip())
+            has_connection_string = bool(
+                (self.AZURE_STORAGE_CONNECTION_STRING or "").strip()
+            )
             has_account_url = bool((self.AZURE_STORAGE_ACCOUNT_URL or "").strip())
 
             if not has_container:

@@ -2,6 +2,7 @@ import json
 import logging
 import time
 from functools import lru_cache
+from threading import Lock
 from typing import Any
 
 from redis import Redis
@@ -13,17 +14,27 @@ logger = logging.getLogger("app.cache")
 
 
 class AppCache:
-    def __init__(self, *, enabled: bool, redis_url: str | None, key_prefix: str, default_ttl_seconds: int) -> None:
+    def __init__(
+        self,
+        *,
+        enabled: bool,
+        redis_url: str | None,
+        key_prefix: str,
+        default_ttl_seconds: int,
+    ) -> None:
         self.enabled = enabled
         self.key_prefix = key_prefix
         self.default_ttl_seconds = max(1, default_ttl_seconds)
         self._memory: dict[str, tuple[int, str]] = {}
+        self._memory_lock = Lock()
         self._redis_error_logged = False
         self._redis_enabled = enabled and bool(redis_url)
         self._redis: Redis | None = None
 
         if self._redis_enabled and redis_url:
-            self._redis = Redis.from_url(redis_url, encoding="utf-8", decode_responses=True)
+            self._redis = Redis.from_url(
+                redis_url, encoding="utf-8", decode_responses=True
+            )
 
     def get_json(self, key: str) -> Any | None:
         if not self.enabled:
@@ -111,10 +122,12 @@ class AppCache:
             except RedisError as exc:
                 self._fallback_to_memory(exc)
 
-        current = self.get_int(key) or 0
-        next_value = current + normalized_amount
-        self._set_memory(full_key, str(next_value), self.default_ttl_seconds)
-        return next_value
+        # Use lock for thread-safe in-memory increment
+        with self._memory_lock:
+            current = self.get_int(key) or 0
+            next_value = current + normalized_amount
+            self._set_memory(full_key, str(next_value), self.default_ttl_seconds)
+            return next_value
 
     def expire(self, key: str, ttl_seconds: int) -> bool:
         if not self.enabled:
@@ -148,7 +161,8 @@ class AppCache:
             except RedisError as exc:
                 self._fallback_to_memory(exc)
 
-        self._memory.pop(full_key, None)
+        with self._memory_lock:
+            self._memory.pop(full_key, None)
 
     def delete_by_prefix(self, prefix: str) -> None:
         if not self.enabled:
@@ -164,9 +178,12 @@ class AppCache:
             except RedisError as exc:
                 self._fallback_to_memory(exc)
 
-        keys_to_delete = [key for key in self._memory if key.startswith(full_prefix)]
-        for key in keys_to_delete:
-            self._memory.pop(key, None)
+        with self._memory_lock:
+            keys_to_delete = [
+                key for key in self._memory if key.startswith(full_prefix)
+            ]
+            for key in keys_to_delete:
+                self._memory.pop(key, None)
 
     def _build_key(self, key: str) -> str:
         return f"{self.key_prefix}:{key}"

@@ -22,7 +22,7 @@ function Ensure-Command {
     }
 }
 
-$ProjectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+$ProjectRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 Set-Location $ProjectRoot
 
 Ensure-Command "docker"
