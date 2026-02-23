@@ -1,9 +1,5 @@
-import pytest
-from datetime import datetime, timedelta
-from typing import Dict
 
 from tests.helpers import auth_headers, register_user
-from app.modules.assignments.schemas.schemas import SubmissionUpdate
 
 
 def test_grade_submission_success(client, monkeypatch):

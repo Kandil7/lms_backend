@@ -10,7 +10,6 @@ from app.core.permissions import Role
 from app.modules.auth.schemas import (
     AuthResponse,
     ForgotPasswordRequest,
-    LoginResponse,
     LogoutRequest,
     MessageResponse,
     MfaChallengeResponse,

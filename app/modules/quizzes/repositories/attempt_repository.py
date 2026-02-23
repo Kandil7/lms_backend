@@ -22,7 +22,6 @@ class AttemptRepository:
     def get_by_id_for_update(self, attempt_id: UUID) -> QuizAttempt | None:
         stmt = (
             select(QuizAttempt)
-            .options(joinedload(QuizAttempt.quiz), joinedload(QuizAttempt.enrollment))
             .where(QuizAttempt.id == attempt_id)
             .with_for_update()
         )

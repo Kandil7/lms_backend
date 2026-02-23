@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import pytest
-from datetime import datetime, timedelta
-from uuid import uuid4
 
 from tests.helpers import auth_headers, register_user
 from app.core.config import settings

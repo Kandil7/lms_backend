@@ -7,6 +7,9 @@
 !.env.production.example
 !.env.staging.example
 !.env.observability.example
+!.env.demo.example
+!.env.demo.proxy.example
+!.env.demo.azure.example
 __pycache__/
 *.py[cod]
 *.pyo

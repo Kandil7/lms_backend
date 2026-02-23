@@ -26,6 +26,7 @@ class CourseService:
         page_size: int,
         category: str | None,
         difficulty_level: str | None,
+        search: str | None,
         current_user,
         mine: bool = False,
     ) -> dict:
@@ -46,6 +47,7 @@ class CourseService:
             page_size=page_size,
             category=category,
             difficulty_level=difficulty_level,
+            search=search,
             published_only=published_only,
             instructor_id=instructor_id,
         )
@@ -56,6 +58,21 @@ class CourseService:
         course = self.repo.get_by_id(course_id, with_lessons=with_lessons)
         if not course:
             raise NotFoundException("Course not found")
+
+        if not course.is_published and not self._can_manage_course(course, current_user):
+            raise ForbiddenException("Not authorized to access this course")
+
+        return course
+
+    def get_course_by_slug(self, slug: str, current_user, *, with_lessons: bool = False):
+        course = self.repo.get_by_slug(slug)
+        if not course:
+            raise NotFoundException("Course not found")
+
+        if with_lessons:
+            course = self.repo.get_by_id(course.id, with_lessons=True)
+            if not course:
+                raise NotFoundException("Course not found")
 
         if not course.is_published and not self._can_manage_course(course, current_user):
             raise ForbiddenException("Not authorized to access this course")
@@ -81,6 +98,19 @@ class CourseService:
             estimated_duration_minutes=payload.estimated_duration_minutes,
             course_metadata=payload.metadata,
             is_published=False,
+            # Enhanced fields for frontend compatibility
+            price=payload.price,
+            currency=payload.currency,
+            is_free=payload.is_free,
+            long_description=payload.long_description,
+            preview_video_url=payload.preview_video_url,
+            requirements=payload.requirements,
+            learning_objectives=payload.learning_objectives,
+            total_reviews=payload.total_reviews,
+            total_quizzes=payload.total_quizzes,
+            enrollment_count=payload.enrollment_count,
+            average_rating=payload.average_rating,
+            status=payload.status,
         )
         self._commit()
         return course
@@ -97,7 +127,37 @@ class CourseService:
         if "metadata" in updates:
             updates["course_metadata"] = updates.pop("metadata")
 
-        course = self.repo.update(course, **updates)
+        # Handle enhanced fields for frontend compatibility
+        if "price" in updates:
+            course.price = updates["price"]
+        if "currency" in updates:
+            course.currency = updates["currency"]
+        if "is_free" in updates:
+            course.is_free = updates["is_free"]
+        if "long_description" in updates:
+            course.long_description = updates["long_description"]
+        if "preview_video_url" in updates:
+            course.preview_video_url = updates["preview_video_url"]
+        if "requirements" in updates:
+            course.requirements = updates["requirements"]
+        if "learning_objectives" in updates:
+            course.learning_objectives = updates["learning_objectives"]
+        if "total_reviews" in updates:
+            course.total_reviews = updates["total_reviews"]
+        if "total_quizzes" in updates:
+            course.total_quizzes = updates["total_quizzes"]
+        if "enrollment_count" in updates:
+            course.enrollment_count = updates["enrollment_count"]
+        if "average_rating" in updates:
+            course.average_rating = updates["average_rating"]
+        if "status" in updates:
+            course.status = updates["status"]
+
+        course = self.repo.update(course, **{k: v for k, v in updates.items() if k not in [
+            "price", "currency", "is_free", "long_description", "preview_video_url",
+            "requirements", "learning_objectives", "total_reviews", "total_quizzes",
+            "enrollment_count", "average_rating", "status"
+        ]})
         self._commit()
         return course
 

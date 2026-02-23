@@ -280,6 +280,9 @@ class AuthService:
         access_token = create_access_token(subject=str(user_id), role=role)
         refresh_token = create_refresh_token(subject=str(user_id))
 
+        # Calculate expires_in for access token (in seconds)
+        expires_in_seconds = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+
         payload = decode_token(refresh_token, expected_type=TokenType.REFRESH)
         token_record = RefreshToken(
             user_id=user_id,
@@ -290,7 +293,11 @@ class AuthService:
         self.db.add(token_record)
         self.db.flush()
 
-        return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+        return TokenResponse(
+            access_token=access_token, 
+            refresh_token=refresh_token,
+            expires_in=expires_in_seconds
+        )
 
     def _get_valid_refresh_token(self, token_jti: str, *, for_update: bool = False) -> RefreshToken | None:
         stmt = select(RefreshToken).where(

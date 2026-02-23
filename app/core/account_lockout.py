@@ -1,5 +1,3 @@
-from datetime import UTC, datetime, timedelta
-from typing import Optional
 import logging
 
 from app.core.cache import get_app_cache

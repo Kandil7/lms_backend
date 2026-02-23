@@ -27,6 +27,7 @@ class CourseRepository:
         page_size: int,
         category: str | None = None,
         difficulty_level: str | None = None,
+        search: str | None = None,
         published_only: bool = False,
         instructor_id: UUID | None = None,
     ) -> tuple[list[Course], int]:
@@ -39,6 +40,12 @@ class CourseRepository:
             filters.append(Course.is_published.is_(True))
         if instructor_id:
             filters.append(Course.instructor_id == instructor_id)
+        if search:
+            # Add full-text search on title and description
+            filters.append(
+                (Course.title.ilike(f"%{search}%")) |
+                (Course.description.ilike(f"%{search}%"))
+            )
 
         total_stmt = select(func.count()).select_from(Course)
         if filters:

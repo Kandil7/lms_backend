@@ -123,8 +123,8 @@ def _initialize_firebase() -> bool:
     emulator_host = settings.FIREBASE_AUTH_EMULATOR_HOST
     if emulator_host and settings.ENVIRONMENT == "production":
         raise FirebaseInitializationError(
-            f"Firebase Auth emulator is not allowed in production environment. "
-            f"Remove FIREBASE_AUTH_EMULATOR_HOST setting to proceed."
+            "Firebase Auth emulator is not allowed in production environment. "
+            "Remove FIREBASE_AUTH_EMULATOR_HOST setting to proceed."
         )
 
     firebase_admin_module = _get_firebase_admin_module()

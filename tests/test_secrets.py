@@ -2,7 +2,7 @@
 
 import os
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 from app.core.secrets import SecretSource, SecretsManager, get_secret, initialize_secrets_manager
 
 

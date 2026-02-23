@@ -1,12 +1,9 @@
 from __future__ import annotations
 
 import pytest
-from datetime import datetime, timedelta
-from uuid import UUID, uuid4
 
 from tests.helpers import auth_headers, register_user
 from app.core.config import settings
-from app.modules.assignments.schemas.schemas import AssignmentCreate, SubmissionCreate
 
 
 def test_concurrent_submission_race_condition(client, monkeypatch):

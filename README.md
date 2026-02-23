@@ -84,6 +84,12 @@ Production stack notes:
 - TLS is terminated by `caddy` on ports `80/443` using `APP_DOMAIN` + `LETSENCRYPT_EMAIL`.
 - API container is internal-only on port `8000` behind Caddy reverse proxy.
 
+Production preflight validation:
+```bash
+python scripts/deployment/validate_environment.py --env-file .env --strict-warnings
+```
+The Azure VM deploy script also runs this validator automatically before migrations.
+
 Staging stack:
 ```bash
 cp .env.staging.example .env
@@ -118,6 +124,74 @@ Observability one-command startup (Windows):
 scripts\windows\run_observability.bat
 ```
 
+Side-by-side demo startup (Windows, separate stack on port `8002`):
+```bat
+run_demo_side_by_side.bat
+```
+Stop side-by-side demo:
+```bat
+stop_demo_side_by_side.bat
+```
+
+Side-by-side demo stack (manual):
+```bash
+cp .env.demo.example .env.demo
+docker compose -p lms-demo -f docker-compose.demo.yml up -d --build
+docker compose -p lms-demo -f docker-compose.demo.yml exec -T api python scripts/database/seed_demo_data.py --reset-passwords --json-output postman/demo_seed_snapshot.demo.json
+```
+
+Demo domain on DuckDNS with separate reverse proxy (Windows):
+```bat
+run_demo_side_by_side.bat
+run_demo_proxy_duckdns.bat
+```
+
+Demo domain setup (manual):
+```bash
+cp .env.demo.proxy.example .env.demo.proxy
+# edit .env.demo.proxy:
+# - DEMO_DOMAIN (e.g. egylmsdemo.duckdns.org)
+# - LETSENCRYPT_EMAIL
+# - DUCKDNS_SUBDOMAINS
+# - DUCKDNS_TOKEN
+docker compose -p lms-demo-proxy --env-file .env.demo.proxy -f docker-compose.demo.proxy.yml up -d
+```
+
+Stop demo reverse proxy:
+```bat
+stop_demo_proxy_duckdns.bat
+```
+
+Notes:
+- `docker-compose.demo.proxy.yml` assumes demo API is reachable at `http://localhost:8002` (change `DEMO_UPSTREAM` if needed).
+- If another service is already using ports `80/443`, adjust `DEMO_HTTP_PORT` and `DEMO_HTTPS_PORT` in `.env.demo.proxy`.
+
+Azure demo deployment (dedicated VM, TLS on `80/443`):
+```bash
+cp .env.demo.azure.example .env.demo.azure
+docker compose --env-file .env.demo.azure -f docker-compose.demo.azure.yml up -d --build
+docker compose --env-file .env.demo.azure -f docker-compose.demo.azure.yml exec -T api python scripts/database/seed_demo_data.py --reset-passwords --skip-attempt --json-output postman/demo_seed_snapshot.azure.json
+```
+
+Azure demo deploy script (remote):
+```bash
+export AZURE_VM_HOST="<vm-public-ip>"
+export AZURE_VM_USER="azureuser"
+export APP_DOMAIN="egylmsdemo.duckdns.org"
+export LETSENCRYPT_EMAIL="ops@example.com"
+export SECRET_KEY="<32+ chars strong secret>"
+bash scripts/linux/deploy_azure_demo_vm.sh
+```
+
+PowerShell equivalent:
+```powershell
+.\scripts\deployment\deploy_azure_demo_vm.ps1 -AzureVMHost "<vm-public-ip>" -AzureVMUser "azureuser" -AppDomain "egylmsdemo.duckdns.org" -LetsEncryptEmail "ops@example.com" -SecretKey "<32+ chars strong secret>"
+```
+
+Azure demo notes:
+- `docker-compose.demo.azure.yml` is intended for a dedicated VM because it binds host ports `80/443`.
+- Ensure Azure NSG + VM firewall allow inbound TCP `80` and `443`.
+
 Useful flags:
 - `-NoBuild`
 - `-NoMigrate`
@@ -129,10 +203,15 @@ Useful flags:
 Readiness endpoint:
 - `http://localhost:8000/api/v1/ready`
 - `https://egylms.duckdns.org/api/v1/ready` (current production)
+- `http://localhost:8002/api/v1/ready` (side-by-side demo)
+- `https://<your-demo-domain>/api/v1/ready` (demo domain via `docker-compose.demo.proxy.yml`)
+- `https://<your-demo-azure-domain>/api/v1/ready` (Azure demo via `docker-compose.demo.azure.yml`)
 
 Metrics endpoint:
 - `http://localhost:8000/metrics`
 - `https://egylms.duckdns.org/metrics` (production if exposed through Caddy)
+- `https://<your-demo-domain>/metrics` (demo domain via `docker-compose.demo.proxy.yml`)
+- `https://<your-demo-azure-domain>/metrics` (Azure demo via `docker-compose.demo.azure.yml`)
 
 Services included in `docker-compose.yml`:
 - `api`

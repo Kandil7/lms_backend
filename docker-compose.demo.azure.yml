@@ -1,0 +1,126 @@
+name: lms-demo-azure
+
+services:
+  migrate:
+    build: .
+    command:
+      - /bin/sh
+      - -c
+      - >
+        python scripts/database/wait_for_db.py &&
+        alembic upgrade head
+    env_file:
+      - .env.demo.azure
+    environment:
+      ENVIRONMENT: staging
+      DEBUG: "false"
+      DATABASE_URL: ${DEMO_DATABASE_URL:-postgresql+psycopg2://${POSTGRES_USER:-lms_demo}:${POSTGRES_PASSWORD:-lms_demo}@db:5432/${POSTGRES_DB:-lms_demo}}
+      REDIS_URL: ${DEMO_REDIS_URL:-redis://redis:6379/0}
+      CELERY_BROKER_URL: ${DEMO_CELERY_BROKER_URL:-redis://redis:6379/1}
+      CELERY_RESULT_BACKEND: ${DEMO_CELERY_RESULT_BACKEND:-redis://redis:6379/2}
+      TASKS_FORCE_INLINE: ${TASKS_FORCE_INLINE:-true}
+      FILE_STORAGE_PROVIDER: ${FILE_STORAGE_PROVIDER:-local}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: .
+    command:
+      - uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --workers
+      - "${UVICORN_WORKERS:-1}"
+    env_file:
+      - .env.demo.azure
+    environment:
+      ENVIRONMENT: staging
+      DEBUG: "false"
+      DATABASE_URL: ${DEMO_DATABASE_URL:-postgresql+psycopg2://${POSTGRES_USER:-lms_demo}:${POSTGRES_PASSWORD:-lms_demo}@db:5432/${POSTGRES_DB:-lms_demo}}
+      REDIS_URL: ${DEMO_REDIS_URL:-redis://redis:6379/0}
+      CELERY_BROKER_URL: ${DEMO_CELERY_BROKER_URL:-redis://redis:6379/1}
+      CELERY_RESULT_BACKEND: ${DEMO_CELERY_RESULT_BACKEND:-redis://redis:6379/2}
+      TASKS_FORCE_INLINE: ${TASKS_FORCE_INLINE:-true}
+      FILE_STORAGE_PROVIDER: ${FILE_STORAGE_PROVIDER:-local}
+    expose:
+      - "8000"
+    volumes:
+      - uploads_demo_azure:/app/uploads
+      - certificates_demo_azure:/app/certificates
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >
+          python -c "import os,urllib.request,sys;
+          req=urllib.request.Request('http://127.0.0.1:8000/api/v1/ready', headers={'Host': os.getenv('APP_DOMAIN', 'localhost')});
+          sys.exit(0 if urllib.request.urlopen(req, timeout=3).status == 200 else 1)"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./ops/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_demo_azure_data:/data
+      - caddy_demo_azure_config:/config
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-lms_demo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lms_demo}
+      POSTGRES_DB: ${POSTGRES_DB:-lms_demo}
+    expose:
+      - "5432"
+    volumes:
+      - postgres_demo_azure_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lms_demo} -d ${POSTGRES_DB:-lms_demo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save 60 1 --loglevel warning
+    expose:
+      - "6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  postgres_demo_azure_data:
+  uploads_demo_azure:
+  certificates_demo_azure:
+  caddy_demo_azure_data:
+  caddy_demo_azure_config:

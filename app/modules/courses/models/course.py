@@ -1,7 +1,7 @@
 from datetime import datetime
 import uuid
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy import JSON, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -37,6 +37,20 @@ class Course(Base):
     thumbnail_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     estimated_duration_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     course_metadata: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
+    
+    # Enhanced fields for frontend compatibility
+    price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    is_free: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    long_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    preview_video_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    requirements: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    learning_objectives: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    total_reviews: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_quizzes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    enrollment_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    average_rating: Mapped[float | None] = mapped_column(Float, nullable=True)
+    status: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
     updated_at: Mapped[datetime] = mapped_column(
@@ -47,3 +61,4 @@ class Course(Base):
     lessons = relationship("Lesson", back_populates="course", cascade="all, delete-orphan")
     enrollments = relationship("Enrollment", back_populates="course", cascade="all, delete-orphan")
     assignments = relationship("Assignment", back_populates="course", cascade="all, delete-orphan")
+    order_items = relationship("OrderItem", back_populates="course")

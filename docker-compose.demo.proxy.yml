@@ -1,0 +1,35 @@
+name: lms-demo-proxy
+
+services:
+  demo-caddy:
+    image: caddy:2-alpine
+    environment:
+      DEMO_DOMAIN: ${DEMO_DOMAIN}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
+      DEMO_UPSTREAM: ${DEMO_UPSTREAM:-http://host.docker.internal:8002}
+    ports:
+      - "${DEMO_HTTP_PORT:-80}:80"
+      - "${DEMO_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./ops/caddy/Caddyfile.demo:/etc/caddy/Caddyfile:ro
+      - caddy_demo_data:/data
+      - caddy_demo_config:/config
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  duckdns:
+    image: lscr.io/linuxserver/duckdns:latest
+    environment:
+      PUID: ${DUCKDNS_PUID:-1000}
+      PGID: ${DUCKDNS_PGID:-1000}
+      TZ: ${TZ:-Etc/UTC}
+      SUBDOMAINS: ${DUCKDNS_SUBDOMAINS}
+      TOKEN: ${DUCKDNS_TOKEN}
+      LOG_FILE: "true"
+      UPDATE_IP: ${DUCKDNS_UPDATE_IP:-ipv4}
+    restart: unless-stopped
+
+volumes:
+  caddy_demo_data:
+  caddy_demo_config:

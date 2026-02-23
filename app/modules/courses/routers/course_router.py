@@ -34,6 +34,7 @@ def list_courses(
     page_size: int = Query(default=20, ge=1, le=100),
     category: str | None = Query(default=None),
     difficulty_level: str | None = Query(default=None),
+    search: str | None = Query(default=None),
     mine: bool = Query(default=False),
     current_user=Depends(get_current_user_optional),
     db: Session = Depends(get_db),
@@ -55,6 +56,7 @@ def list_courses(
         page_size=page_size,
         category=category,
         difficulty_level=difficulty_level,
+        search=search,
         current_user=current_user,
         mine=mine,
     )
@@ -103,6 +105,24 @@ def get_course(
         return CourseResponse.model_validate(cached_payload)
 
     course = CourseService(db).get_course(course_id, current_user)
+    response = CourseResponse.model_validate(course)
+    cache.set_json(cache_key, response.model_dump(mode="json"), ttl_seconds=settings.COURSE_CACHE_TTL_SECONDS)
+    return response
+
+
+@router.get("/slug/{slug}", response_model=CourseResponse)
+def get_course_by_slug(
+    slug: str,
+    current_user=Depends(get_current_user_optional),
+    db: Session = Depends(get_db),
+) -> CourseResponse:
+    cache = get_app_cache()
+    cache_key = f"courses:get_slug:{_viewer_scope(current_user)}:{slug}"
+    cached_payload = cache.get_json(cache_key)
+    if cached_payload is not None:
+        return CourseResponse.model_validate(cached_payload)
+
+    course = CourseService(db).get_course_by_slug(slug, current_user)
     response = CourseResponse.model_validate(course)
     cache.set_json(cache_key, response.model_dump(mode="json"), ttl_seconds=settings.COURSE_CACHE_TTL_SECONDS)
     return response

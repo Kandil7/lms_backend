@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from app.modules.enrollments.models import Enrollment
 from app.modules.quizzes.models.attempt import QuizAttempt
+from app.modules.quizzes.repositories.attempt_repository import AttemptRepository
 from tests.helpers import auth_headers, register_user
 
 
@@ -82,6 +83,21 @@ def _create_course_lesson_and_quiz(
     )
     assert publish_quiz.status_code == 200, publish_quiz.text
     return course_id, lesson_id, quiz_id
+
+
+def test_get_by_id_for_update_query_does_not_include_outer_joins(monkeypatch, db_session):
+    captured_sql: dict[str, str] = {}
+
+    def fake_scalar(stmt):
+        captured_sql["sql"] = str(stmt)
+        return None
+
+    monkeypatch.setattr(db_session, "scalar", fake_scalar)
+    AttemptRepository(db_session).get_by_id_for_update(uuid4())
+
+    sql = captured_sql["sql"].upper()
+    assert "FOR UPDATE" in sql
+    assert "LEFT OUTER JOIN" not in sql
 
 
 def _enroll_student(client, student_headers: dict[str, str], course_id: str) -> None:

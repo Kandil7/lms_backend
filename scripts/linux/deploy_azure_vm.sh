@@ -38,6 +38,24 @@ select_compose_cmd() {
     fail "Neither 'docker compose' nor 'docker-compose' is available on this host"
 }
 
+run_env_validation() {
+    local app_dir="$1"
+    local env_file="$2"
+    local strict_flag=()
+
+    if [[ "${DEPLOY_STRICT_VALIDATION:-false}" == "true" ]]; then
+        strict_flag+=(--strict-warnings)
+    fi
+
+    log "Validating production environment configuration"
+    docker run --rm \
+        --env-file "${env_file}" \
+        -v "${app_dir}:/app" \
+        -w /app \
+        python:3.11-slim \
+        python scripts/deployment/validate_environment.py "${strict_flag[@]}"
+}
+
 write_env_file() {
     local env_file="$1"
     local db_auth db_user db_password
@@ -175,6 +193,7 @@ run_vm_deploy() {
 
     write_env_file "${env_file}"
     chmod 600 "${env_file}"
+    run_env_validation "${app_dir}" "${env_file}"
 
     log "Running migrations"
     "${COMPOSE_CMD[@]}" -f "${compose_file}" run --build --rm migrate

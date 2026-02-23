@@ -1,0 +1,99 @@
+name: lms-demo
+
+services:
+  migrate:
+    build: .
+    command:
+      - /bin/sh
+      - -c
+      - >
+        python scripts/database/wait_for_db.py &&
+        alembic upgrade head
+    env_file:
+      - .env.demo
+    environment:
+      ENVIRONMENT: development
+      DEBUG: "false"
+      DATABASE_URL: postgresql+psycopg2://lms_demo:lms_demo@db:5432/lms_demo
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      TASKS_FORCE_INLINE: "true"
+      FILE_STORAGE_PROVIDER: local
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    env_file:
+      - .env.demo
+    environment:
+      ENVIRONMENT: development
+      DEBUG: "false"
+      DATABASE_URL: postgresql+psycopg2://lms_demo:lms_demo@db:5432/lms_demo
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      TASKS_FORCE_INLINE: "true"
+      FILE_STORAGE_PROVIDER: local
+    ports:
+      - "8002:8000"
+    volumes:
+      - .:/app
+      - uploads_demo:/app/uploads
+      - certificates_demo:/app/certificates
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >
+          python -c "import urllib.request,sys;
+          sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/v1/ready', timeout=3).status == 200 else 1)"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: lms_demo
+      POSTGRES_PASSWORD: lms_demo
+      POSTGRES_DB: lms_demo
+    expose:
+      - "5432"
+    volumes:
+      - postgres_demo_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lms_demo -d lms_demo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save 60 1 --loglevel warning
+    expose:
+      - "6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  postgres_demo_data:
+  uploads_demo:
+  certificates_demo:
