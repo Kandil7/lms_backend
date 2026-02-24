@@ -34,4 +34,4 @@ build/
 functions/*-firebase-adminsdk-*.json
 functions/*service-account*.json
 *firebase-adminsdk*.json
-
+.agents/

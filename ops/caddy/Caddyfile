@@ -3,7 +3,7 @@
 	acme_ca https://acme-v02.api.letsencrypt.org/directory
 }
 
-{$APP_DOMAIN} {
+{$APP_DOMAIN} 
 	encode zstd gzip
 
 	header {
@@ -15,4 +15,4 @@
 	}
 
 	reverse_proxy api:8000
-}
+

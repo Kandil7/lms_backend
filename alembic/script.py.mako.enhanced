@@ -1,0 +1,90 @@
+"""${message}
+
+Revision ID: ${up_revision}
+Revises: ${down_revision | comma,n}
+Create Date: ${create_date}
+
+Module: ${module_name if module_name else 'core'}
+Dependencies: ${dependencies if dependencies else '[]'}
+Migration Type: ${migration_type if migration_type else 'standard'}
+
+This migration is part of the modular migration strategy. It handles:
+- ${description if description else 'Schema changes for module'}
+- Ensures backward compatibility with existing data
+- Includes comprehensive rollback capabilities
+"""
+
+from collections.abc import Sequence
+from typing import List, Optional
+
+from alembic import op
+import sqlalchemy as sa
+${imports if imports else ""}
+
+# revision identifiers, used by Alembic.
+revision: str = ${repr(up_revision)}
+down_revision: str | None = ${repr(down_revision)}
+branch_labels: str | Sequence[str] | None = ${repr(branch_labels)}
+depends_on: str | Sequence[str] | None = ${repr(depends_on)}
+
+# Migration metadata for enhanced strategy
+module_name: str = "${module_name if module_name else 'core'}"
+dependencies: List[str] = ${repr(dependencies if dependencies else [])}
+migration_type: str = "${migration_type if migration_type else 'standard'}"
+description: str = "${description if description else 'Schema changes for module'}"
+
+
+def upgrade() -> None:
+    """Apply the migration upgrades with enhanced safety checks."""
+    # Safety check: verify current database state before applying changes
+    _pre_upgrade_validation()
+    
+    # Execute main upgrade operations
+    ${upgrades if upgrades else "pass"}
+    
+    # Post-upgrade validation
+    _post_upgrade_validation()
+
+
+def downgrade() -> None:
+    """Apply the migration downgrades with enhanced safety and data preservation."""
+    # Safety check: verify current database state before rolling back
+    _pre_downgrade_validation()
+    
+    # Execute main downgrade operations
+    ${downgrades if downgrades else "pass"}
+    
+    # Post-downgrade validation
+    _post_downgrade_validation()
+
+
+def _pre_upgrade_validation() -> None:
+    """Validate preconditions before upgrading."""
+    # Check if required tables/columns exist
+    connection = op.get_bind()
+    # Example validation - customize per migration
+    pass
+
+
+def _post_upgrade_validation() -> None:
+    """Validate postconditions after upgrading."""
+    # Verify schema integrity
+    connection = op.get_bind()
+    # Example validation - customize per migration
+    pass
+
+
+def _pre_downgrade_validation() -> None:
+    """Validate preconditions before downgrading."""
+    # Check if data can be safely rolled back
+    connection = op.get_bind()
+    # Example validation - customize per migration
+    pass
+
+
+def _post_downgrade_validation() -> None:
+    """Validate postconditions after downgrading."""
+    # Verify schema integrity after rollback
+    connection = op.get_bind()
+    # Example validation - customize per migration
+    pass

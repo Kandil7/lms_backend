@@ -1,614 +1,362 @@
 {
-    "info": {
-        "name": "LMS Backend API (Production)",
-        "description": "Generated from FastAPI OpenAPI schema. Configured for production base URL.",
-        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-    },
-    "item": [
+  "info": {
+    "name": "LMS Backend API (Production)",
+    "description": "Generated from FastAPI OpenAPI schema. Configured for production base URL.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "System",
+      "item": [
         {
-            "name": "System",
-            "item": [
-                {
-                    "name": "Root",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": "{{base_url}}/"
-                    },
-                    "response": []
-                }
-            ]
+          "name": "Ready Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/ready"
+          },
+          "response": []
         },
         {
-            "name": "Analytics",
-            "item": [
-                {
-                    "name": "Course Analytics",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/analytics/courses/{{course_id}}",
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "My Progress",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/analytics/my-progress",
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "System Overview",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/analytics/system/overview",
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
-                }
-            ]
-        },
-        {
-            "name": "Auth",
-            "item": [
-                {
-                    "name": "Forgot Password",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/auth/forgot-password",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"email\": \"{{test_email}}\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Login",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/auth/login",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Login Cookie",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/auth/login-cookie",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Refresh Token",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/auth/refresh",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Refresh Token Cookie",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/auth/refresh-cookie",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Logout",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/auth/logout",
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Logout Cookie",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/auth/logout-cookie",
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
-                }
-            ]
-        },
-        {
-            "name": "Courses",
-            "item": [
-                {
-                    "name": "List Courses",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/courses"
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Get Course",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/courses/{{course_id}}"
-                    },
-                    "response": []
-                }
-            ]
-        },
-        {
-            "name": "Users",
-            "item": [
-                {
-                    "name": "Get My Profile",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/users/me",
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "List Users",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/users",
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Create User",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/users",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"full_name\": \"New User\",\n  \"role\": \"student\",\n  \"password\": \"StrongPassword123!\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
-                }
-            ]
-        },
-        {
-            "name": "Instructors",
-            "item": [
-                {
-                    "name": "Register Instructor",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/instructors/register",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"email\": \"instructor@example.com\",\n  \"password\": \"StrongPassword123!\",\n  \"full_name\": \"John Instructor\",\n  \"role\": \"instructor\",\n  \"bio\": \"Experienced educator with 10+ years teaching experience.\",\n  \"expertise\": [\"Computer Science\", \"Data Science\"],\n  \"teaching_experience_years\": 10,\n  \"education_level\": \"PhD\",\n  \"institution\": \"University of Technology\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Get Onboarding Status",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/instructors/onboarding-status",
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Update Instructor Profile",
-                    "request": {
-                        "method": "PUT",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/instructors/profile",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"bio\": \"Updated bio with more details about teaching philosophy.\",\n  \"expertise\": [\"Computer Science\", \"Artificial Intelligence\", \"Machine Learning\"],\n  \"teaching_experience_years\": 12\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Submit Verification",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/instructors/verify",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"document_type\": \"resume\",\n  \"document_url\": \"https://example.com/resume.pdf\",\n  \"verification_notes\": \"Please verify my credentials as requested.\",\n  \"consent_to_verify\": true\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
-                }
-            ]
-        },
-        {
-            "name": "Admin",
-            "item": [
-                {
-                    "name": "Setup Admin Account",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/admin/setup",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"VeryStrongPassword123456!\",\n  \"full_name\": \"System Administrator\",\n  \"role\": \"admin\",\n  \"security_level\": \"enhanced\",\n  \"mfa_required\": true,\n  \"ip_whitelist\": [\"192.168.1.1\", \"10.0.0.1\"],\n  \"time_restrictions\": {\n    \"start_hour\": 9,\n    \"end_hour\": 17,\n    \"days\": [\"monday\", \"tuesday\", \"wednesday\", \"thursday\", \"friday\"]\n  },\n  \"emergency_contacts\": [\n    {\n      \"name\": \"Backup Admin\",\n      \"email\": \"backup@example.com\",\n      \"phone\": \"+15551234567\",\n      \"relationship\": \"Colleague\",\n      \"is_backup\": true\n    }\n  ],\n  \"security_policy_accepted\": true,\n  \"security_policy_version\": \"1.0\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Get Admin Onboarding Status",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/admin/onboarding-status",
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Configure Admin Security",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/admin/security-config",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"mfa_method\": \"totp\",\n  \"ip_whitelist\": [\"192.168.1.1\", \"10.0.0.1\"],\n  \"time_restrictions\": {\n    \"start_hour\": 9,\n    \"end_hour\": 17,\n    \"days\": [\"monday\", \"tuesday\", \"wednesday\", \"thursday\", \"friday\"]\n  },\n  \"require_password_change\": true,\n  \"password_expiry_days\": 90,\n  \"session_timeout_minutes\": 30,\n  \"geo_restrictions\": [],\n  \"anomaly_detection_enabled\": true\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Complete Admin Setup",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/admin/complete-setup",
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Create Initial Admin",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/admin/create-initial",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"email\": \"initial-admin@example.com\",\n  \"password\": \"InitialAdminPassword123!\",\n  \"full_name\": \"Initial System Admin\",\n  \"role\": \"admin\",\n  \"security_level\": \"enhanced\",\n  \"mfa_required\": true,\n  \"security_policy_accepted\": true,\n  \"security_policy_version\": \"1.0\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        }
-                    },
-                    "response": []
-                }
-            ]
-        },
-        {
-            "name": "Payments",
-            "item": [
-                {
-                    "name": "Create Payment",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/payments",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"amount\": 99.99,\n  \"currency\": \"USD\",\n  \"payment_method\": \"credit_card\",\n  \"course_id\": \"{{course_id}}\"\n}",
-                            "options": {
-                                "raw": {
-                                    "language": "json"
-                                }
-                            }
-                        },
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
-                }
-            ]
-        },
-        {
-            "name": "Certificates",
-            "item": [
-                {
-                    "name": "Get Certificates",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": "{{base_url}}/api/v1/certificates",
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{access_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
-                }
-            ]
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/health"
+          },
+          "response": []
         }
-    ]
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/v1/auth/login"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/users/me"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Courses",
+      "item": [
+        {
+          "name": "List Courses",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/courses"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Enrollments",
+      "item": [
+        {
+          "name": "Get My Enrollments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/enrollments/my-enrollments"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Quizzes",
+      "item": [
+        {
+          "name": "Get Quiz",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/quizzes/{{quiz_id}}"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Student Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/analytics/my-dashboard"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Files",
+      "item": [
+        {
+          "name": "Upload File",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "filename",
+                  "type": "text",
+                  "value": "example.pdf"
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/v1/files/upload"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Certificates",
+      "item": [
+        {
+          "name": "Get My Certificates",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/certificates/my-certificates"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"course_id\": \"{{course_id}}\",\n  \"amount\": 99.99,\n  \"currency\": \"USD\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/v1/payments/orders"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://egylms.duckdns.org",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "email",
+      "value": "student@example.com",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "password",
+      "value": "StrongPass123",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "role",
+      "value": "student",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "course_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "lesson_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "quiz_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "question_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "enrollment_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "attempt_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "student_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "instructor_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "admin_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "file_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "certificate_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "certificate_number",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "submission_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    }
+  ]
 }

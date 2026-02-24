@@ -187,6 +187,7 @@ class Settings(BaseSettings):
     )
     FILE_STORAGE_PROVIDER: Literal["local", "azure"] = "azure"
     FILE_DOWNLOAD_URL_EXPIRE_SECONDS: int = 900
+    WEBSOCKET_CONNECTION_TTL_SECONDS: int = 3600
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
