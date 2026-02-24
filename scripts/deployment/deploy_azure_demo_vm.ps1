@@ -156,8 +156,8 @@ UVICORN_WORKERS=$UvicornWorkers
         "find ""`$`{APP_DIR`}\"" -mindepth 1 -maxdepth 1 ! -name "".env"" ! -name "".env.demo.azure"" -exec rm -rf {} +"
         "tar -xzf /tmp/lms_backend_demo_release.tar.gz -C ""`$`{APP_DIR`}\"""
         "cd ""`$`{APP_DIR`}\"""
-        "chmod +x scripts/linux/deploy_azure_demo_vm.sh"
-        "DEPLOY_MODE=vm ./scripts/linux/deploy_azure_demo_vm.sh"
+        "chmod +x scripts/platform/linux/deploy_azure_demo_vm.sh"
+        "DEPLOY_MODE=vm ./scripts/platform/linux/deploy_azure_demo_vm.sh"
         "rm -f /tmp/lms_backend_demo_release.tar.gz /tmp/lms_backend_demo_deploy.env /tmp/lms_backend_demo_remote_deploy.sh"
     )
     ($remoteScriptLines -join "`n") | Set-Content -Path $remoteScriptPath

@@ -291,8 +291,8 @@ mkdir -p "${APP_DIR}"
 find "${APP_DIR}" -mindepth 1 -maxdepth 1 ! -name ".env" -exec rm -rf {} +
 tar -xzf /tmp/lms_backend_release.tar.gz -C "${APP_DIR}"
 cd "${APP_DIR}"
-chmod +x scripts/linux/deploy_azure_vm.sh
-DEPLOY_MODE=vm ./scripts/linux/deploy_azure_vm.sh
+    chmod +x scripts/platform/linux/deploy_azure_vm.sh
+    DEPLOY_MODE=vm ./scripts/platform/linux/deploy_azure_vm.sh
 rm -f /tmp/lms_backend_release.tar.gz /tmp/lms_backend_deploy.env
 EOF
 }

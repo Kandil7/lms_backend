@@ -79,5 +79,5 @@ jobs:
             find "$APP_DIR" -mindepth 1 -maxdepth 1 ! -name ".env" -exec rm -rf {} +
             tar -xzf /tmp/release.tar.gz -C "$APP_DIR"
             cd "$APP_DIR"
-            chmod +x scripts/linux/deploy_azure_vm.sh
-            APP_DIR="$APP_DIR" DEPLOY_MODE=vm ./scripts/linux/deploy_azure_vm.sh
+            chmod +x scripts/platform/linux/deploy_azure_vm.sh
+            APP_DIR="$APP_DIR" DEPLOY_MODE=vm ./scripts/platform/linux/deploy_azure_vm.sh
