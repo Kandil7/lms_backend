@@ -1,8 +1,8 @@
 # LMS Backend
 
-[![CI Status](https://github.com/your-repo/lms_backend/actions/workflows/ci.yml/badge.svg)](https://github.com/your-repo/lms_backend/actions/workflows/ci.yml)
-[![Code Coverage](https://img.shields.io/codecov/c/github/your-repo/lms_backend)](https://codecov.io/github/your-repo/lms_backend)
-[![Security Scan](https://github.com/your-repo/lms_backend/actions/workflows/security.yml/badge.svg)](https://github.com/your-repo/lms_backend/actions/workflows/security.yml)
+[![CI Status](https://github.com/Kadnil7/lms_backend/actions/workflows/ci.yml/badge.svg)](https://github.com/Kadnil7/lms_backend/actions/workflows/ci.yml)
+[![Code Coverage](https://img.shields.io/codecov/c/github/Kadnil7/lms_backend)](https://codecov.io/github/Kadnil7/lms_backend)
+[![Security Scan](https://github.com/Kadnil7/lms_backend/actions/workflows/security.yml/badge.svg)](https://github.com/Kadnil7/lms_backend/actions/workflows/security.yml)
 
 Production-oriented LMS backend built as a modular monolith with FastAPI.
 
@@ -103,7 +103,7 @@ The LMS backend follows a **modular monolith** architecture pattern, balancing t
 - `analytics`: Student dashboard, course analytics, instructor and system overview.
 - `files`: Upload/list/download with Azure Blob (default) and local fallback backend.
 - `certificates`: Automatic issuance on completion, verify/download/revoke.
-- `payments`: Order management, payment processing (skeleton ready).
+- `payments`: Order management, payment processing (DEFERRED - skeleton ready, not wired into API).
 - `websocket`: Real-time communication infrastructure.
 
 ## Python Compatibility

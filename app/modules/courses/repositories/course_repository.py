@@ -10,7 +10,9 @@ class CourseRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def get_by_id(self, course_id: UUID, *, with_lessons: bool = False) -> Course | None:
+    def get_by_id(
+        self, course_id: UUID, *, with_lessons: bool = False
+    ) -> Course | None:
         stmt = select(Course).where(Course.id == course_id)
         if with_lessons:
             stmt = stmt.options(selectinload(Course.lessons))
@@ -43,8 +45,8 @@ class CourseRepository:
         if search:
             # Add full-text search on title and description
             filters.append(
-                (Course.title.ilike(f"%{search}%")) |
-                (Course.description.ilike(f"%{search}%"))
+                (Course.title.ilike(f"%{search}%"))
+                | (Course.description.ilike(f"%{search}%"))
             )
 
         total_stmt = select(func.count()).select_from(Course)
@@ -53,9 +55,15 @@ class CourseRepository:
         total = int(self.db.scalar(total_stmt) or 0)
 
         stmt = select(Course)
+        # PERFORMANCE: Eager load instructor to avoid N+1 queries when serializing course list
+        stmt = stmt.options(selectinload(Course.instructor))
         if filters:
             stmt = stmt.where(*filters)
-        stmt = stmt.order_by(Course.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
+        stmt = (
+            stmt.order_by(Course.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
 
         items = list(self.db.scalars(stmt).all())
         return items, total

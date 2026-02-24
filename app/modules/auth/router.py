@@ -4,7 +4,11 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.dependencies import get_current_user, oauth2_scheme, optional_oauth2_scheme
+from app.core.dependencies import (
+    get_current_user,
+    oauth2_scheme,
+    optional_oauth2_scheme,
+)
 from app.core.exceptions import UnauthorizedException
 from app.core.permissions import Role
 from app.modules.auth.schemas import (
@@ -34,30 +38,67 @@ from app.modules.users.services.user_service import (
 )
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
-PASSWORD_RESET_REQUEST_MESSAGE = "If the email is registered, a reset link has been sent"
-EMAIL_VERIFICATION_REQUEST_MESSAGE = "If the email is registered, a verification link has been sent"
+PASSWORD_RESET_REQUEST_MESSAGE = (
+    "If the email is registered, a reset link has been sent"
+)
+EMAIL_VERIFICATION_REQUEST_MESSAGE = (
+    "If the email is registered, a verification link has been sent"
+)
 MFA_ENABLE_REQUEST_MESSAGE = "A verification code has been sent to your email"
 
 
 def _get_client_ip(request: Request) -> str:
-    forwarded_for = request.headers.get("x-forwarded-for")
-    if forwarded_for:
-        first_ip = forwarded_for.split(",")[0].strip()
-        if first_ip:
-            return first_ip
+    """
+    Get client IP address with proper proxy header validation.
 
-    real_ip = request.headers.get("x-real-ip")
-    if real_ip:
-        normalized_real_ip = real_ip.strip()
-        if normalized_real_ip:
-            return normalized_real_ip
+    SECURITY: Only trust X-Forwarded-For and X-Real-IP headers if they come
+    from trusted proxy IPs to prevent IP spoofing attacks.
+    """
+    # Get trusted proxy IPs from settings
+    trusted_proxies = settings.TRUSTED_PROXY_IPS
 
-    if request.client and request.client.host:
-        return request.client.host
-    return "127.0.0.1"
+    # Get the direct client IP (from the actual TCP connection)
+    direct_client_ip = (
+        request.client.host if request.client and request.client.host else None
+    )
+
+    # If no trusted proxies configured, only use direct client IP
+    if not trusted_proxies:
+        return direct_client_ip or "127.0.0.1"
+
+    # Check if direct client is from a trusted proxy
+    if direct_client_ip and direct_client_ip in trusted_proxies:
+        # Only trust proxy headers when request comes from trusted proxy
+        forwarded_for = request.headers.get("x-forwarded-for")
+        if forwarded_for:
+            first_ip = forwarded_for.split(",")[0].strip()
+            if first_ip and _is_valid_ip(first_ip):
+                return first_ip
+
+        real_ip = request.headers.get("x-real-ip")
+        if real_ip:
+            normalized_real_ip = real_ip.strip()
+            if normalized_real_ip and _is_valid_ip(normalized_real_ip):
+                return normalized_real_ip
+
+    # Fall back to direct client IP (or localhost if unavailable)
+    return direct_client_ip or "127.0.0.1"
 
 
-@router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
+def _is_valid_ip(ip: str) -> bool:
+    """Validate IP address format."""
+    import ipaddress
+
+    try:
+        ipaddress.ip_address(ip)
+        return True
+    except ValueError:
+        return False
+
+
+@router.post(
+    "/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED
+)
 def register(payload: UserCreate, db: Session = Depends(get_db)) -> AuthResponse:
     if payload.role != Role.STUDENT and not settings.ALLOW_PUBLIC_ROLE_REGISTRATION:
         raise HTTPException(
@@ -75,7 +116,9 @@ def register(payload: UserCreate, db: Session = Depends(get_db)) -> AuthResponse
         db.refresh(user)
     except UserAlreadyExistsError as exc:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     except Exception:
         db.rollback()
         raise
@@ -102,17 +145,17 @@ def register(payload: UserCreate, db: Session = Depends(get_db)) -> AuthResponse
 
 @router.post("/login", response_model=LoginResponse)
 def login(
-    request: Request,
-    payload: UserLogin,
-    db: Session = Depends(get_db)
+    request: Request, payload: UserLogin, db: Session = Depends(get_db)
 ) -> LoginResponse:
     auth_service = AuthService(db)
-    
+
     # Get client IP address for account lockout
     ip_address = _get_client_ip(request)
 
     try:
-        user, tokens, mfa_challenge = auth_service.login(payload.email, payload.password, ip_address=ip_address)
+        user, tokens, mfa_challenge = auth_service.login(
+            payload.email, payload.password, ip_address=ip_address
+        )
     except InvalidCredentialsError as exc:
         raise UnauthorizedException(str(exc)) from exc
 
@@ -132,7 +175,11 @@ def login(
     return AuthResponse(user=UserResponse.model_validate(user), tokens=tokens)
 
 
-@router.post("/token", response_model=TokenResponse, summary="OAuth2 token endpoint for Swagger Authorize")
+@router.post(
+    "/token",
+    response_model=TokenResponse,
+    summary="OAuth2 token endpoint for Swagger Authorize",
+)
 def oauth_token(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -160,7 +207,9 @@ def oauth_token(
 
 
 @router.post("/login/mfa", response_model=AuthResponse)
-def verify_mfa_login(payload: MfaLoginVerifyRequest, db: Session = Depends(get_db)) -> AuthResponse:
+def verify_mfa_login(
+    payload: MfaLoginVerifyRequest, db: Session = Depends(get_db)
+) -> AuthResponse:
     auth_service = AuthService(db)
     user, tokens = auth_service.verify_mfa_login(payload.challenge_token, payload.code)
     return AuthResponse(user=UserResponse.model_validate(user), tokens=tokens)
@@ -173,7 +222,9 @@ def refresh_tokens(
     access_token: str | None = Depends(optional_oauth2_scheme),
 ) -> AuthResponse:
     auth_service = AuthService(db)
-    tokens = auth_service.refresh_tokens(payload.refresh_token, previous_access_token=access_token)
+    tokens = auth_service.refresh_tokens(
+        payload.refresh_token, previous_access_token=access_token
+    )
 
     user = get_current_user(tokens.access_token, db)
     return AuthResponse(user=UserResponse.model_validate(user), tokens=tokens)
@@ -190,7 +241,9 @@ def logout(
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
-def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)) -> MessageResponse:
+def forgot_password(
+    payload: ForgotPasswordRequest, db: Session = Depends(get_db)
+) -> MessageResponse:
     auth_service = AuthService(db)
     reset_payload = auth_service.request_password_reset(payload.email)
 
@@ -209,7 +262,9 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
 
 
 @router.post("/verify-email/request", response_model=MessageResponse)
-def request_email_verification(payload: VerifyEmailRequest, db: Session = Depends(get_db)) -> MessageResponse:
+def request_email_verification(
+    payload: VerifyEmailRequest, db: Session = Depends(get_db)
+) -> MessageResponse:
     auth_service = AuthService(db)
     verification_payload = auth_service.request_email_verification(payload.email)
 
@@ -228,14 +283,18 @@ def request_email_verification(payload: VerifyEmailRequest, db: Session = Depend
 
 
 @router.post("/verify-email/confirm", response_model=MessageResponse)
-def confirm_email_verification(payload: VerifyEmailConfirmRequest, db: Session = Depends(get_db)) -> MessageResponse:
+def confirm_email_verification(
+    payload: VerifyEmailConfirmRequest, db: Session = Depends(get_db)
+) -> MessageResponse:
     auth_service = AuthService(db)
     auth_service.confirm_email_verification(payload.token)
     return MessageResponse(message="Email has been verified successfully")
 
 
 @router.post("/reset-password", response_model=MessageResponse)
-def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db)) -> MessageResponse:
+def reset_password(
+    payload: ResetPasswordRequest, db: Session = Depends(get_db)
+) -> MessageResponse:
     auth_service = AuthService(db)
     auth_service.reset_password(payload.token, payload.new_password)
     return MessageResponse(message="Password has been reset successfully")
@@ -248,7 +307,9 @@ def request_enable_mfa(
     db: Session = Depends(get_db),
 ) -> MessageResponse:
     auth_service = AuthService(db)
-    email, full_name, code, expires_minutes = auth_service.request_enable_mfa(current_user, payload.password)
+    email, full_name, code, expires_minutes = auth_service.request_enable_mfa(
+        current_user, payload.password
+    )
 
     if code:
         enqueue_task_with_fallback(

@@ -22,12 +22,16 @@ def _get_engine_kwargs() -> dict:
     else:
         kwargs["pool_size"] = settings.DB_POOL_SIZE
         kwargs["max_overflow"] = settings.DB_MAX_OVERFLOW
+        kwargs["pool_timeout"] = settings.DB_POOL_TIMEOUT  # Connection pool timeout
+        kwargs["pool_recycle"] = settings.DB_POOL_RECYCLE  # Recycle connections
 
     return kwargs
 
 
 engine = create_engine(settings.DATABASE_URL, **_get_engine_kwargs())
-SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, class_=Session)
+SessionLocal = sessionmaker(
+    bind=engine, autocommit=False, autoflush=False, class_=Session
+)
 
 
 def get_db() -> Generator[Session, None, None]:

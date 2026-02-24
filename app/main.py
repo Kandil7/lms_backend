@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from app.core.csrf_protection import CSRFMiddleware, get_csrf_protection
 from app.api.v1.api import api_router
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
@@ -49,17 +50,18 @@ app = FastAPI(
     openapi_url="/openapi.json" if settings.API_DOCS_EFFECTIVE_ENABLED else None,
 )
 
+
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
-    
+
     openapi_schema = get_openapi(
         title=app.title,
         version=app.version,
         description=app.description,
         routes=app.routes,
     )
-    
+
     # Add security schemes for JWT and cookie-based authentication
     openapi_schema["components"]["securitySchemes"] = {
         "OAuth2PasswordBearer": {
@@ -67,22 +69,18 @@ def custom_openapi():
             "flows": {
                 "password": {
                     "tokenUrl": f"{settings.API_V1_PREFIX}/auth/token",
-                    "scopes": {}
+                    "scopes": {},
                 }
-            }
+            },
         },
-        "AccessTokenCookie": {
-            "type": "apiKey",
-            "in": "cookie",
-            "name": "access_token"
-        },
+        "AccessTokenCookie": {"type": "apiKey", "in": "cookie", "name": "access_token"},
         "RefreshTokenCookie": {
             "type": "apiKey",
             "in": "cookie",
-            "name": "refresh_token"
-        }
+            "name": "refresh_token",
+        },
     }
-    
+
     # Apply security to protected endpoints
     # Identify endpoints that require authentication
     protected_endpoints = [
@@ -99,9 +97,9 @@ def custom_openapi():
         "/analytics/",
         "/certificates/",
         "/payments/",
-        "/files/"
+        "/files/",
     ]
-    
+
     for path in openapi_schema["paths"]:
         for method in openapi_schema["paths"][path]:
             # Apply security to paths that match protected patterns
@@ -116,9 +114,10 @@ def custom_openapi():
                         openapi_schema["paths"][path][method]["security"] = [
                             {"OAuth2PasswordBearer": []}
                         ]
-    
+
     app.openapi_schema = openapi_schema
     return app.openapi_schema
+
 
 app.openapi = custom_openapi
 
@@ -129,6 +128,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# CSRF Protection - Critical security fix
+# Enable CSRF middleware to protect against cross-site request forgery attacks
+# Only enable in production where we have proper HTTPS
+if settings.CSRF_ENABLED:
+    csrf_exempt_paths = [
+        "/",
+        "/docs",
+        "/redoc",
+        "/openapi.json",
+        "/api/v1/health",
+        "/api/v1/ready",
+        "/api/v1/auth/token",
+    ]
+    app.add_middleware(
+        CSRFMiddleware,
+        csrf_protection=get_csrf_protection(),
+        exempt_paths=csrf_exempt_paths,
+    )
+
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.TRUSTED_HOSTS)
 if settings.SECURITY_HEADERS_ENABLED:

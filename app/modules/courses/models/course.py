@@ -1,7 +1,19 @@
 from datetime import datetime
 import uuid
+from decimal import Decimal
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    Numeric,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy import JSON, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,6 +29,14 @@ class Course(Base):
         ),
         Index("ix_courses_is_published_created_at", "is_published", "created_at"),
         Index("ix_courses_instructor_created_at", "instructor_id", "created_at"),
+        # PERFORMANCE: Composite index for common query patterns
+        Index("ix_courses_instructor_published", "instructor_id", "is_published"),
+        Index(
+            "ix_courses_category_difficulty_published",
+            "category",
+            "difficulty_level",
+            "is_published",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -37,9 +57,10 @@ class Course(Base):
     thumbnail_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     estimated_duration_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     course_metadata: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
-    
+
     # Enhanced fields for frontend compatibility
-    price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # FIXED: Use Numeric instead of Float for currency to avoid precision errors
+    price: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
     is_free: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     long_description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -52,7 +73,9 @@ class Course(Base):
     average_rating: Mapped[float | None] = mapped_column(Float, nullable=True)
     status: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), index=True
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )

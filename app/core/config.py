@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     ENVIRONMENT: Literal["development", "staging", "production"] = "development"
     DEBUG: bool = True
+    ALLOW_INITIAL_ADMIN_CREATION: bool = True  # Allow initial admin creation via API
     API_V1_PREFIX: str = "/api/v1"
     ENABLE_API_DOCS: bool = True
     STRICT_ROUTER_IMPORTS: bool = False
@@ -59,6 +60,8 @@ class Settings(BaseSettings):
     SQLALCHEMY_ECHO: bool = False
     DB_POOL_SIZE: int = 20
     DB_MAX_OVERFLOW: int = 40
+    DB_POOL_TIMEOUT: int = 30  # Connection pool timeout in seconds
+    DB_POOL_RECYCLE: int = 1800  # Recycle connections after 30 minutes
 
     # Security secrets - will be loaded from secrets manager in production
     SECRET_KEY: str = ""
@@ -76,6 +79,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_BLACKLIST_FAIL_CLOSED: bool = True  # Must be true in production for security
     ACCESS_TOKEN_BLACKLIST_PREFIX: str = "auth:blacklist:access"
     SECURITY_HEADERS_ENABLED: bool = True
+    CSRF_ENABLED: bool = False  # Enable in production with HTTPS
+
+    # Trusted proxy configuration for X-Forwarded-For handling
+    TRUSTED_PROXY_IPS: CsvList = Field(default_factory=lambda: [])  # Empty = trust all proxies
 
     FRONTEND_BASE_URL: str = "http://localhost:3000"
     APP_DOMAIN: str | None = None
@@ -98,9 +105,10 @@ class Settings(BaseSettings):
     FIREBASE_FUNCTIONS_URL: str | None = None
     FIREBASE_FUNCTIONS_API_KEY: str | None = None
 
-    # Database credentials - will be loaded from secrets manager in production
+    # Database credentials - must be overridden in production
+    # WARNING: Default values are for local development only
     POSTGRES_USER: str = "lms"
-    POSTGRES_PASSWORD: str = "lms"
+    POSTGRES_PASSWORD: str = "lms"  # Override in production!
     POSTGRES_DB: str = "lms"
 
     # Azure Blob Storage configuration - can be loaded from secrets manager in production
@@ -120,14 +128,12 @@ class Settings(BaseSettings):
     QUIZ_QUESTION_CACHE_TTL_SECONDS: int = 120
 
     CORS_ORIGINS: CsvList = Field(default_factory=lambda: ["http://localhost:3000"])
-    TRUSTED_HOSTS: CsvList = Field(
-        default_factory=lambda: ["localhost", "127.0.0.1", "testserver"]
-    )
+    TRUSTED_HOSTS: CsvList = Field(default_factory=lambda: ["localhost", "127.0.0.1", "testserver"])
 
     REDIS_URL: str = "redis://localhost:6379/0"
     CELERY_BROKER_URL: str = "redis://localhost:6379/1"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
-    TASKS_FORCE_INLINE: bool = True
+    TASKS_FORCE_INLINE: bool = False  # Changed from True - run tasks asynchronously in background
     RATE_LIMIT_USE_REDIS: bool = True
     RATE_LIMIT_REQUESTS_PER_MINUTE: int = 100
     RATE_LIMIT_WINDOW_SECONDS: int = 60
@@ -155,9 +161,7 @@ class Settings(BaseSettings):
     ACCOUNT_LOCKOUT_DURATION_SECONDS: int = 900  # 15 minutes
     FILE_UPLOAD_RATE_LIMIT_REQUESTS_PER_HOUR: int = 100
     FILE_UPLOAD_RATE_LIMIT_WINDOW_SECONDS: int = 3600
-    FILE_UPLOAD_RATE_LIMIT_PATHS: CsvList = Field(
-        default_factory=lambda: ["/api/v1/files/upload"]
-    )
+    FILE_UPLOAD_RATE_LIMIT_PATHS: CsvList = Field(default_factory=lambda: ["/api/v1/files/upload"])
 
     ASSIGNMENT_RATE_LIMIT_REQUESTS_PER_MINUTE: int = 60
     ASSIGNMENT_RATE_LIMIT_WINDOW_SECONDS: int = 60
@@ -323,9 +327,7 @@ class Settings(BaseSettings):
                     "Ensure required secrets provider (Azure Key Vault or Vault) is properly configured."
                 ) from e
 
-            logger.info(
-                f"Secrets manager initialized with source: {secrets_manager_source}"
-            )
+            logger.info(f"Secrets manager initialized with source: {secrets_manager_source}")
 
             # Override sensitive values from secrets manager
             if (
@@ -335,6 +337,7 @@ class Settings(BaseSettings):
                     "change-this-in-production-with-64-random-chars-minimum",
                 }
                 or len(self.SECRET_KEY) < 32
+                or self.SECRET_KEY == ""  # Empty string is not allowed
             ):
                 secret_key = get_secret("SECRET_KEY", default=self.SECRET_KEY)
                 if secret_key and len(secret_key) >= 32:
@@ -347,12 +350,18 @@ class Settings(BaseSettings):
             # Load database credentials from secrets
             if self.POSTGRES_PASSWORD == "lms":
                 db_password = get_secret(
-                    "DATABASE_PASSWORD", default=self.POSTGRES_PASSWORD
+                    "DATABASE_PASSWORD",
+                    default=None,  # Don't fall back to default!
                 )
-                if db_password:
+                if db_password and db_password != "lms":
                     self.POSTGRES_PASSWORD = db_password
                     # Reconstruct DATABASE_URL
                     self.DATABASE_URL = f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.DATABASE_URL.split('@')[1]}"
+                elif not db_password:
+                    raise ValueError(
+                        "POSTGRES_PASSWORD must be set from secrets manager in production. "
+                        "Set DATABASE_PASSWORD secret in Azure Key Vault or Vault."
+                    )
 
             # Load SMTP credentials from secrets
             if self.SMTP_PASSWORD is None or self.SMTP_PASSWORD == "":
@@ -414,29 +423,18 @@ class Settings(BaseSettings):
             "change-me",
             "change-this-in-production-with-64-random-chars-minimum",
         }
-        if self.SECRET_KEY in insecure_values or len(self.SECRET_KEY) < 32:
-            raise ValueError(
-                "SECRET_KEY must be a strong random value (32+ chars) in production"
-            )
+        if self.SECRET_KEY in insecure_values or len(self.SECRET_KEY) < 32 or self.SECRET_KEY == "":
+            raise ValueError("SECRET_KEY must be a strong random value (32+ chars) in production")
 
-        if (
-            self.ACCESS_TOKEN_BLACKLIST_ENABLED
-            and not self.ACCESS_TOKEN_BLACKLIST_FAIL_CLOSED
-        ):
-            raise ValueError(
-                "ACCESS_TOKEN_BLACKLIST_FAIL_CLOSED must be true in production"
-            )
+        if self.ACCESS_TOKEN_BLACKLIST_ENABLED and not self.ACCESS_TOKEN_BLACKLIST_FAIL_CLOSED:
+            raise ValueError("ACCESS_TOKEN_BLACKLIST_FAIL_CLOSED must be true in production")
 
         if self.TASKS_FORCE_INLINE:
-            raise ValueError(
-                "TASKS_FORCE_INLINE must be false when ENVIRONMENT=production"
-            )
+            raise ValueError("TASKS_FORCE_INLINE must be false when ENVIRONMENT=production")
 
         if self.FILE_STORAGE_PROVIDER == "azure":
             has_container = bool((self.AZURE_STORAGE_CONTAINER_NAME or "").strip())
-            has_connection_string = bool(
-                (self.AZURE_STORAGE_CONNECTION_STRING or "").strip()
-            )
+            has_connection_string = bool((self.AZURE_STORAGE_CONNECTION_STRING or "").strip())
             has_account_url = bool((self.AZURE_STORAGE_ACCOUNT_URL or "").strip())
 
             if not has_container:

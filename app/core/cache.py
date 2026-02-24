@@ -14,6 +14,9 @@ logger = logging.getLogger("app.cache")
 
 
 class AppCache:
+    # Maximum entries in in-memory fallback cache to prevent memory exhaustion
+    MAX_MEMORY_SIZE = 10000
+
     def __init__(
         self,
         *,
@@ -30,6 +33,8 @@ class AppCache:
         self._redis_error_logged = False
         self._redis_enabled = enabled and bool(redis_url)
         self._redis: Redis | None = None
+        self._memory_cleanup_counter = 0
+        self._MEMORY_CLEANUP_INTERVAL = 100  # Cleanup every 100 writes
 
         if self._redis_enabled and redis_url:
             self._redis = Redis.from_url(
@@ -190,8 +195,34 @@ class AppCache:
         return f"{self.key_prefix}:{key}"
 
     def _set_memory(self, key: str, payload: str, ttl_seconds: int) -> None:
+        # PERIODIC CLEANUP: Clean up expired entries periodically to prevent unbounded memory growth
+        self._memory_cleanup_counter += 1
+        if self._memory_cleanup_counter >= self._MEMORY_CLEANUP_INTERVAL:
+            self._cleanup_expired_memory()
+            self._memory_cleanup_counter = 0
+
+        # If cache is full, remove oldest entries
+        if len(self._memory) >= self.MAX_MEMORY_SIZE:
+            self._evict_oldest_entries(count=self.MAX_MEMORY_SIZE // 10)  # Remove 10%
+
         expires_at = int(time.time()) + ttl_seconds
         self._memory[key] = (expires_at, payload)
+
+    def _cleanup_expired_memory(self) -> None:
+        """Remove expired entries from memory cache."""
+        current_time = int(time.time())
+        expired_keys = [
+            k for k, (exp, _) in self._memory.items() if exp <= current_time
+        ]
+        for key in expired_keys:
+            self._memory.pop(key, None)
+
+    def _evict_oldest_entries(self, count: int) -> None:
+        """Evict oldest entries when cache is full."""
+        # Sort by expiration time and remove oldest
+        sorted_items = sorted(self._memory.items(), key=lambda x: x[1][0])
+        for key, _ in sorted_items[:count]:
+            self._memory.pop(key, None)
 
     def _get_memory(self, key: str) -> str | None:
         item = self._memory.get(key)

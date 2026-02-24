@@ -2,7 +2,18 @@ from datetime import datetime
 from decimal import Decimal
 import uuid
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, Numeric, String, Text, func
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy import Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -13,6 +24,9 @@ class Quiz(Base):
     __tablename__ = "quizzes"
     __table_args__ = (
         CheckConstraint("quiz_type IN ('practice','graded')", name="ck_quizzes_quiz_type"),
+        # PERFORMANCE: Add indexes for common query patterns
+        Index("ix_quizzes_is_published", "is_published"),
+        Index("ix_quizzes_lesson_id_is_published", "lesson_id", "is_published"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -28,16 +42,20 @@ class Quiz(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     quiz_type: Mapped[str] = mapped_column(String(50), nullable=False, default="graded")
 
-    passing_score: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False, default=Decimal("70.00"))
+    passing_score: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), nullable=False, default=Decimal("70.00")
+    )
     time_limit_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     max_attempts: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     shuffle_questions: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     shuffle_options: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     show_correct_answers: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
