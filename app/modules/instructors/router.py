@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from uuid import UUID
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.permissions import Role, require_role
+from app.core.permissions import Role
+from app.core.dependencies import require_roles, get_current_user
 from app.modules.auth.service import AuthService
 from app.modules.instructors.schemas import (
     InstructorRegistrationRequest,
@@ -47,7 +49,7 @@ async def register_instructor(
 
 @router.get("/onboarding-status", response_model=InstructorOnboardingStatus)
 async def get_instructor_onboarding_status(
-    current_user: dict = Depends(AuthService.get_current_user),
+    current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Get current instructor onboarding status"""
@@ -58,7 +60,7 @@ async def get_instructor_onboarding_status(
 @router.put("/profile", response_model=dict)
 async def update_instructor_profile(
     profile_data: InstructorUpdate,
-    current_user: dict = Depends(AuthService.get_current_user),
+    current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Update instructor profile information"""
@@ -83,7 +85,7 @@ async def update_instructor_profile(
 @router.post("/verify", response_model=dict)
 async def submit_instructor_verification(
     verification_data: InstructorVerificationRequest,
-    current_user: dict = Depends(AuthService.get_current_user),
+    current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Submit instructor verification documentation"""
@@ -107,7 +109,7 @@ async def submit_instructor_verification(
 
 # Admin endpoints for verification approval/rejection
 @router.post("/verify/approve/{instructor_id}")
-@require_role(Role.ADMIN)
+@require_roles(Role.ADMIN)
 async def approve_instructor_verification(
     instructor_id: str,
     admin_notes: str = "",
@@ -115,9 +117,11 @@ async def approve_instructor_verification(
 ):
     """Approve instructor verification (admin only)"""
     instructor_service = InstructorService(db)
-    
+
     try:
-        instructor = instructor_service.approve_verification(instructor_id, admin_notes)
+        # Convert string UUID to UUID object
+        instructor_uuid = UUID(instructor_id)
+        instructor = instructor_service.approve_verification(instructor_uuid, admin_notes)
         return {
             "message": "Instructor verification approved",
             "instructor": instructor,
@@ -130,7 +134,7 @@ async def approve_instructor_verification(
 
 
 @router.post("/verify/reject/{instructor_id}")
-@require_role(Role.ADMIN)
+@require_roles(Role.ADMIN)
 async def reject_instructor_verification(
     instructor_id: str,
     rejection_reason: str,
@@ -138,9 +142,11 @@ async def reject_instructor_verification(
 ):
     """Reject instructor verification (admin only)"""
     instructor_service = InstructorService(db)
-    
+
     try:
-        instructor = instructor_service.reject_verification(instructor_id, rejection_reason)
+        # Convert string UUID to UUID object
+        instructor_uuid = UUID(instructor_id)
+        instructor = instructor_service.reject_verification(instructor_uuid, rejection_reason)
         return {
             "message": "Instructor verification rejected",
             "instructor": instructor,

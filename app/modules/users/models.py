@@ -1,3 +1,4 @@
+from __future__ import annotations
 from datetime import datetime
 import uuid
 
@@ -6,7 +7,6 @@ from sqlalchemy import JSON, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
-from app.modules.instructors.models import Instructor
 from app.modules.admin.models import Admin
 
 

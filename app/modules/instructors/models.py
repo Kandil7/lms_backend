@@ -1,19 +1,20 @@
+from __future__ import annotations
 from datetime import datetime
 from typing import Optional
-from uuid import UUID
+import uuid
 
 from sqlalchemy import Column, DateTime, ForeignKey, String, Boolean, Integer, Text, JSON
+from sqlalchemy import Uuid
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
-from app.modules.users.models import User
 
 
 class Instructor(Base):
     __tablename__ = "instructors"
 
-    id = Column(UUID(as_uuid=True), primary_key=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, unique=True)
+    id = Column(Uuid(as_uuid=True), primary_key=True)
+    user_id = Column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False, unique=True)
     bio = Column(Text, nullable=False)
     expertise = Column(JSON, nullable=False, default=list)
     teaching_experience_years = Column(Integer, nullable=False, default=0)
