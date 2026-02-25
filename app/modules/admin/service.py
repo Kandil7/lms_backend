@@ -13,7 +13,7 @@ from app.modules.admin.schemas import (
     AdminSecurityConfigRequest,
     AdminOnboardingStatus,
 )
-from app.modules.users.service import UserService
+from app.modules.users.services.user_service import UserService
 from app.modules.auth.service import AuthService
 from app.modules.users.models import User
 from app.core.permissions import Role
