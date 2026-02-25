@@ -2,13 +2,14 @@
 Cookie-based authentication router for secure HttpOnly token management.
 """
 
-from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.modules.auth.service_cookie import CookieAuthService
 from app.modules.users.schemas import UserResponse
+from app.tasks.dispatcher import enqueue_task_with_fallback
 
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -42,12 +43,16 @@ def login_with_cookies(
 def refresh_with_cookies(
     request: Request,
     response: Response,
-    payload: dict,
+    payload: dict | None = None,
     db: Session = Depends(get_db),
 ) -> None:
     """Refresh tokens and set as HttpOnly cookies"""
     auth_service = CookieAuthService(db)
-    refresh_token = payload.get("refresh_token")
+    refresh_token = None
+    if payload:
+        refresh_token = payload.get("refresh_token")
+    if not refresh_token:
+        refresh_token = request.cookies.get("refresh_token")
     
     if not refresh_token:
         raise HTTPException(status_code=400, detail="Refresh token required")
@@ -66,7 +71,14 @@ def logout_with_cookies(
 ) -> None:
     """Logout and delete HttpOnly cookies"""
     auth_service = CookieAuthService(db)
-    auth_service.logout_with_cookies(request, response)
+    refresh_token = request.cookies.get("refresh_token")
+    access_token = request.cookies.get("access_token")
+    auth_service.logout_with_cookies(
+        request=request,
+        response=response,
+        refresh_token=refresh_token,
+        access_token=access_token,
+    )
 
 
 # Additional endpoints for token info (to allow frontend to read tokens via API)

@@ -49,8 +49,16 @@ class AssignmentService:
         )
         return self.db.scalar(stmt)
 
-    def get_assignments_by_course(self, course_id: UUID, skip: int, limit: int) -> tuple[list[Assignment], int]:
-        cache_key = cache_manager.get_assignment_list_cache_key(str(course_id), skip, limit, "anonymous")
+    def get_assignments_by_course(
+        self,
+        course_id: UUID,
+        skip: int,
+        limit: int,
+        *,
+        published_only: bool = False,
+    ) -> tuple[list[Assignment], int]:
+        viewer_scope = "published" if published_only else "manage"
+        cache_key = cache_manager.get_assignment_list_cache_key(str(course_id), skip, limit, viewer_scope)
 
         if settings.CACHE_ENABLED:
             cached_data = cache_manager.get_json(cache_key)
@@ -69,6 +77,11 @@ class AssignmentService:
                         cache_manager.delete(cache_key)
 
         base_stmt = select(Assignment).where(Assignment.course_id == course_id)
+        if published_only:
+            base_stmt = base_stmt.where(
+                Assignment.is_published.is_(True),
+                Assignment.status == "published",
+            )
         total = self.db.scalar(select(func.count()).select_from(base_stmt.subquery())) or 0
         rows = self.db.scalars(
             base_stmt.options(joinedload(Assignment.course), joinedload(Assignment.instructor))
@@ -192,6 +205,8 @@ class SubmissionService:
         )
         if assignment is None:
             raise ValueError("Assignment not found or does not belong to the course")
+        if not assignment.is_published or assignment.status != "published":
+            raise ValueError("Assignment is not published")
 
         submission = Submission(
             enrollment_id=payload.enrollment_id,

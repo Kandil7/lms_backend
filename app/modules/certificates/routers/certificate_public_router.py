@@ -12,7 +12,7 @@ from app.modules.certificates.schemas import CertificateResponse
 router = APIRouter(prefix="/certificates", tags=["Certificates"])
 
 
-@router.get("/verify/{certificate_id}", response_model=CertificateResponse)
+@router.get("/public/verify/{certificate_id}", response_model=CertificateResponse)
 def verify_certificate(
     certificate_id: UUID,
     current_user=Depends(get_current_user_optional),

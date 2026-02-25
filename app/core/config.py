@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     ENVIRONMENT: Literal["development", "staging", "production"] = "development"
     DEBUG: bool = True
-    ALLOW_INITIAL_ADMIN_CREATION: bool = True  # Allow initial admin creation via API
+    ALLOW_INITIAL_ADMIN_CREATION: bool = False  # Must be explicitly enabled for bootstrap
     API_V1_PREFIX: str = "/api/v1"
     ENABLE_API_DOCS: bool = True
     STRICT_ROUTER_IMPORTS: bool = False

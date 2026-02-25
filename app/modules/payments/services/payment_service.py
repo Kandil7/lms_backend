@@ -41,6 +41,8 @@ class PaymentService:
             currency=payload.currency,
             status=payload.status,
         )
+        self._commit()
+        self.db.refresh(order)
         return order
 
     def create_payment(self, payload: PaymentCreate, current_user):
@@ -54,12 +56,14 @@ class PaymentService:
         
         payment = self.repo.create_payment(
             order_id=payload.order_id,
-            user_id=current_user.id,
+            user_id=order.user_id,
             amount=payload.amount,
             currency=payload.currency,
             payment_method=payload.payment_method,
             status=payload.status,
         )
+        self._commit()
+        self.db.refresh(payment)
         return payment
 
     def update_order(self, order_id: UUID, payload: OrderUpdate, current_user):
@@ -74,6 +78,8 @@ class PaymentService:
         if "metadata" in fields and "order_metadata" not in fields:
             fields["order_metadata"] = fields.pop("metadata")
         order = self.repo.update_order(order, **fields)
+        self._commit()
+        self.db.refresh(order)
         return order
 
     def update_payment(self, payment_id: UUID, payload: PaymentUpdate, current_user):
@@ -93,4 +99,13 @@ class PaymentService:
         if "metadata" in fields and "payment_metadata" not in fields:
             fields["payment_metadata"] = fields.pop("metadata")
         payment = self.repo.update_payment(payment, **fields)
+        self._commit()
+        self.db.refresh(payment)
         return payment
+
+    def _commit(self) -> None:
+        try:
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+            raise

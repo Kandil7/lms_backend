@@ -18,14 +18,26 @@ class CourseAnalyticsService:
         self.cache = get_app_cache()
 
     def get_course_analytics(self, course_id: UUID, current_user) -> CourseAnalyticsResponse:
-        # Generate cache key
+        if current_user.role not in {Role.ADMIN.value, Role.INSTRUCTOR.value}:
+            raise ForbiddenException("Insufficient permissions")
+
+        course = self.db.execute(
+            select(Course.id, Course.instructor_id).where(Course.id == course_id)
+        ).one_or_none()
+        if course is None:
+            raise NotFoundException("Course not found")
+
+        if current_user.role == Role.INSTRUCTOR.value and course[1] != current_user.id:
+            raise ForbiddenException("Not authorized to view analytics for this course")
+
+        # Generate cache key after authorization check.
         cache_key = f"course_analytics:{course_id}"
-        
+
         # Try to get from cache first
         cached_data = self.cache.get_json(cache_key)
         if cached_data is not None:
             return CourseAnalyticsResponse(**cached_data)
-        
+
         # Execute the query if not in cache
         row = self.db.execute(
             select(
@@ -48,12 +60,6 @@ class CourseAnalyticsService:
 
         if row is None:
             raise NotFoundException("Course not found")
-
-        if current_user.role not in {Role.ADMIN.value, Role.INSTRUCTOR.value}:
-            raise ForbiddenException("Insufficient permissions")
-
-        if current_user.role == Role.INSTRUCTOR.value and row[2] != current_user.id:
-            raise ForbiddenException("Not authorized to view analytics for this course")
 
         total_enrollments = int(row[3] or 0)
         active_students = int(row[4] or 0)

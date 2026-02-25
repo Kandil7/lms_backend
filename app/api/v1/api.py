@@ -50,11 +50,12 @@ def _safe_include(
         logger.warning("Router '%s' not loaded: %s", import_path, exc)
 
 
-# Use cookie-based auth router in production for enhanced security
+# Always include token-based auth router for compatibility (OAuth2, Swagger, API clients).
+_safe_include(api_router, "app.modules.auth.router:router")
+
+# Include cookie-based auth endpoints in production.
 if settings.ENVIRONMENT == "production":
     _safe_include(api_router, "app.modules.auth.router_cookie:router")
-else:
-    _safe_include(api_router, "app.modules.auth.router:router")
 _safe_include(api_router, "app.modules.users.router:router")
 _safe_include(api_router, "app.modules.courses.routers.course_router:router")
 _safe_include(api_router, "app.modules.courses.routers.lesson_router:router")

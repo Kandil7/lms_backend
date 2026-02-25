@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
+from app.core.permissions import Role
 from app.modules.certificates.models import Certificate
 from app.modules.certificates.schemas import (
     CertificateListResponse,
@@ -15,6 +16,7 @@ from app.modules.certificates.schemas import (
     CertificateVerifyResponse,
 )
 from app.modules.certificates.service import CertificateService
+from app.modules.courses.models.course import Course
 from app.modules.enrollments.models import Enrollment
 
 router = APIRouter(prefix="/certificates", tags=["Certificates"])
@@ -79,6 +81,26 @@ def generate_certificate(
     enrollment = db.scalar(select(Enrollment).where(Enrollment.id == enrollment_id))
     if not enrollment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Enrollment not found")
+
+    is_authorized = False
+    if current_user.role == Role.ADMIN.value:
+        is_authorized = True
+    elif current_user.role == Role.STUDENT.value and enrollment.student_id == current_user.id:
+        is_authorized = True
+    elif current_user.role == Role.INSTRUCTOR.value:
+        owned_course = db.scalar(
+            select(Course.id).where(
+                Course.id == enrollment.course_id,
+                Course.instructor_id == current_user.id,
+            )
+        )
+        is_authorized = owned_course is not None
+
+    if not is_authorized:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to generate certificate for this enrollment",
+        )
 
     certificate = CertificateService(db).issue_for_enrollment(enrollment)
     if certificate is None:

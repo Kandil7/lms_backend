@@ -84,6 +84,11 @@ def get_assignment(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You don't have access to this assignment",
             )
+        if not assignment.is_published or assignment.status != "published":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Assignment is not available to students",
+            )
     elif current_user.role == "instructor" and assignment.instructor_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -121,7 +126,12 @@ def get_assignments_by_course(
                 detail="You don't have access to this course",
             )
 
-    assignments, total = AssignmentService(db).get_assignments_by_course(course_id, skip, limit)
+    assignments, total = AssignmentService(db).get_assignments_by_course(
+        course_id,
+        skip,
+        limit,
+        published_only=(current_user.role == "student"),
+    )
     return AssignmentListResponse(
         assignments=[_as_assignment_response(item) for item in assignments],
         total=total,
@@ -196,6 +206,8 @@ def submit_assignment(
         detail = str(exc)
         if detail == "Enrollment not found":
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail) from exc
+        if detail == "Assignment is not published":
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail) from exc
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail) from exc
     return _as_submission_response(submission)
 

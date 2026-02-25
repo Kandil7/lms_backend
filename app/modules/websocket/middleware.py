@@ -1,24 +1,18 @@
 from typing import Optional, Tuple
 import logging
 from datetime import datetime, timezone
+from uuid import UUID
 
 from fastapi import WebSocket, WebSocketException, status
-from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+from jose import JWTError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.exceptions import UnauthorizedException
 from app.core.security import decode_token, TokenType
-from app.core.database import get_db
-from app.modules.users.models import User
 from app.modules.users.repositories.user_repository import UserRepository
 
 logger = logging.getLogger("app.websocket.middleware")
-
-# OAuth2 scheme for WebSocket authentication (using query params or headers)
-websocket_oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/token")
-
 
 async def authenticate_websocket(
     websocket: WebSocket,
@@ -64,10 +58,18 @@ async def authenticate_websocket(
                 code=status.WS_1008_POLICY_VIOLATION,
                 reason="Invalid token: missing subject"
             )
+
+        try:
+            user_id = UUID(user_id_str)
+        except (TypeError, ValueError) as exc:
+            raise WebSocketException(
+                code=status.WS_1008_POLICY_VIOLATION,
+                reason="Invalid token: malformed subject",
+            ) from exc
         
         # Verify user exists and is active
         user_repo = UserRepository(db)
-        user = user_repo.get_by_id(user_id_str)
+        user = user_repo.get_by_id(user_id)
         if not user or not user.is_active:
             raise WebSocketException(
                 code=status.WS_1008_POLICY_VIOLATION,
@@ -81,9 +83,9 @@ async def authenticate_websocket(
             )
         
         # Generate session ID (could be from token or new UUID)
-        session_id = payload.get("jti", f"session_{user_id_str}_{int(datetime.now(timezone.utc).timestamp())}")
+        session_id = payload.get("jti", f"session_{user_id}_{int(datetime.now(timezone.utc).timestamp())}")
         
-        return user_id_str, session_id
+        return str(user_id), session_id
         
     except JWTError as e:
         logger.warning(f"JWT decode error in WebSocket auth: {e}")

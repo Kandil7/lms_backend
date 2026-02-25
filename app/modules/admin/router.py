@@ -6,6 +6,7 @@ from app.core.database import get_db
 from app.core.exceptions import AppException
 from app.core.permissions import Role
 from app.core.dependencies import require_admin_setup_complete, require_roles
+from app.modules.admin.models import Admin
 from app.modules.admin.schemas import (
     AdminResponse,
     AdminOnboardingStatus,
@@ -138,14 +139,19 @@ async def create_initial_admin(
     db: Session = Depends(get_db),
 ):
     """Create the first admin account (bypasses role requirements)"""
-    # This endpoint should only be used during initial system setup
-    # In production, this should be protected by environment variables or special tokens
-
-    if not settings.DEBUG and not settings.ALLOW_INITIAL_ADMIN_CREATION:
+    if settings.ENVIRONMENT == "production" and not settings.ALLOW_INITIAL_ADMIN_CREATION:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Initial admin creation is disabled in production",
+            detail="Initial admin creation is disabled",
         )
+
+    if settings.ENVIRONMENT == "production":
+        existing_admin = db.query(Admin).first()
+        if existing_admin:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Initial admin already exists",
+            )
 
     admin_service = AdminService(db)
 
