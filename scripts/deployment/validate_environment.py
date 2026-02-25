@@ -172,6 +172,27 @@ class EnvironmentValidator:
     def validate_secret_manager(self) -> None:
         keyvault = self._get("AZURE_KEYVAULT_URL")
         vault = self._get("VAULT_ADDR")
+        source = (self._get("SECRETS_MANAGER_SOURCE") or self._get("SECRETS_SOURCE")).lower()
+
+        if source in {"env", "environment", "env_var"}:
+            # Explicitly running with environment-based secrets.
+            return
+
+        if source == "azure_key_vault":
+            if not keyvault:
+                self._error(
+                    "AZURE_KEYVAULT_URL is required when SECRETS_MANAGER_SOURCE=azure_key_vault"
+                )
+            return
+
+        if source == "vault":
+            if not vault:
+                self._error("VAULT_ADDR is required when SECRETS_MANAGER_SOURCE=vault")
+            return
+
+        if source and source not in {"auto", "env", "environment", "env_var", "vault", "azure_key_vault"}:
+            self._warn(f"Unknown SECRETS_MANAGER_SOURCE value: '{source}' (expected auto/env_var/vault/azure_key_vault)")
+
         if not keyvault and not vault:
             self._warn("No secret manager configured (AZURE_KEYVAULT_URL or VAULT_ADDR)")
         if keyvault and vault:
@@ -208,7 +229,8 @@ class EnvironmentValidator:
 
     def validate_observability(self) -> None:
         sentry_dsn = self._get("SENTRY_DSN")
-        if not sentry_dsn:
+        sentry_enabled = _as_bool(self._get("SENTRY_ENABLED"))
+        if sentry_enabled is not False and not sentry_dsn:
             self._warn("SENTRY_DSN is empty; production error tracking is disabled")
 
         metrics_enabled = _as_bool(self._get("METRICS_ENABLED"))

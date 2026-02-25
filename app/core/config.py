@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     SENTRY_PROFILES_SAMPLE_RATE: float = Field(default=0.0, ge=0.0, le=1.0)
     SENTRY_SEND_PII: bool = False
     SENTRY_ENABLE_FOR_CELERY: bool = True
+    SECRETS_MANAGER_SOURCE: Literal["auto", "env_var", "vault", "azure_key_vault"] = "auto"
     WEBHOOKS_ENABLED: bool = False
     WEBHOOK_TARGET_URLS: CsvList = Field(default_factory=list)
     WEBHOOK_SIGNING_SECRET: str | None = None
@@ -289,42 +290,65 @@ class Settings(BaseSettings):
 
         # In production, load sensitive values from secrets manager
         if self.ENVIRONMENT == "production":
-            # Initialize secrets manager for production
-            secrets_manager_initialized = False
-            secrets_manager_source = None
+            # Initialize secrets manager for production.
+            # "auto": try configured providers, then fall back to env_var.
+            # explicit provider: require successful initialization.
+            secrets_manager_source = "env_var"
+            requested_source = (self.SECRETS_MANAGER_SOURCE or "auto").lower()
+            keyvault_url = os.getenv("AZURE_KEYVAULT_URL") or os.getenv("AZURE_KEYVAULT_ENDPOINT")
+            vault_addr = os.getenv("VAULT_ADDR")
 
             try:
-                # Try to initialize with Azure Key Vault first (preferred for Azure deployments)
-                success = initialize_secrets_manager(
-                    "azure_key_vault",
-                    vault_url=os.getenv("AZURE_KEYVAULT_URL")
-                    or os.getenv("AZURE_KEYVAULT_ENDPOINT"),
-                )
-                if success:
+                if requested_source == "env_var":
+                    initialize_secrets_manager("env_var")
+                    secrets_manager_source = "env_var"
+                elif requested_source == "azure_key_vault":
+                    success = initialize_secrets_manager("azure_key_vault", vault_url=keyvault_url)
+                    if not success:
+                        raise ValueError(
+                            "SECRETS_MANAGER_SOURCE=azure_key_vault but initialization failed. "
+                            "Verify AZURE_KEYVAULT_URL and Azure credentials."
+                        )
                     secrets_manager_source = "azure_key_vault"
-                else:
-                    # Fall back to Vault
+                elif requested_source == "vault":
                     success = initialize_secrets_manager(
                         "vault",
-                        vault_url=os.getenv("VAULT_ADDR"),
+                        vault_url=vault_addr,
                         vault_token=os.getenv("VAULT_TOKEN"),
                         vault_namespace=os.getenv("VAULT_NAMESPACE"),
                     )
-                    if success:
-                        secrets_manager_source = "vault"
-
-                if success:
-                    secrets_manager_initialized = True
+                    if not success:
+                        raise ValueError(
+                            "SECRETS_MANAGER_SOURCE=vault but initialization failed. "
+                            "Verify VAULT_ADDR and Vault credentials."
+                        )
+                    secrets_manager_source = "vault"
                 else:
-                    # Fall back to environment variables (for development/staging)
-                    initialize_secrets_manager("env_var")
-                    secrets_manager_source = "env_var"
+                    success = False
+                    if keyvault_url:
+                        success = initialize_secrets_manager(
+                            "azure_key_vault",
+                            vault_url=keyvault_url,
+                        )
+                        if success:
+                            secrets_manager_source = "azure_key_vault"
+                    if not success and vault_addr:
+                        success = initialize_secrets_manager(
+                            "vault",
+                            vault_url=vault_addr,
+                            vault_token=os.getenv("VAULT_TOKEN"),
+                            vault_namespace=os.getenv("VAULT_NAMESPACE"),
+                        )
+                        if success:
+                            secrets_manager_source = "vault"
+                    if not success:
+                        initialize_secrets_manager("env_var")
+                        secrets_manager_source = "env_var"
             except Exception as e:
                 logger.error(f"Failed to initialize secrets manager: {e}")
-                # In production, fail fast if secrets manager fails to initialize
                 raise ValueError(
                     f"Failed to initialize secrets manager in production: {e}. "
-                    "Ensure required secrets provider (Azure Key Vault or Vault) is properly configured."
+                    "Ensure secrets provider configuration is correct."
                 ) from e
 
             logger.info(f"Secrets manager initialized with source: {secrets_manager_source}")
