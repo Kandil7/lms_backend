@@ -17,6 +17,11 @@ depends_on = None
 
 
 def upgrade():
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    if "instructors" in inspector.get_table_names():
+        return
+
     # Create instructors table
     op.create_table(
         'instructors',
@@ -41,5 +46,7 @@ def upgrade():
 
 
 def downgrade():
-    # Drop instructors table
-    op.drop_table('instructors')
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    if "instructors" in inspector.get_table_names():
+        op.drop_table('instructors')
