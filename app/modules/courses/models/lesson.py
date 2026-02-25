@@ -29,9 +29,6 @@ class Lesson(Base):
         Index("ix_lessons_course_lesson_type_order", "course_id", "lesson_type", "order_index"),
         # PERFORMANCE: Additional indexes for common query patterns
         Index("ix_lessons_is_published", "is_published"),
-        Index("ix_lessons_parent_lesson_id", "parent_lesson_id"),
-        Index("ix_lessons_slug", "slug"),
-        Index("ix_lessons_created_at", "created_at"),
         Index("ix_lessons_course_published", "course_id", "is_published"),
     )
 

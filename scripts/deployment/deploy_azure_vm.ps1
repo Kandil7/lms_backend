@@ -139,18 +139,25 @@ AZURE_STORAGE_CONTAINER_URL=$AzureStorageContainerUrl
     $remoteScriptLines = @(
         "#!/usr/bin/env bash"
         "set -euo pipefail"
+        "sed -i 's/\r$//' /tmp/lms_backend_deploy.env"
         "set -a"
         "source /tmp/lms_backend_deploy.env"
         "set +a"
-        "mkdir -p ""`$`{APP_DIR`}\"""
-        "find ""`$`{APP_DIR`}\"" -mindepth 1 -maxdepth 1 ! -name "".env"" -exec rm -rf {} +"
-        "tar -xzf /tmp/lms_backend_release.tar.gz -C ""`$`{APP_DIR`}\"""
-        "cd ""`$`{APP_DIR`}\"""
+        "mkdir -p ""`$`{APP_DIR`}"""
+        "find ""`$`{APP_DIR`}"" -mindepth 1 -maxdepth 1 ! -name "".env"" -exec rm -rf {} +"
+        "tar -xzf /tmp/lms_backend_release.tar.gz -C ""`$`{APP_DIR`}"""
+        "cd ""`$`{APP_DIR`}"""
+        "sed -i 's/\r$//' scripts/platform/linux/deploy_azure_vm.sh"
         "chmod +x scripts/platform/linux/deploy_azure_vm.sh"
-        "DEPLOY_MODE=vm ./scripts/platform/linux/deploy_azure_vm.sh"
+        "DEPLOY_MODE=vm bash ./scripts/platform/linux/deploy_azure_vm.sh"
         "rm -f /tmp/lms_backend_release.tar.gz /tmp/lms_backend_deploy.env /tmp/lms_backend_remote_deploy.sh"
     )
-    ($remoteScriptLines -join "`n") | Set-Content -Path $remoteScriptPath
+    $remoteScriptContent = ($remoteScriptLines -join "`n") + "`n"
+    [System.IO.File]::WriteAllText(
+        $remoteScriptPath,
+        $remoteScriptContent,
+        [System.Text.UTF8Encoding]::new($false)
+    )
 
     Write-Host "[deploy] Uploading release and deployment metadata"
     & scp -P $SshPort -i $SshPrivateKeyPath -o StrictHostKeyChecking=no $archivePath "${AzureVMUser}@${AzureVMHost}:${remoteArchive}"

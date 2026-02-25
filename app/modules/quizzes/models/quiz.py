@@ -25,7 +25,6 @@ class Quiz(Base):
     __table_args__ = (
         CheckConstraint("quiz_type IN ('practice','graded')", name="ck_quizzes_quiz_type"),
         # PERFORMANCE: Add indexes for common query patterns
-        Index("ix_quizzes_is_published", "is_published"),
         Index("ix_quizzes_lesson_id_is_published", "lesson_id", "is_published"),
     )
 
