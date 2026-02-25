@@ -9,8 +9,10 @@ from app.modules.payments.schemas.payment import (
     OrderCreate,
     OrderListResponse,
     OrderResponse,
+    OrderUpdate,
     PaymentCreate,
     PaymentResponse,
+    PaymentUpdate,
 )
 from app.modules.payments.services.payment_service import PaymentService
 from app.utils.pagination import PageParams, paginate
@@ -66,4 +68,28 @@ def create_payment(
 ) -> PaymentResponse:
     service = PaymentService(db)
     payment = service.create_payment(payload, current_user)
+    return PaymentResponse.model_validate(payment)
+
+
+@router.put("/orders/{order_id}", response_model=OrderResponse)
+def update_order(
+    order_id: UUID,
+    payload: OrderUpdate,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> OrderResponse:
+    service = PaymentService(db)
+    order = service.update_order(order_id, payload, current_user)
+    return OrderResponse.model_validate(order)
+
+
+@router.put("/payments/{payment_id}", response_model=PaymentResponse)
+def update_payment(
+    payment_id: UUID,
+    payload: PaymentUpdate,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> PaymentResponse:
+    service = PaymentService(db)
+    payment = service.update_payment(payment_id, payload, current_user)
     return PaymentResponse.model_validate(payment)

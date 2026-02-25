@@ -30,7 +30,7 @@ param(
     [string]$SmtpPort = "587",
     [string]$SmtpUsername = "",
     [Alias("SmtpPassword")]
-    [string]$SmtpSecret = "",
+    [System.Security.SecureString]$SmtpSecret,
     [string]$EmailFrom = "",
     [string]$SmtpUseTls = "true",
     [string]$SmtpUseSsl = "false",
@@ -58,17 +58,36 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Assert-Command {
+function Test-CommandAvailable {
     param([string]$Name)
     if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
         throw "Required command '$Name' is not available in PATH"
     }
 }
 
-function Assert-LastExitCode {
+function Test-LastExitCode {
     param([string]$Action)
     if ($LASTEXITCODE -ne 0) {
         throw "$Action failed with exit code $LASTEXITCODE"
+    }
+}
+
+function ConvertFrom-SecureStringPlain {
+    param([System.Security.SecureString]$SecureString)
+
+    if (-not $SecureString) {
+        return ""
+    }
+
+    $ptr = [System.IntPtr]::Zero
+    try {
+        $ptr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureString)
+        return [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr)
+    }
+    finally {
+        if ($ptr -ne [System.IntPtr]::Zero) {
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr)
+        }
     }
 }
 
@@ -88,9 +107,9 @@ if ([string]::IsNullOrWhiteSpace($TrustedHosts)) {
     $TrustedHosts = $AppDomain
 }
 
-Assert-Command "git"
-Assert-Command "ssh"
-Assert-Command "scp"
+Test-CommandAvailable "git"
+Test-CommandAvailable "ssh"
+Test-CommandAvailable "scp"
 
 if (-not (Test-Path $SshPrivateKeyPath)) {
     throw "SSH private key not found: $SshPrivateKeyPath"
@@ -108,8 +127,10 @@ $remoteEnv = "/tmp/lms_backend_deploy.env"
 $remoteScript = "/tmp/lms_backend_remote_deploy.sh"
 
 try {
+    $smtpSecretPlain = ConvertFrom-SecureStringPlain -SecureString $SmtpSecret
+
     & git archive --format=tar.gz -o $archivePath HEAD
-    Assert-LastExitCode "Creating release archive"
+    Test-LastExitCode "Creating release archive"
 
     $envLines = @(
         "APP_DIR=$AppDir"
@@ -123,7 +144,7 @@ try {
         "SMTP_HOST=$SmtpHost"
         "SMTP_PORT=$SmtpPort"
         "SMTP_USERNAME=$SmtpUsername"
-        "SMTP_PASSWORD=$SmtpSecret"
+        "SMTP_PASSWORD=$smtpSecretPlain"
         "EMAIL_FROM=$EmailFrom"
         "SMTP_USE_TLS=$SmtpUseTls"
         "SMTP_USE_SSL=$SmtpUseSsl"
@@ -178,17 +199,17 @@ try {
 
     Write-Host "[deploy] Uploading release and deployment metadata"
     & scp -P $SshPort -i $SshPrivateKeyPath -o StrictHostKeyChecking=no $archivePath "${AzureVMUser}@${AzureVMHost}:${remoteArchive}"
-    Assert-LastExitCode "Uploading release archive"
+    Test-LastExitCode "Uploading release archive"
 
     & scp -P $SshPort -i $SshPrivateKeyPath -o StrictHostKeyChecking=no $envPath "${AzureVMUser}@${AzureVMHost}:${remoteEnv}"
-    Assert-LastExitCode "Uploading deployment env"
+    Test-LastExitCode "Uploading deployment env"
 
     & scp -P $SshPort -i $SshPrivateKeyPath -o StrictHostKeyChecking=no $remoteScriptPath "${AzureVMUser}@${AzureVMHost}:${remoteScript}"
-    Assert-LastExitCode "Uploading remote deployment script"
+    Test-LastExitCode "Uploading remote deployment script"
 
     Write-Host "[deploy] Executing deployment on VM"
     & ssh -p $SshPort -i $SshPrivateKeyPath -o StrictHostKeyChecking=no "${AzureVMUser}@${AzureVMHost}" "bash ${remoteScript}"
-    Assert-LastExitCode "Remote deployment"
+    Test-LastExitCode "Remote deployment"
 
     Write-Host "[deploy] Deployment completed successfully"
 }

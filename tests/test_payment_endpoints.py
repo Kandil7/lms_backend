@@ -30,39 +30,43 @@ TEST_ORDER_ITEM_DATA = {
 
 class TestPaymentEndpoints:
     
-    def test_create_order_valid(self, client, auth_token):
+    def test_create_order_valid(self, client, auth_context):
         """Test creating a valid order"""
-        headers = {"Authorization": f"Bearer {auth_token}"}
-        response = client.post("/api/v1/payments/orders", json=TEST_ORDER_DATA, headers=headers)
+        headers = {"Authorization": f"Bearer {auth_context['token']}"}
+        order_data = TEST_ORDER_DATA.copy()
+        order_data["user_id"] = auth_context["user_id"]
+        response = client.post("/api/v1/payments/orders", json=order_data, headers=headers)
         assert response.status_code == 201
         data = response.json()
         assert "id" in data
-        assert data["user_id"] == TEST_ORDER_DATA["user_id"]
-        assert data["total_amount"] == TEST_ORDER_DATA["total_amount"]
-        assert data["currency"] == TEST_ORDER_DATA["currency"]
-        assert data["status"] == TEST_ORDER_DATA["status"]
+        assert data["user_id"] == order_data["user_id"]
+        assert data["total_amount"] == order_data["total_amount"]
+        assert data["currency"] == order_data["currency"]
+        assert data["status"] == order_data["status"]
     
-    def test_create_order_invalid_currency(self, client, auth_token):
+    def test_create_order_invalid_currency(self, client, auth_context):
         """Test creating order with invalid currency"""
         invalid_data = TEST_ORDER_DATA.copy()
+        invalid_data["user_id"] = auth_context["user_id"]
         invalid_data["currency"] = "INVALID"
-        headers = {"Authorization": f"Bearer {auth_token}"}
+        headers = {"Authorization": f"Bearer {auth_context['token']}"}
         response = client.post("/api/v1/payments/orders", json=invalid_data, headers=headers)
-        assert response.status_code == 400
+        assert response.status_code == 422
         assert "currency" in response.text.lower()
     
-    def test_create_order_negative_amount(self, client, auth_token):
+    def test_create_order_negative_amount(self, client, auth_context):
         """Test creating order with negative amount"""
         invalid_data = TEST_ORDER_DATA.copy()
+        invalid_data["user_id"] = auth_context["user_id"]
         invalid_data["total_amount"] = -10.0
-        headers = {"Authorization": f"Bearer {auth_token}"}
+        headers = {"Authorization": f"Bearer {auth_context['token']}"}
         response = client.post("/api/v1/payments/orders", json=invalid_data, headers=headers)
-        assert response.status_code == 400
+        assert response.status_code == 422
         assert "total_amount" in response.text.lower()
     
-    def test_list_orders_authenticated(self, client, auth_token):
+    def test_list_orders_authenticated(self, client, auth_context):
         """Test listing orders for authenticated user"""
-        headers = {"Authorization": f"Bearer {auth_token}"}
+        headers = {"Authorization": f"Bearer {auth_context['token']}"}
         response = client.get("/api/v1/payments/orders", headers=headers)
         assert response.status_code == 200
         data = response.json()
@@ -71,11 +75,13 @@ class TestPaymentEndpoints:
         assert "page" in data
         assert "page_size" in data
     
-    def test_get_order_valid(self, client, auth_token):
+    def test_get_order_valid(self, client, auth_context):
         """Test getting a specific order"""
         # First create an order
-        headers = {"Authorization": f"Bearer {auth_token}"}
-        create_response = client.post("/api/v1/payments/orders", json=TEST_ORDER_DATA, headers=headers)
+        headers = {"Authorization": f"Bearer {auth_context['token']}"}
+        order_data = TEST_ORDER_DATA.copy()
+        order_data["user_id"] = auth_context["user_id"]
+        create_response = client.post("/api/v1/payments/orders", json=order_data, headers=headers)
         order_id = create_response.json()["id"]
         
         # Get the order
@@ -83,13 +89,15 @@ class TestPaymentEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == order_id
-        assert data["user_id"] == TEST_ORDER_DATA["user_id"]
+        assert data["user_id"] == order_data["user_id"]
     
-    def test_create_payment_valid(self, client, auth_token):
+    def test_create_payment_valid(self, client, auth_context):
         """Test creating a valid payment"""
         # First create an order
-        headers = {"Authorization": f"Bearer {auth_token}"}
-        create_order_response = client.post("/api/v1/payments/orders", json=TEST_ORDER_DATA, headers=headers)
+        headers = {"Authorization": f"Bearer {auth_context['token']}"}
+        order_data = TEST_ORDER_DATA.copy()
+        order_data["user_id"] = auth_context["user_id"]
+        create_order_response = client.post("/api/v1/payments/orders", json=order_data, headers=headers)
         order_id = create_order_response.json()["id"]
         
         # Create payment for the order
@@ -106,27 +114,29 @@ class TestPaymentEndpoints:
         assert data["payment_method"] == payment_data["payment_method"]
         assert data["status"] == payment_data["status"]
     
-    def test_create_payment_invalid_order(self, client, auth_token):
+    def test_create_payment_invalid_order(self, client, auth_context):
         """Test creating payment with invalid order ID"""
         invalid_payment_data = TEST_PAYMENT_DATA.copy()
         invalid_payment_data["order_id"] = str(uuid.uuid4())  # Non-existent order
         
-        headers = {"Authorization": f"Bearer {auth_token}"}
+        headers = {"Authorization": f"Bearer {auth_context['token']}"}
         response = client.post("/api/v1/payments/payments", json=invalid_payment_data, headers=headers)
         assert response.status_code == 404
         assert "Order not found" in response.text
     
-    def test_create_payment_unauthorized_user(self, client, auth_token):
+    def test_create_payment_unauthorized_user(self, client, auth_context):
         """Test creating payment for another user's order"""
         # This would require admin privileges or proper authorization
         # In real implementation, this should return 403 if user is not admin
         pass
     
-    def test_update_order_valid(self, client, auth_token):
+    def test_update_order_valid(self, client, auth_context):
         """Test updating an order"""
         # Create order first
-        headers = {"Authorization": f"Bearer {auth_token}"}
-        create_response = client.post("/api/v1/payments/orders", json=TEST_ORDER_DATA, headers=headers)
+        headers = {"Authorization": f"Bearer {auth_context['token']}"}
+        order_data = TEST_ORDER_DATA.copy()
+        order_data["user_id"] = auth_context["user_id"]
+        create_response = client.post("/api/v1/payments/orders", json=order_data, headers=headers)
         order_id = create_response.json()["id"]
         
         # Update order status
@@ -136,11 +146,13 @@ class TestPaymentEndpoints:
         data = response.json()
         assert data["status"] == "completed"
     
-    def test_update_payment_valid(self, client, auth_token):
+    def test_update_payment_valid(self, client, auth_context):
         """Test updating a payment"""
         # Create order and payment first
-        headers = {"Authorization": f"Bearer {auth_token}"}
-        create_order_response = client.post("/api/v1/payments/orders", json=TEST_ORDER_DATA, headers=headers)
+        headers = {"Authorization": f"Bearer {auth_context['token']}"}
+        order_data = TEST_ORDER_DATA.copy()
+        order_data["user_id"] = auth_context["user_id"]
+        create_order_response = client.post("/api/v1/payments/orders", json=order_data, headers=headers)
         order_id = create_order_response.json()["id"]
         
         payment_data = TEST_PAYMENT_DATA.copy()
@@ -155,7 +167,7 @@ class TestPaymentEndpoints:
         data = response.json()
         assert data["status"] == "completed"
     
-    def test_order_item_creation(self, client, auth_token):
+    def test_order_item_creation(self, client, auth_context):
         """Test order item creation (if endpoint exists)"""
         # Note: Order items might be created as part of order creation
         # This would depend on the specific implementation

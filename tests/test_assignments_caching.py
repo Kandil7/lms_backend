@@ -66,7 +66,7 @@ def test_assignment_list_caching(client, monkeypatch):
     assert data1["assignments"][0]["id"] == assignment_id
 
     # Clear any existing cache for this key
-    cache_key = f"{settings.CACHE_KEY_PREFIX}:assignments:list:{course_id}:0:100:anonymous"
+    cache_key = f"{settings.CACHE_KEY_PREFIX}:assignments:list:{course_id}:0:100:manage"
     cache_manager.delete(cache_key)
 
     # Get assignments list again (should hit database and repopulate cache)

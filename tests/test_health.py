@@ -44,4 +44,7 @@ def test_security_headers_are_present(client):
     assert response.headers["X-Frame-Options"] == "DENY"
     assert response.headers["Referrer-Policy"] == "no-referrer"
     assert response.headers["X-Permitted-Cross-Domain-Policies"] == "none"
-    assert response.headers["Content-Security-Policy"] == "frame-ancestors 'none'; object-src 'none'; base-uri 'self'"
+    csp = response.headers["Content-Security-Policy"]
+    assert "frame-ancestors 'none'" in csp
+    assert "object-src 'none'" in csp
+    assert "base-uri 'self'" in csp

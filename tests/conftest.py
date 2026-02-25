@@ -11,15 +11,53 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.main import app
+from app.core.cache import get_app_cache
 from app.core.config import settings
-from app.core.database import Base
+from app.core.database import Base, get_db
+from app.core.middleware.rate_limit import RateLimitMiddleware
+from app.utils.cache import cache_manager
+from tests import helpers as test_helpers
 
 
-@pytest.fixture(scope="session")
-def client():
-    """Test client fixture"""
+def _reset_bootstrap_auth_state() -> None:
+    test_helpers._BOOTSTRAP_ADMIN_EMAIL = None
+    test_helpers._BOOTSTRAP_ADMIN_ACCESS_TOKEN = None
+
+
+def _reset_rate_limit_state() -> None:
+    node = app.middleware_stack
+    visited: set[int] = set()
+    while node is not None and id(node) not in visited:
+        visited.add(id(node))
+        if isinstance(node, RateLimitMiddleware):
+            node._requests.clear()
+        node = getattr(node, "app", None)
+
+
+@pytest.fixture(scope="function")
+def client(db_session):
+    """Isolated test client fixture with per-test DB override."""
+
+    def override_get_db() -> Generator:
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    original_file_storage_provider = settings.FILE_STORAGE_PROVIDER
+    settings.FILE_STORAGE_PROVIDER = "local"
+    app.middleware_stack = None
+    _reset_bootstrap_auth_state()
+    cache_manager._memory_cache.clear()
+    get_app_cache.cache_clear()
     with TestClient(app) as c:
+        _reset_rate_limit_state()
         yield c
+    _reset_rate_limit_state()
+    app.dependency_overrides.clear()
+    settings.FILE_STORAGE_PROVIDER = original_file_storage_provider
+    app.middleware_stack = None
+    _reset_bootstrap_auth_state()
+    cache_manager._memory_cache.clear()
+    get_app_cache.cache_clear()
 
 
 @pytest.fixture(scope="function")
@@ -62,14 +100,30 @@ def generate_unique_email() -> Generator[callable, None, None]:
 
 
 @pytest.fixture
-def auth_token():
-    """Generate a valid JWT token for testing.
+def auth_context(client, generate_unique_email):
+    """Create a real authenticated student context for API tests."""
+    email = generate_unique_email()
+    password = "TestPassword123!"
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": email,
+            "password": password,
+            "full_name": "Payment Test User",
+            "role": "student",
+        },
+    )
+    assert response.status_code == 201, response.text
+    payload = response.json()
+    return {
+        "token": payload["tokens"]["access_token"],
+        "user_id": payload["user"]["id"],
+    }
 
-    Note: In production-like tests, generate actual tokens using the
-    create_access_token function from app.core.security.
-    """
-    # This should be replaced with actual token generation in real tests
-    return "mock-jwt-token-for-testing"
+
+@pytest.fixture
+def auth_token(auth_context):
+    return auth_context["token"]
 
 
 @pytest.fixture
