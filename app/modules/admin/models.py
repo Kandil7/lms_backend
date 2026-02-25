@@ -1,12 +1,10 @@
 from datetime import datetime
 from typing import Optional
-from uuid import UUID
 
-from sqlalchemy import Column, DateTime, ForeignKey, String, Boolean, JSON, Integer
+from sqlalchemy import Column, DateTime, ForeignKey, String, Boolean, JSON, Integer, UUID
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
-from app.modules.users.models import User
 
 
 class Admin(Base):

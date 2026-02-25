@@ -7,7 +7,6 @@ from sqlalchemy import JSON, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
-from app.modules.admin.models import Admin
 
 
 class User(Base):

@@ -1,7 +1,7 @@
 from datetime import datetime
 import uuid
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, String, Text, func
 from sqlalchemy import JSON, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -27,7 +27,7 @@ class Payment(Base):
         nullable=False,
         index=True,
     )
-    amount: Mapped[float] = mapped_column(nullable=False)
+    amount: Mapped[float] = mapped_column(Float, nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     payment_method: Mapped[str] = mapped_column(String(50), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
@@ -56,7 +56,7 @@ class Order(Base):
         nullable=False,
         index=True,
     )
-    total_amount: Mapped[float] = mapped_column(nullable=False)
+    total_amount: Mapped[float] = mapped_column(Float, nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     order_metadata: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
@@ -90,8 +90,8 @@ class OrderItem(Base):
         index=True,
     )
     quantity: Mapped[int] = mapped_column(nullable=False, default=1)
-    unit_price: Mapped[float] = mapped_column(nullable=False)
-    total_price: Mapped[float] = mapped_column(nullable=False)
+    unit_price: Mapped[float] = mapped_column(Float, nullable=False)
+    total_price: Mapped[float] = mapped_column(Float, nullable=False)
     item_metadata: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
     updated_at: Mapped[datetime] = mapped_column(
