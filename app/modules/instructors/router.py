@@ -49,18 +49,18 @@ async def register_instructor(
 
 @router.get("/onboarding-status", response_model=InstructorOnboardingStatus)
 async def get_instructor_onboarding_status(
-    current_user: dict = Depends(get_current_user),
+    current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Get current instructor onboarding status"""
     instructor_service = InstructorService(db)
-    return instructor_service.get_onboarding_status(current_user["id"])
+    return instructor_service.get_onboarding_status(current_user.id)
 
 
 @router.put("/profile", response_model=dict)
 async def update_instructor_profile(
     profile_data: InstructorUpdate,
-    current_user: dict = Depends(get_current_user),
+    current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Update instructor profile information"""
@@ -68,12 +68,12 @@ async def update_instructor_profile(
     
     try:
         instructor = instructor_service.update_instructor_profile(
-            current_user["id"], profile_data
+            current_user.id, profile_data
         )
         return {
             "message": "Instructor profile updated successfully",
             "instructor": instructor,
-            "onboarding_status": instructor_service.get_onboarding_status(current_user["id"]),
+            "onboarding_status": instructor_service.get_onboarding_status(current_user.id),
         }
     except Exception as e:
         raise HTTPException(
@@ -85,7 +85,7 @@ async def update_instructor_profile(
 @router.post("/verify", response_model=dict)
 async def submit_instructor_verification(
     verification_data: InstructorVerificationRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Submit instructor verification documentation"""
@@ -93,12 +93,12 @@ async def submit_instructor_verification(
     
     try:
         instructor = instructor_service.submit_verification(
-            current_user["id"], verification_data
+            current_user.id, verification_data
         )
         return {
             "message": "Verification submitted successfully",
             "instructor": instructor,
-            "onboarding_status": instructor_service.get_onboarding_status(current_user["id"]),
+            "onboarding_status": instructor_service.get_onboarding_status(current_user.id),
         }
     except Exception as e:
         raise HTTPException(
@@ -109,10 +109,10 @@ async def submit_instructor_verification(
 
 # Admin endpoints for verification approval/rejection
 @router.post("/verify/approve/{instructor_id}")
-@require_roles(Role.ADMIN)
 async def approve_instructor_verification(
     instructor_id: str,
     admin_notes: str = "",
+    _: object = Depends(require_roles(Role.ADMIN)),
     db: Session = Depends(get_db),
 ):
     """Approve instructor verification (admin only)"""
@@ -134,10 +134,10 @@ async def approve_instructor_verification(
 
 
 @router.post("/verify/reject/{instructor_id}")
-@require_roles(Role.ADMIN)
 async def reject_instructor_verification(
     instructor_id: str,
     rejection_reason: str,
+    _: object = Depends(require_roles(Role.ADMIN)),
     db: Session = Depends(get_db),
 ):
     """Reject instructor verification (admin only)"""

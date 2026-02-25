@@ -16,17 +16,15 @@ from app.modules.admin.schemas import (
 from app.modules.admin.service import AdminService
 from app.modules.users.schemas import UserResponse
 from app.modules.auth.schemas import TokenResponse
-from app.core.dependencies import get_current_user
 
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 @router.post("/setup", status_code=status.HTTP_201_CREATED)
-@require_roles(Role.ADMIN)
 async def setup_admin_account(
     setup_data: AdminSetupRequest,
-    current_user: dict = Depends(get_current_user),
+    _: object = Depends(require_roles(Role.ADMIN)),
     db: Session = Depends(get_db),
 ):
     """Setup a new admin account with enhanced security"""
@@ -53,32 +51,30 @@ async def setup_admin_account(
 
 
 @router.get("/onboarding-status", response_model=AdminOnboardingStatus)
-@require_roles(Role.ADMIN)
 async def get_admin_onboarding_status(
-    current_user: dict = Depends(get_current_user),
+    current_user=Depends(require_roles(Role.ADMIN)),
     db: Session = Depends(get_db),
 ):
     """Get current admin onboarding status"""
     admin_service = AdminService(db)
-    return admin_service.get_onboarding_status(current_user["id"])
+    return admin_service.get_onboarding_status(current_user.id)
 
 
 @router.put("/profile", response_model=dict)
-@require_roles(Role.ADMIN)
 async def update_admin_profile(
     profile_data: AdminUpdate,
-    current_user: dict = Depends(get_current_user),
+    current_user=Depends(require_roles(Role.ADMIN)),
     db: Session = Depends(get_db),
 ):
     """Update admin profile information"""
     admin_service = AdminService(db)
 
     try:
-        admin = admin_service.update_admin_profile(current_user["id"], profile_data)
+        admin = admin_service.update_admin_profile(current_user.id, profile_data)
         return {
             "message": "Admin profile updated successfully",
             "admin": admin,
-            "onboarding_status": admin_service.get_onboarding_status(current_user["id"]),
+            "onboarding_status": admin_service.get_onboarding_status(current_user.id),
         }
     except AppException:
         raise
@@ -90,21 +86,20 @@ async def update_admin_profile(
 
 
 @router.post("/security-config", response_model=dict)
-@require_roles(Role.ADMIN)
 async def configure_admin_security(
     security_config: AdminSecurityConfigRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user=Depends(require_roles(Role.ADMIN)),
     db: Session = Depends(get_db),
 ):
     """Configure admin security settings"""
     admin_service = AdminService(db)
 
     try:
-        admin = admin_service.configure_admin_security(current_user["id"], security_config)
+        admin = admin_service.configure_admin_security(current_user.id, security_config)
         return {
             "message": "Admin security configuration updated successfully",
             "admin": admin,
-            "onboarding_status": admin_service.get_onboarding_status(current_user["id"]),
+            "onboarding_status": admin_service.get_onboarding_status(current_user.id),
         }
     except AppException:
         raise
@@ -116,20 +111,19 @@ async def configure_admin_security(
 
 
 @router.post("/complete-setup", response_model=dict)
-@require_roles(Role.ADMIN)
 async def complete_admin_setup(
-    current_user: dict = Depends(get_current_user),
+    current_user=Depends(require_roles(Role.ADMIN)),
     db: Session = Depends(get_db),
 ):
     """Complete admin setup process"""
     admin_service = AdminService(db)
 
     try:
-        admin = admin_service.complete_admin_setup(current_user["id"])
+        admin = admin_service.complete_admin_setup(current_user.id)
         return {
             "message": "Admin setup completed successfully",
             "admin": admin,
-            "onboarding_status": admin_service.get_onboarding_status(current_user["id"]),
+            "onboarding_status": admin_service.get_onboarding_status(current_user.id),
         }
     except Exception as e:
         raise HTTPException(
