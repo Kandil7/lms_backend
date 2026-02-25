@@ -89,3 +89,20 @@ def require_permissions(*permissions: Permission) -> Callable:
         return current_user
 
     return dependency
+
+
+def require_admin_setup_complete(
+    current_user: "User" = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> "User":
+    """Require admin role with completed admin onboarding setup."""
+    if current_user.role != Role.ADMIN.value:
+        raise ForbiddenException("Not authorized to perform this action")
+
+    from app.modules.admin.models import Admin
+
+    admin_profile = db.query(Admin).filter(Admin.user_id == current_user.id).first()
+    if not admin_profile or not admin_profile.is_setup_complete:
+        raise ForbiddenException("Admin setup must be completed before performing this action")
+
+    return current_user

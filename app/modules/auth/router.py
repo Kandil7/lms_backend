@@ -100,7 +100,7 @@ def _is_valid_ip(ip: str) -> bool:
     "/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED
 )
 def register(payload: UserCreate, db: Session = Depends(get_db)) -> AuthResponse:
-    if payload.role != Role.STUDENT and not settings.ALLOW_PUBLIC_ROLE_REGISTRATION:
+    if payload.role != Role.STUDENT:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Public registration is limited to student accounts",

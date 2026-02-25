@@ -1,11 +1,18 @@
+from uuid import uuid4
+
 from app.core.config import settings
 from tests.helpers import auth_headers, login_user, register_user
 
 
+def _email(prefix: str) -> str:
+    return f"{prefix}-{uuid4().hex[:8]}@example.com"
+
+
 def test_register_login_and_profile_flow(client):
+    email = _email("student")
     register_payload = register_user(
         client,
-        email="student@example.com",
+        email=email,
         password="StrongPass123",
         full_name="Student One",
         role="student",
@@ -14,17 +21,18 @@ def test_register_login_and_profile_flow(client):
     access_token = register_payload["tokens"]["access_token"]
     me_response = client.get("/api/v1/auth/me", headers=auth_headers(access_token))
     assert me_response.status_code == 200
-    assert me_response.json()["email"] == "student@example.com"
+    assert me_response.json()["email"] == email
 
-    login_payload = login_user(client, email="student@example.com", password="StrongPass123")
+    login_payload = login_user(client, email=email, password="StrongPass123")
     assert login_payload["tokens"]["access_token"]
     assert login_payload["tokens"]["refresh_token"]
 
 
 def test_refresh_token_rotation(client):
+    email = _email("refresh")
     register_payload = register_user(
         client,
-        email="refresh@example.com",
+        email=email,
         password="StrongPass123",
         full_name="Refresh User",
         role="student",
@@ -41,9 +49,10 @@ def test_refresh_token_rotation(client):
 
 
 def test_refresh_token_cannot_be_reused(client):
+    email = _email("refresh-reuse")
     register_payload = register_user(
         client,
-        email="refresh-reuse@example.com",
+        email=email,
         password="StrongPass123",
         full_name="Refresh Reuse User",
         role="student",
@@ -71,16 +80,18 @@ def test_refresh_token_cannot_be_reused(client):
 
 
 def test_refresh_rejects_mismatched_access_token(client):
+    email_one = _email("refresh-mismatch-one")
+    email_two = _email("refresh-mismatch-two")
     user_one = register_user(
         client,
-        email="refresh-mismatch-one@example.com",
+        email=email_one,
         password="StrongPass123",
         full_name="Refresh Mismatch One",
         role="student",
     )
     user_two = register_user(
         client,
-        email="refresh-mismatch-two@example.com",
+        email=email_two,
         password="StrongPass123",
         full_name="Refresh Mismatch Two",
         role="student",
@@ -101,15 +112,16 @@ def test_refresh_rejects_mismatched_access_token(client):
 
 
 def test_login_refresh_token_rotation(client):
+    email = _email("login-refresh")
     register_user(
         client,
-        email="login-refresh@example.com",
+        email=email,
         password="StrongPass123",
         full_name="Login Refresh User",
         role="student",
     )
 
-    login_payload = login_user(client, email="login-refresh@example.com", password="StrongPass123")
+    login_payload = login_user(client, email=email, password="StrongPass123")
     refresh_response = client.post(
         "/api/v1/auth/refresh",
         json={"refresh_token": login_payload["tokens"]["refresh_token"]},
@@ -119,9 +131,10 @@ def test_login_refresh_token_rotation(client):
 
 
 def test_logout_blacklists_access_token(client):
+    email = _email("logout-blacklist")
     register_payload = register_user(
         client,
-        email="logout-blacklist@example.com",
+        email=email,
         password="StrongPass123",
         full_name="Logout Blacklist User",
         role="student",
@@ -144,16 +157,18 @@ def test_logout_blacklists_access_token(client):
 
 
 def test_logout_rejects_mismatched_access_and_refresh_tokens(client):
+    email_one = _email("logout-mismatch-one")
+    email_two = _email("logout-mismatch-two")
     user_one = register_user(
         client,
-        email="logout-mismatch-one@example.com",
+        email=email_one,
         password="StrongPass123",
         full_name="Logout Mismatch One",
         role="student",
     )
     user_two = register_user(
         client,
-        email="logout-mismatch-two@example.com",
+        email=email_two,
         password="StrongPass123",
         full_name="Logout Mismatch Two",
         role="student",
@@ -171,9 +186,10 @@ def test_logout_rejects_mismatched_access_and_refresh_tokens(client):
 
 
 def test_logout_requires_access_token(client):
+    email = _email("logout-no-access")
     register_payload = register_user(
         client,
-        email="logout-no-access@example.com",
+        email=email,
         password="StrongPass123",
         full_name="Logout No Access User",
         role="student",
@@ -188,11 +204,12 @@ def test_logout_requires_access_token(client):
 
 
 def test_public_register_rejects_admin_role_when_disabled(client, monkeypatch):
+    email = _email("blocked-admin")
     monkeypatch.setattr(settings, "ALLOW_PUBLIC_ROLE_REGISTRATION", False)
     response = client.post(
         "/api/v1/auth/register",
         json={
-            "email": "blocked-admin@example.com",
+            "email": email,
             "password": "StrongPass123",
             "full_name": "Blocked Admin",
             "role": "admin",
@@ -203,9 +220,10 @@ def test_public_register_rejects_admin_role_when_disabled(client, monkeypatch):
 
 
 def test_forgot_and_reset_password_flow(client, monkeypatch):
+    email = _email("reset-flow")
     register_payload = register_user(
         client,
-        email="reset-flow@example.com",
+        email=email,
         password="StrongPass123",
         full_name="Reset Flow User",
         role="student",
@@ -224,7 +242,7 @@ def test_forgot_and_reset_password_flow(client, monkeypatch):
 
     forgot_response = client.post(
         "/api/v1/auth/forgot-password",
-        json={"email": "reset-flow@example.com"},
+        json={"email": email},
     )
     assert forgot_response.status_code == 200, forgot_response.text
     assert forgot_response.json()["message"] == "If the email is registered, a reset link has been sent"
@@ -244,13 +262,13 @@ def test_forgot_and_reset_password_flow(client, monkeypatch):
 
     old_login_response = client.post(
         "/api/v1/auth/login",
-        json={"email": "reset-flow@example.com", "password": "StrongPass123"},
+        json={"email": email, "password": "StrongPass123"},
     )
     assert old_login_response.status_code == 401
 
     new_login_response = client.post(
         "/api/v1/auth/login",
-        json={"email": "reset-flow@example.com", "password": "NewStrongPass123"},
+        json={"email": email, "password": "NewStrongPass123"},
     )
     assert new_login_response.status_code == 200, new_login_response.text
 
@@ -288,6 +306,7 @@ def test_reset_password_rejects_invalid_token(client):
 
 
 def test_register_sends_email_verification_task(client, monkeypatch):
+    email = _email("verify-task")
     calls: list[tuple[str, tuple, dict]] = []
 
     def fake_enqueue(task_name: str, *args, **kwargs):
@@ -299,7 +318,7 @@ def test_register_sends_email_verification_task(client, monkeypatch):
     response = client.post(
         "/api/v1/auth/register",
         json={
-            "email": "verify-task@example.com",
+            "email": email,
             "password": "StrongPass123",
             "full_name": "Verify Task User",
             "role": "student",
@@ -314,14 +333,15 @@ def test_register_sends_email_verification_task(client, monkeypatch):
         item for item in calls if item[0] == "app.tasks.email_tasks.send_email_verification_email"
     )
     verification_kwargs = verification_call[2]
-    assert verification_kwargs["email"] == "verify-task@example.com"
+    assert verification_kwargs["email"] == email
     assert isinstance(verification_kwargs["verification_token"], str)
 
 
 def test_verify_email_request_and_confirm_flow(client, monkeypatch):
+    email = _email("verify-flow")
     register_user(
         client,
-        email="verify-flow@example.com",
+        email=email,
         password="StrongPass123",
         full_name="Verify Flow User",
         role="student",
@@ -338,7 +358,7 @@ def test_verify_email_request_and_confirm_flow(client, monkeypatch):
 
     request_response = client.post(
         "/api/v1/auth/verify-email/request",
-        json={"email": "verify-flow@example.com"},
+        json={"email": email},
     )
     assert request_response.status_code == 200, request_response.text
     assert request_response.json()["message"] == "If the email is registered, a verification link has been sent"
@@ -351,7 +371,7 @@ def test_verify_email_request_and_confirm_flow(client, monkeypatch):
     assert confirm_response.status_code == 200, confirm_response.text
     assert confirm_response.json()["message"] == "Email has been verified successfully"
 
-    login_payload = login_user(client, email="verify-flow@example.com", password="StrongPass123")
+    login_payload = login_user(client, email=email, password="StrongPass123")
     me_response = client.get("/api/v1/auth/me", headers=auth_headers(login_payload["tokens"]["access_token"]))
     assert me_response.status_code == 200, me_response.text
     assert me_response.json()["email_verified_at"] is not None
@@ -384,6 +404,7 @@ def test_verify_email_confirm_rejects_invalid_token(client):
 
 
 def test_login_requires_verified_email_when_enabled(client, monkeypatch):
+    email = _email("verify-required")
     monkeypatch.setattr(settings, "REQUIRE_EMAIL_VERIFICATION_FOR_LOGIN", True)
 
     calls: list[tuple[str, tuple, dict]] = []
@@ -397,7 +418,7 @@ def test_login_requires_verified_email_when_enabled(client, monkeypatch):
     register_response = client.post(
         "/api/v1/auth/register",
         json={
-            "email": "verify-required@example.com",
+            "email": email,
             "password": "StrongPass123",
             "full_name": "Verify Required User",
             "role": "student",
@@ -407,7 +428,7 @@ def test_login_requires_verified_email_when_enabled(client, monkeypatch):
 
     blocked_login = client.post(
         "/api/v1/auth/login",
-        json={"email": "verify-required@example.com", "password": "StrongPass123"},
+        json={"email": email, "password": "StrongPass123"},
     )
     assert blocked_login.status_code == 401
     assert blocked_login.json()["detail"] == "Email is not verified"
@@ -425,15 +446,16 @@ def test_login_requires_verified_email_when_enabled(client, monkeypatch):
 
     allowed_login = client.post(
         "/api/v1/auth/login",
-        json={"email": "verify-required@example.com", "password": "StrongPass123"},
+        json={"email": email, "password": "StrongPass123"},
     )
     assert allowed_login.status_code == 200, allowed_login.text
 
 
 def test_mfa_enable_and_login_challenge_flow(client, monkeypatch):
+    email = _email("mfa-flow")
     register_payload = register_user(
         client,
-        email="mfa-flow@example.com",
+        email=email,
         password="StrongPass123",
         full_name="MFA Flow User",
         role="student",
@@ -469,7 +491,7 @@ def test_mfa_enable_and_login_challenge_flow(client, monkeypatch):
 
     login_response = client.post(
         "/api/v1/auth/login",
-        json={"email": "mfa-flow@example.com", "password": "StrongPass123"},
+        json={"email": email, "password": "StrongPass123"},
     )
     assert login_response.status_code == 200, login_response.text
     login_payload = login_response.json()
@@ -489,9 +511,10 @@ def test_mfa_enable_and_login_challenge_flow(client, monkeypatch):
 
 
 def test_mfa_login_rejects_invalid_code(client, monkeypatch):
+    email = _email("mfa-invalid")
     register_payload = register_user(
         client,
-        email="mfa-invalid@example.com",
+        email=email,
         password="StrongPass123",
         full_name="MFA Invalid User",
         role="student",
@@ -523,7 +546,7 @@ def test_mfa_login_rejects_invalid_code(client, monkeypatch):
 
     login_response = client.post(
         "/api/v1/auth/login",
-        json={"email": "mfa-invalid@example.com", "password": "StrongPass123"},
+        json={"email": email, "password": "StrongPass123"},
     )
     assert login_response.status_code == 200, login_response.text
     challenge_token = login_response.json()["challenge_token"]
@@ -537,9 +560,10 @@ def test_mfa_login_rejects_invalid_code(client, monkeypatch):
 
 
 def test_mfa_disable_restores_direct_login(client, monkeypatch):
+    email = _email("mfa-disable")
     register_payload = register_user(
         client,
-        email="mfa-disable@example.com",
+        email=email,
         password="StrongPass123",
         full_name="MFA Disable User",
         role="student",
@@ -579,7 +603,7 @@ def test_mfa_disable_restores_direct_login(client, monkeypatch):
 
     login_response = client.post(
         "/api/v1/auth/login",
-        json={"email": "mfa-disable@example.com", "password": "StrongPass123"},
+        json={"email": email, "password": "StrongPass123"},
     )
     assert login_response.status_code == 200, login_response.text
     assert login_response.json()["tokens"]["access_token"]

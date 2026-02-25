@@ -2,20 +2,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
 
-from app.core.config import settings
 from app.core.database import get_db
-from app.core.permissions import Role
-from app.core.dependencies import require_roles, get_current_user
-from app.modules.auth.service import AuthService
+from app.core.dependencies import get_current_user, require_admin_setup_complete
 from app.modules.instructors.schemas import (
     InstructorRegistrationRequest,
     InstructorUpdate,
     InstructorVerificationRequest,
     InstructorOnboardingStatus,
+    InstructorResponse,
 )
 from app.modules.instructors.service import InstructorService
 from app.modules.users.schemas import UserResponse
-from app.modules.auth.schemas import TokenResponse
 
 
 router = APIRouter(prefix="/instructors", tags=["instructors"])
@@ -24,18 +21,20 @@ router = APIRouter(prefix="/instructors", tags=["instructors"])
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register_instructor(
     registration_data: InstructorRegistrationRequest,
+    _: object = Depends(require_admin_setup_complete),
     db: Session = Depends(get_db),
 ):
     """Register a new instructor with complete onboarding flow"""
     instructor_service = InstructorService(db)
-    
+
     try:
         result = instructor_service.create_instructor_from_registration(registration_data)
-        
+
         # Return success response with onboarding status
         return {
             "message": "Instructor account created successfully",
             "user": UserResponse.model_validate(result["user"]),
+            "instructor": InstructorResponse.model_validate(result["instructor"]),
             "onboarding_status": instructor_service.get_onboarding_status(result["user"].id),
             "verification_required": True,
             "verification_expires_at": result["verification_expires_at"],
@@ -65,14 +64,12 @@ async def update_instructor_profile(
 ):
     """Update instructor profile information"""
     instructor_service = InstructorService(db)
-    
+
     try:
-        instructor = instructor_service.update_instructor_profile(
-            current_user.id, profile_data
-        )
+        instructor = instructor_service.update_instructor_profile(current_user.id, profile_data)
         return {
             "message": "Instructor profile updated successfully",
-            "instructor": instructor,
+            "instructor": InstructorResponse.model_validate(instructor),
             "onboarding_status": instructor_service.get_onboarding_status(current_user.id),
         }
     except Exception as e:
@@ -90,14 +87,12 @@ async def submit_instructor_verification(
 ):
     """Submit instructor verification documentation"""
     instructor_service = InstructorService(db)
-    
+
     try:
-        instructor = instructor_service.submit_verification(
-            current_user.id, verification_data
-        )
+        instructor = instructor_service.submit_verification(current_user.id, verification_data)
         return {
             "message": "Verification submitted successfully",
-            "instructor": instructor,
+            "instructor": InstructorResponse.model_validate(instructor),
             "onboarding_status": instructor_service.get_onboarding_status(current_user.id),
         }
     except Exception as e:
@@ -112,7 +107,7 @@ async def submit_instructor_verification(
 async def approve_instructor_verification(
     instructor_id: str,
     admin_notes: str = "",
-    _: object = Depends(require_roles(Role.ADMIN)),
+    _: object = Depends(require_admin_setup_complete),
     db: Session = Depends(get_db),
 ):
     """Approve instructor verification (admin only)"""
@@ -124,7 +119,7 @@ async def approve_instructor_verification(
         instructor = instructor_service.approve_verification(instructor_uuid, admin_notes)
         return {
             "message": "Instructor verification approved",
-            "instructor": instructor,
+            "instructor": InstructorResponse.model_validate(instructor),
         }
     except Exception as e:
         raise HTTPException(
@@ -137,7 +132,7 @@ async def approve_instructor_verification(
 async def reject_instructor_verification(
     instructor_id: str,
     rejection_reason: str,
-    _: object = Depends(require_roles(Role.ADMIN)),
+    _: object = Depends(require_admin_setup_complete),
     db: Session = Depends(get_db),
 ):
     """Reject instructor verification (admin only)"""
@@ -149,7 +144,7 @@ async def reject_instructor_verification(
         instructor = instructor_service.reject_verification(instructor_uuid, rejection_reason)
         return {
             "message": "Instructor verification rejected",
-            "instructor": instructor,
+            "instructor": InstructorResponse.model_validate(instructor),
         }
     except Exception as e:
         raise HTTPException(

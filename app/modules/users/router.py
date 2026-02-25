@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user, get_pagination, require_roles
+from app.core.dependencies import get_current_user, get_pagination, require_admin_setup_complete
 from app.core.permissions import Role
 from app.modules.users.schemas import UserCreate, UserListResponse, UserResponse, UserUpdate
 from app.modules.users.services.user_service import UserAlreadyExistsError, UserService
@@ -21,7 +21,7 @@ def get_my_profile(current_user=Depends(get_current_user)) -> UserResponse:
 @router.get("", response_model=UserListResponse)
 def list_users(
     pagination: tuple[int, int] = Depends(get_pagination),
-    _: object = Depends(require_roles(Role.ADMIN)),
+    _: object = Depends(require_admin_setup_complete),
     db: Session = Depends(get_db),
 ) -> UserListResponse:
     page, page_size = pagination
@@ -34,7 +34,7 @@ def list_users(
 @router.get("/{user_id}", response_model=UserResponse)
 def get_user(
     user_id: UUID,
-    _: object = Depends(require_roles(Role.ADMIN)),
+    _: object = Depends(require_admin_setup_complete),
     db: Session = Depends(get_db),
 ) -> UserResponse:
     user = UserService(db).get_user(user_id)
@@ -44,9 +44,15 @@ def get_user(
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(
     payload: UserCreate,
-    _: object = Depends(require_roles(Role.ADMIN)),
+    _: object = Depends(require_admin_setup_complete),
     db: Session = Depends(get_db),
 ) -> UserResponse:
+    if payload.role in {Role.ADMIN, Role.INSTRUCTOR}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Use /admin/setup or /instructors/register to create privileged accounts",
+        )
+
     try:
         user = UserService(db).create_user(payload)
     except UserAlreadyExistsError as exc:
@@ -58,8 +64,14 @@ def create_user(
 def update_user(
     user_id: UUID,
     payload: UserUpdate,
-    _: object = Depends(require_roles(Role.ADMIN)),
+    _: object = Depends(require_admin_setup_complete),
     db: Session = Depends(get_db),
 ) -> UserResponse:
+    if payload.role in {Role.ADMIN, Role.INSTRUCTOR}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Use /admin/setup or /instructors/register to assign privileged roles",
+        )
+
     user = UserService(db).update_user(user_id, payload)
     return UserResponse.model_validate(user)

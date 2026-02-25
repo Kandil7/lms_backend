@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Optional
+import uuid
 
 from sqlalchemy import Column, DateTime, ForeignKey, String, Boolean, JSON, Integer, UUID
 from sqlalchemy.orm import relationship
@@ -10,7 +11,7 @@ from app.core.database import Base
 class Admin(Base):
     __tablename__ = "admins"
 
-    id = Column(UUID(as_uuid=True), primary_key=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, unique=True)
     security_level = Column(String(20), nullable=False, default="standard")
     mfa_required = Column(Boolean, nullable=False, default=True)

@@ -167,6 +167,7 @@ class CourseService:
             raise NotFoundException("Course not found")
 
         self._ensure_manage_access(course, current_user)
+        self._ensure_instructor_can_publish(current_user)
 
         course = self.repo.update(course, is_published=True)
         self._commit()
@@ -199,6 +200,20 @@ class CourseService:
     def _ensure_manage_access(self, course, current_user) -> None:
         if not self._can_manage_course(course, current_user):
             raise ForbiddenException("Not authorized to manage this course")
+
+    def _ensure_instructor_can_publish(self, current_user) -> None:
+        if current_user.role != Role.INSTRUCTOR.value:
+            return
+
+        from app.modules.instructors.models import Instructor
+
+        instructor = (
+            self.db.query(Instructor)
+            .filter(Instructor.user_id == current_user.id)
+            .first()
+        )
+        if not instructor or not instructor.is_verified:
+            raise ForbiddenException("Instructor verification is required before publishing courses")
 
     def _commit(self) -> None:
         try:

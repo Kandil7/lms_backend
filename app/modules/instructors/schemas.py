@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 from app.core.permissions import Role
 from app.modules.users.schemas import UserResponse
@@ -89,10 +89,22 @@ class InstructorRegistrationRequest(BaseModel):
     website: Optional[str] = Field(default=None, max_length=255)
     social_media: Optional[dict] = Field(default_factory=dict)
 
+    @model_validator(mode="after")
+    def validate_role(self):
+        if self.role != Role.INSTRUCTOR:
+            raise ValueError("role must be instructor")
+        return self
+
 
 class InstructorVerificationRequest(BaseModel):
     """Instructor verification submission"""
     document_type: str = Field(max_length=50)  # resume, certificate, ID, etc.
     document_url: str = Field(max_length=1000)
     verification_notes: Optional[str] = None
-    consent_to_verify: bool = True
+    consent_to_verify: bool
+
+    @model_validator(mode="after")
+    def validate_consent(self):
+        if not self.consent_to_verify:
+            raise ValueError("consent_to_verify must be true")
+        return self

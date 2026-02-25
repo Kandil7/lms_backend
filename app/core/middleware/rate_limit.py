@@ -273,8 +273,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     def _should_fallback_to_memory(exc: Exception) -> bool:
         if isinstance(exc, RedisError):
             return True
-        if isinstance(exc, RuntimeError) and "Event loop is closed" in str(exc):
-            return True
+        if isinstance(exc, RuntimeError):
+            message = str(exc)
+            if "Event loop is closed" in message or "attached to a different loop" in message:
+                return True
         return False
 
     @staticmethod

@@ -6,6 +6,7 @@ import uuid
 from sqlalchemy import Column, DateTime, ForeignKey, String, Boolean, Integer, Text, JSON
 from sqlalchemy import Uuid
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
 
 from app.core.database import Base
 from app.modules.courses.models.course import Course
@@ -14,7 +15,7 @@ from app.modules.courses.models.course import Course
 class Instructor(Base):
     __tablename__ = "instructors"
 
-    id = Column(Uuid(as_uuid=True), primary_key=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False, unique=True)
     bio = Column(Text, nullable=False)
     expertise = Column(JSON, nullable=False, default=list)

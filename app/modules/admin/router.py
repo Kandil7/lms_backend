@@ -3,19 +3,18 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.exceptions import AppException, NotFoundException
+from app.core.exceptions import AppException
 from app.core.permissions import Role
-from app.core.dependencies import require_roles
-from app.modules.auth.service import AuthService
+from app.core.dependencies import require_admin_setup_complete, require_roles
 from app.modules.admin.schemas import (
-    AdminSetupRequest,
-    AdminSecurityConfigRequest,
+    AdminResponse,
     AdminOnboardingStatus,
+    AdminSecurityConfigRequest,
+    AdminSetupRequest,
     AdminUpdate,
 )
 from app.modules.admin.service import AdminService
 from app.modules.users.schemas import UserResponse
-from app.modules.auth.schemas import TokenResponse
 
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -24,7 +23,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 @router.post("/setup", status_code=status.HTTP_201_CREATED)
 async def setup_admin_account(
     setup_data: AdminSetupRequest,
-    _: object = Depends(require_roles(Role.ADMIN)),
+    _: object = Depends(require_admin_setup_complete),
     db: Session = Depends(get_db),
 ):
     """Setup a new admin account with enhanced security"""
@@ -36,7 +35,7 @@ async def setup_admin_account(
         return {
             "message": "Admin account created successfully",
             "user": UserResponse.model_validate(result["user"]),
-            "admin": result["admin"],
+            "admin": AdminResponse.model_validate(result["admin"]),
             "onboarding_status": result["onboarding_status"],
             "setup_expires_at": result["setup_expires_at"],
         }
@@ -73,7 +72,7 @@ async def update_admin_profile(
         admin = admin_service.update_admin_profile(current_user.id, profile_data)
         return {
             "message": "Admin profile updated successfully",
-            "admin": admin,
+            "admin": AdminResponse.model_validate(admin),
             "onboarding_status": admin_service.get_onboarding_status(current_user.id),
         }
     except AppException:
@@ -98,7 +97,7 @@ async def configure_admin_security(
         admin = admin_service.configure_admin_security(current_user.id, security_config)
         return {
             "message": "Admin security configuration updated successfully",
-            "admin": admin,
+            "admin": AdminResponse.model_validate(admin),
             "onboarding_status": admin_service.get_onboarding_status(current_user.id),
         }
     except AppException:
@@ -122,7 +121,7 @@ async def complete_admin_setup(
         admin = admin_service.complete_admin_setup(current_user.id)
         return {
             "message": "Admin setup completed successfully",
-            "admin": admin,
+            "admin": AdminResponse.model_validate(admin),
             "onboarding_status": admin_service.get_onboarding_status(current_user.id),
         }
     except Exception as e:
@@ -156,7 +155,7 @@ async def create_initial_admin(
         return {
             "message": "Initial admin account created successfully",
             "user": UserResponse.model_validate(result["user"]),
-            "admin": result["admin"],
+            "admin": AdminResponse.model_validate(result["admin"]),
             "onboarding_status": result["onboarding_status"],
             "setup_expires_at": result["setup_expires_at"],
         }
