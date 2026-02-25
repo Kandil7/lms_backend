@@ -12,7 +12,7 @@ from app.modules.instructors.schemas import (
     InstructorRegistrationRequest,
     InstructorVerificationRequest,
 )
-from app.modules.users.service import UserService
+from app.modules.users.services.user_service import UserService
 from app.modules.auth.service import AuthService
 
 
