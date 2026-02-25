@@ -1,34 +1,36 @@
 from __future__ import annotations
 from datetime import datetime
-from typing import Optional
 import uuid
 
-from sqlalchemy import Column, DateTime, ForeignKey, String, Boolean, Integer, Text, JSON
-from sqlalchemy import Uuid
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Uuid
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
-from app.modules.courses.models.course import Course
 
 
 class Instructor(Base):
     __tablename__ = "instructors"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False, unique=True)
-    bio = Column(Text, nullable=False)
-    expertise = Column(JSON, nullable=False, default=list)
-    teaching_experience_years = Column(Integer, nullable=False, default=0)
-    education_level = Column(String(100), nullable=False)
-    institution = Column(String(255), nullable=False)
-    is_verified = Column(Boolean, nullable=False, default=False)
-    verification_status = Column(String(50), nullable=False, default="pending")
-    verification_notes = Column(Text)
-    verification_document_url = Column(String(1000))
-    verification_expires_at = Column(DateTime)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False, unique=True
+    )
+    bio: Mapped[str] = mapped_column(Text, nullable=False)
+    expertise: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    teaching_experience_years: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    education_level: Mapped[str] = mapped_column(String(100), nullable=False)
+    institution: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    verification_status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
+    verification_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    verification_document_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    verification_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
     # Relationships
     user = relationship("User", back_populates="instructor")

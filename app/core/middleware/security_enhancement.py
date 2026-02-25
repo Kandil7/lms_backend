@@ -61,8 +61,14 @@ class SecurityEnhancementMiddleware(BaseHTTPMiddleware):
                     
                 cookie_token = request.cookies.get("csrf_token")
                 
-                # Use the first available token
-                token = header_token or form_token or cookie_token
+                # Use the first available token and ensure it's a string.
+                token: Optional[str] = None
+                if header_token:
+                    token = header_token
+                elif form_token and isinstance(form_token, str):
+                    token = form_token
+                elif cookie_token:
+                    token = cookie_token
                 
                 if not token or not get_csrf_protection().validate_csrf_token(token, request):
                     logger.warning(f"CSRF token validation failed for {request.method} {request.url.path}")

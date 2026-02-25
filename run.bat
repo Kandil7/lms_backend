@@ -18,14 +18,14 @@ IF "%MODE%"=="docker" (
     ECHO Running development server...
     python -m venv venv
     venv\Scripts\pip install -r requirements.txt
-    venv\Scripts\uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    venv\Scripts\uvicorn app.main:app --port 8000 --reload
 ) ELSE IF "%MODE%"=="debug" (
     ECHO Running in debug mode...
     python -m venv venv
     venv\Scripts\pip install -r requirements.txt
     set DEBUG=true
     set LOG_LEVEL=DEBUG
-    venv\Scripts\uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --log-level debug
+    venv\Scripts\uvicorn app.main:app --port 8000 --reload --log-level debug
 ) ELSE IF "%MODE%"=="migrate" (
     ECHO Running database migrations...
     python -m venv venv
