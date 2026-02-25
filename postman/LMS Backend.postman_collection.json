@@ -54,7 +54,7 @@
             "url": "{{base_url}}/api/v1/admin/create-initial",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"StrongPass123\",\n  \"full_name\": \"Demo User\",\n  \"role\": \"student\",\n  \"security_level\": {},\n  \"mfa_required\": {},\n  \"ip_whitelist\": {},\n  \"time_restrictions\": {},\n  \"emergency_contacts\": {},\n  \"security_policy_accepted\": {},\n  \"security_policy_version\": {}\n}",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"StrongPass123!\",\n  \"full_name\": \"Demo User\",\n  \"role\": \"admin\",\n  \"security_level\": \"enhanced\",\n  \"mfa_required\": true,\n  \"ip_whitelist\": [\n    \"127.0.0.1\"\n  ],\n  \"time_restrictions\": {\n    \"start_hour\": 9,\n    \"end_hour\": 17,\n    \"days\": [\n      \"monday\",\n      \"tuesday\"\n    ]\n  },\n  \"emergency_contacts\": [\n    {\n      \"name\": \"Security Officer\",\n      \"email\": \"security@example.com\"\n    }\n  ],\n  \"security_policy_accepted\": true,\n  \"security_policy_version\": \"1.0\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -106,7 +106,7 @@
             "url": "{{base_url}}/api/v1/admin/profile",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"security_level\": {},\n  \"mfa_required\": {},\n  \"ip_whitelist\": {},\n  \"time_restrictions\": {},\n  \"emergency_contacts\": {},\n  \"security_policy_accepted\": {},\n  \"security_policy_version\": {},\n  \"last_security_review\": {},\n  \"security_health_score\": {}\n}",
+              "raw": "{\n  \"security_level\": \"string\",\n  \"mfa_required\": false,\n  \"ip_whitelist\": [\n    \"127.0.0.1\"\n  ],\n  \"time_restrictions\": {\n    \"start_hour\": 9,\n    \"end_hour\": 17,\n    \"days\": [\n      \"monday\",\n      \"tuesday\"\n    ]\n  },\n  \"emergency_contacts\": [\n    {\n      \"name\": \"Security Officer\",\n      \"email\": \"security@example.com\"\n    }\n  ],\n  \"security_policy_accepted\": true,\n  \"security_policy_version\": \"string\",\n  \"last_security_review\": \"2026-01-01T10:00:00Z\",\n  \"security_health_score\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -139,7 +139,7 @@
             "url": "{{base_url}}/api/v1/admin/security-config",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"mfa_method\": {},\n  \"ip_whitelist\": {},\n  \"time_restrictions\": {},\n  \"require_password_change\": {},\n  \"password_expiry_days\": {},\n  \"session_timeout_minutes\": {},\n  \"geo_restrictions\": {},\n  \"anomaly_detection_enabled\": {}\n}",
+              "raw": "{\n  \"mfa_method\": \"totp\",\n  \"ip_whitelist\": [\n    \"127.0.0.1\"\n  ],\n  \"time_restrictions\": {\n    \"start_hour\": 9,\n    \"end_hour\": 17,\n    \"days\": [\n      \"monday\",\n      \"tuesday\"\n    ]\n  },\n  \"require_password_change\": true,\n  \"password_expiry_days\": 90,\n  \"session_timeout_minutes\": 30,\n  \"geo_restrictions\": [\n    \"string\"\n  ],\n  \"anomaly_detection_enabled\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -172,7 +172,7 @@
             "url": "{{base_url}}/api/v1/admin/setup",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"StrongPass123\",\n  \"full_name\": \"Demo User\",\n  \"role\": \"student\",\n  \"security_level\": {},\n  \"mfa_required\": {},\n  \"ip_whitelist\": {},\n  \"time_restrictions\": {},\n  \"emergency_contacts\": {},\n  \"security_policy_accepted\": {},\n  \"security_policy_version\": {}\n}",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"StrongPass123!\",\n  \"full_name\": \"Demo User\",\n  \"role\": \"admin\",\n  \"security_level\": \"enhanced\",\n  \"mfa_required\": true,\n  \"ip_whitelist\": [\n    \"127.0.0.1\"\n  ],\n  \"time_restrictions\": {\n    \"start_hour\": 9,\n    \"end_hour\": 17,\n    \"days\": [\n      \"monday\",\n      \"tuesday\"\n    ]\n  },\n  \"emergency_contacts\": [\n    {\n      \"name\": \"Security Officer\",\n      \"email\": \"security@example.com\"\n    }\n  ],\n  \"security_policy_accepted\": true,\n  \"security_policy_version\": \"1.0\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -310,7 +310,7 @@
             "url": "{{base_url}}/api/v1/assignments",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": {},\n  \"description\": {},\n  \"instructions\": {},\n  \"due_date\": {},\n  \"max_points\": {},\n  \"grading_type\": {},\n  \"assignment_metadata\": {},\n  \"course_id\": \"{{course_id}}\",\n  \"status\": {},\n  \"is_published\": {}\n}",
+              "raw": "{\n  \"title\": \"string\",\n  \"description\": \"string\",\n  \"instructions\": \"string\",\n  \"due_date\": \"2026-01-01T10:00:00Z\",\n  \"max_points\": 1,\n  \"grading_type\": \"string\",\n  \"assignment_metadata\": {},\n  \"course_id\": \"{{course_id}}\",\n  \"status\": \"draft\",\n  \"is_published\": false\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -419,7 +419,7 @@
             "url": "{{base_url}}/api/v1/assignments/submissions/{{submission_id}}",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"grade\": {},\n  \"max_grade\": {},\n  \"feedback\": {},\n  \"feedback_attachments\": {},\n  \"status\": {},\n  \"graded_at\": {},\n  \"returned_at\": {}\n}",
+              "raw": "{\n  \"grade\": 1,\n  \"max_grade\": 1,\n  \"feedback\": \"string\",\n  \"feedback_attachments\": [\n    \"string\"\n  ],\n  \"status\": \"string\",\n  \"graded_at\": \"2026-01-01T10:00:00Z\",\n  \"returned_at\": \"2026-01-01T10:00:00Z\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -452,7 +452,7 @@
             "url": "{{base_url}}/api/v1/assignments/submissions/{{submission_id}}/grade",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"grade\": {},\n  \"max_grade\": {},\n  \"feedback\": {},\n  \"feedback_attachments\": {}\n}",
+              "raw": "{\n  \"grade\": 1,\n  \"max_grade\": 1,\n  \"feedback\": \"\",\n  \"feedback_attachments\": [\n    \"string\"\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -485,7 +485,7 @@
             "url": "{{base_url}}/api/v1/assignments/submit",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"content\": {},\n  \"file_urls\": {},\n  \"submission_type\": {},\n  \"submission_metadata\": {},\n  \"assignment_id\": \"{{assignment_id}}\",\n  \"enrollment_id\": \"{{enrollment_id}}\",\n  \"submitted_at\": {},\n  \"status\": {}\n}",
+              "raw": "{\n  \"content\": \"string\",\n  \"file_urls\": [\n    \"string\"\n  ],\n  \"submission_type\": \"string\",\n  \"submission_metadata\": {},\n  \"assignment_id\": \"{{assignment_id}}\",\n  \"enrollment_id\": \"{{enrollment_id}}\",\n  \"submitted_at\": \"2026-01-01T10:00:00Z\",\n  \"status\": \"submitted\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -537,7 +537,7 @@
             "url": "{{base_url}}/api/v1/assignments/{{assignment_id}}",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": {},\n  \"description\": {},\n  \"instructions\": {},\n  \"due_date\": {},\n  \"max_points\": {},\n  \"grading_type\": {},\n  \"status\": {},\n  \"is_published\": {},\n  \"assignment_metadata\": {}\n}",
+              "raw": "{\n  \"title\": \"string\",\n  \"description\": \"string\",\n  \"instructions\": \"string\",\n  \"due_date\": \"2026-01-01T10:00:00Z\",\n  \"max_points\": 1,\n  \"grading_type\": \"string\",\n  \"status\": \"string\",\n  \"is_published\": false,\n  \"assignment_metadata\": {}\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -617,7 +617,7 @@
             "url": "{{base_url}}/api/v1/auth/login",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"StrongPass123\"\n}",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"StrongPass123!\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -640,7 +640,7 @@
             "url": "{{base_url}}/api/v1/auth/login/mfa",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"challenge_token\": {},\n  \"code\": {}\n}",
+              "raw": "{\n  \"challenge_token\": \"string\",\n  \"code\": \"string\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -663,7 +663,7 @@
             "url": "{{base_url}}/api/v1/auth/logout",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"refresh_token\": {}\n}",
+              "raw": "{\n  \"refresh_token\": \"string\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -715,7 +715,7 @@
             "url": "{{base_url}}/api/v1/auth/mfa/disable",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"password\": \"StrongPass123\"\n}",
+              "raw": "{\n  \"password\": \"StrongPass123!\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -748,7 +748,7 @@
             "url": "{{base_url}}/api/v1/auth/mfa/enable/confirm",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": {}\n}",
+              "raw": "{\n  \"code\": \"string\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -781,7 +781,7 @@
             "url": "{{base_url}}/api/v1/auth/mfa/enable/request",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"password\": \"StrongPass123\"\n}",
+              "raw": "{\n  \"password\": \"StrongPass123!\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -814,7 +814,7 @@
             "url": "{{base_url}}/api/v1/auth/refresh",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"refresh_token\": {}\n}",
+              "raw": "{\n  \"refresh_token\": \"string\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -847,7 +847,7 @@
             "url": "{{base_url}}/api/v1/auth/register",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\",\n  \"full_name\": \"Demo User\",\n  \"role\": \"student\",\n  \"password\": \"StrongPass123\"\n}",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"full_name\": \"Demo User\",\n  \"role\": \"student\",\n  \"password\": \"StrongPass123!\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -870,7 +870,7 @@
             "url": "{{base_url}}/api/v1/auth/reset-password",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"token\": {},\n  \"new_password\": {}\n}",
+              "raw": "{\n  \"token\": \"string\",\n  \"new_password\": \"string\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -902,7 +902,7 @@
             "url": "{{base_url}}/api/v1/auth/verify-email/confirm",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"token\": {}\n}",
+              "raw": "{\n  \"token\": \"string\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1091,7 +1091,7 @@
             "url": "{{base_url}}/api/v1/courses",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": {},\n  \"slug\": {},\n  \"description\": {},\n  \"category\": {},\n  \"difficulty_level\": {},\n  \"thumbnail_url\": {},\n  \"estimated_duration_minutes\": {},\n  \"metadata\": {},\n  \"price\": {},\n  \"currency\": {},\n  \"is_free\": {},\n  \"long_description\": {},\n  \"preview_video_url\": {},\n  \"requirements\": {},\n  \"learning_objectives\": {},\n  \"total_reviews\": {},\n  \"total_quizzes\": {},\n  \"enrollment_count\": {},\n  \"average_rating\": {},\n  \"status\": {}\n}",
+              "raw": "{\n  \"title\": \"string\",\n  \"slug\": \"string\",\n  \"description\": \"string\",\n  \"category\": \"string\",\n  \"difficulty_level\": \"string\",\n  \"thumbnail_url\": \"string\",\n  \"estimated_duration_minutes\": 1,\n  \"metadata\": {},\n  \"price\": 1,\n  \"currency\": \"string\",\n  \"is_free\": false,\n  \"long_description\": \"string\",\n  \"preview_video_url\": \"string\",\n  \"requirements\": [\n    \"string\"\n  ],\n  \"learning_objectives\": [\n    \"string\"\n  ],\n  \"total_reviews\": 1,\n  \"total_quizzes\": 1,\n  \"enrollment_count\": 1,\n  \"average_rating\": 1,\n  \"status\": \"string\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1162,7 +1162,7 @@
             "url": "{{base_url}}/api/v1/courses/{{course_id}}",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": {},\n  \"description\": {},\n  \"category\": {},\n  \"difficulty_level\": {},\n  \"thumbnail_url\": {},\n  \"estimated_duration_minutes\": {},\n  \"is_published\": {},\n  \"metadata\": {},\n  \"price\": {},\n  \"currency\": {},\n  \"is_free\": {},\n  \"long_description\": {},\n  \"preview_video_url\": {},\n  \"requirements\": {},\n  \"learning_objectives\": {},\n  \"total_reviews\": {},\n  \"total_quizzes\": {},\n  \"enrollment_count\": {},\n  \"average_rating\": {},\n  \"status\": {}\n}",
+              "raw": "{\n  \"title\": \"string\",\n  \"description\": \"string\",\n  \"category\": \"string\",\n  \"difficulty_level\": \"string\",\n  \"thumbnail_url\": \"string\",\n  \"estimated_duration_minutes\": 1,\n  \"is_published\": false,\n  \"metadata\": {},\n  \"price\": 1,\n  \"currency\": \"string\",\n  \"is_free\": false,\n  \"long_description\": \"string\",\n  \"preview_video_url\": \"string\",\n  \"requirements\": [\n    \"string\"\n  ],\n  \"learning_objectives\": [\n    \"string\"\n  ],\n  \"total_reviews\": 1,\n  \"total_quizzes\": 1,\n  \"enrollment_count\": 1,\n  \"average_rating\": 1,\n  \"status\": \"string\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1233,7 +1233,7 @@
             "url": "{{base_url}}/api/v1/courses/{{course_id}}/lessons",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": {},\n  \"slug\": {},\n  \"description\": {},\n  \"content\": {},\n  \"lesson_type\": {},\n  \"order_index\": {},\n  \"parent_lesson_id\": \"{{parent_lesson_id}}\",\n  \"duration_minutes\": {},\n  \"video_url\": {},\n  \"is_preview\": {},\n  \"metadata\": {}\n}",
+              "raw": "{\n  \"title\": \"string\",\n  \"slug\": \"string\",\n  \"description\": \"string\",\n  \"content\": \"string\",\n  \"lesson_type\": \"string\",\n  \"order_index\": 1,\n  \"parent_lesson_id\": \"{{parent_lesson_id}}\",\n  \"duration_minutes\": 1,\n  \"video_url\": \"string\",\n  \"is_preview\": false,\n  \"metadata\": {}\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1304,7 +1304,7 @@
             "url": "{{base_url}}/api/v1/courses/{{course_id}}/quizzes",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"lesson_id\": \"{{lesson_id}}\",\n  \"title\": {},\n  \"description\": {},\n  \"quiz_type\": {},\n  \"time_limit_minutes\": {},\n  \"passing_score\": {},\n  \"max_attempts\": {},\n  \"shuffle_questions\": {},\n  \"shuffle_options\": {},\n  \"show_correct_answers\": {}\n}",
+              "raw": "{\n  \"lesson_id\": \"{{lesson_id}}\",\n  \"title\": \"string\",\n  \"description\": \"string\",\n  \"quiz_type\": \"graded\",\n  \"time_limit_minutes\": 1,\n  \"passing_score\": \"70.00\",\n  \"max_attempts\": 1,\n  \"shuffle_questions\": true,\n  \"shuffle_options\": true,\n  \"show_correct_answers\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1356,7 +1356,7 @@
             "url": "{{base_url}}/api/v1/courses/{{course_id}}/quizzes/{{quiz_id}}",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": {},\n  \"description\": {},\n  \"quiz_type\": {},\n  \"time_limit_minutes\": {},\n  \"passing_score\": {},\n  \"max_attempts\": {},\n  \"shuffle_questions\": {},\n  \"shuffle_options\": {},\n  \"show_correct_answers\": {},\n  \"is_published\": {}\n}",
+              "raw": "{\n  \"title\": \"string\",\n  \"description\": \"string\",\n  \"quiz_type\": \"string\",\n  \"time_limit_minutes\": 1,\n  \"passing_score\": 1,\n  \"max_attempts\": 1,\n  \"shuffle_questions\": false,\n  \"shuffle_options\": false,\n  \"show_correct_answers\": false,\n  \"is_published\": false\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1427,7 +1427,7 @@
             "url": "{{base_url}}/api/v1/courses/{{course_id}}/quizzes/{{quiz_id}}/questions",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"question_text\": {},\n  \"question_type\": {},\n  \"points\": {},\n  \"explanation\": {},\n  \"options\": {},\n  \"correct_answer\": {},\n  \"metadata\": {}\n}",
+              "raw": "{\n  \"question_text\": \"string\",\n  \"question_type\": \"string\",\n  \"points\": \"1.00\",\n  \"explanation\": \"string\",\n  \"options\": [\n    {\n      \"option_id\": \"string\",\n      \"option_text\": \"string\",\n      \"is_correct\": false\n    }\n  ],\n  \"correct_answer\": \"string\",\n  \"metadata\": {}\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1479,7 +1479,7 @@
             "url": "{{base_url}}/api/v1/courses/{{course_id}}/quizzes/{{quiz_id}}/questions/{{question_id}}",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"question_text\": {},\n  \"question_type\": {},\n  \"points\": {},\n  \"explanation\": {},\n  \"options\": {},\n  \"correct_answer\": {},\n  \"metadata\": {}\n}",
+              "raw": "{\n  \"question_text\": \"string\",\n  \"question_type\": \"string\",\n  \"points\": 1,\n  \"explanation\": \"string\",\n  \"options\": [\n    {\n      \"option_id\": \"string\",\n      \"option_text\": \"string\",\n      \"is_correct\": false\n    }\n  ],\n  \"correct_answer\": \"string\",\n  \"metadata\": {}\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1645,7 +1645,7 @@
             "url": "{{base_url}}/api/v1/enrollments/{{enrollment_id}}/lessons/{{lesson_id}}/progress",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": {},\n  \"time_spent_seconds\": {},\n  \"last_position_seconds\": {},\n  \"completion_percentage\": {},\n  \"notes\": {}\n}",
+              "raw": "{\n  \"status\": \"string\",\n  \"time_spent_seconds\": 1,\n  \"last_position_seconds\": 1,\n  \"completion_percentage\": 1,\n  \"notes\": \"string\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1678,7 +1678,7 @@
             "url": "{{base_url}}/api/v1/enrollments/{{enrollment_id}}/review",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"rating\": {},\n  \"review\": {}\n}",
+              "raw": "{\n  \"rating\": 1,\n  \"review\": \"string\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1815,7 +1815,7 @@
             "url": "{{base_url}}/api/v1/instructors/profile",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"bio\": {},\n  \"expertise\": {},\n  \"teaching_experience_years\": {},\n  \"education_level\": {},\n  \"institution\": {},\n  \"verification_status\": {},\n  \"verification_notes\": {},\n  \"verification_document_url\": {},\n  \"verification_expires_at\": {}\n}",
+              "raw": "{\n  \"bio\": \"Experienced instructor focused on practical project-based teaching.\",\n  \"expertise\": [\n    \"python\",\n    \"fastapi\"\n  ],\n  \"teaching_experience_years\": 5,\n  \"education_level\": \"Master's Degree\",\n  \"institution\": \"Demo University\",\n  \"verification_status\": \"string\",\n  \"verification_notes\": \"string\",\n  \"verification_document_url\": \"string\",\n  \"verification_expires_at\": \"2026-01-01T10:00:00Z\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1848,7 +1848,7 @@
             "url": "{{base_url}}/api/v1/instructors/register",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"StrongPass123\",\n  \"full_name\": \"Demo User\",\n  \"role\": \"student\",\n  \"bio\": {},\n  \"expertise\": {},\n  \"teaching_experience_years\": {},\n  \"education_level\": {},\n  \"institution\": {},\n  \"phone\": {},\n  \"website\": {},\n  \"social_media\": {}\n}",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"StrongPass123!\",\n  \"full_name\": \"Demo User\",\n  \"role\": \"instructor\",\n  \"bio\": \"Experienced instructor focused on practical project-based teaching.\",\n  \"expertise\": [\n    \"python\",\n    \"fastapi\"\n  ],\n  \"teaching_experience_years\": 5,\n  \"education_level\": \"Master's Degree\",\n  \"institution\": \"Demo University\",\n  \"phone\": \"+201000000000\",\n  \"website\": \"https://example.com\",\n  \"social_media\": {\n    \"linkedin\": \"https://linkedin.com/in/demo-instructor\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1881,7 +1881,7 @@
             "url": "{{base_url}}/api/v1/instructors/verify",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"document_type\": {},\n  \"document_url\": {},\n  \"verification_notes\": {},\n  \"consent_to_verify\": {}\n}",
+              "raw": "{\n  \"document_type\": \"string\",\n  \"document_url\": \"string\",\n  \"verification_notes\": \"string\",\n  \"consent_to_verify\": false\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1976,7 +1976,7 @@
             "url": "{{base_url}}/api/v1/lessons/{{lesson_id}}",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": {},\n  \"description\": {},\n  \"content\": {},\n  \"lesson_type\": {},\n  \"order_index\": {},\n  \"parent_lesson_id\": \"{{parent_lesson_id}}\",\n  \"duration_minutes\": {},\n  \"video_url\": {},\n  \"is_preview\": {},\n  \"metadata\": {}\n}",
+              "raw": "{\n  \"title\": \"string\",\n  \"description\": \"string\",\n  \"content\": \"string\",\n  \"lesson_type\": \"string\",\n  \"order_index\": 1,\n  \"parent_lesson_id\": \"{{parent_lesson_id}}\",\n  \"duration_minutes\": 1,\n  \"video_url\": \"string\",\n  \"is_preview\": false,\n  \"metadata\": {}\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2052,7 +2052,7 @@
             "url": "{{base_url}}/api/v1/payments/orders",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"total_amount\": {},\n  \"currency\": {},\n  \"status\": {}\n}",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"total_amount\": 1,\n  \"currency\": \"string\",\n  \"status\": \"string\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2104,7 +2104,7 @@
             "url": "{{base_url}}/api/v1/payments/payments",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"order_id\": \"{{order_id}}\",\n  \"amount\": {},\n  \"currency\": {},\n  \"payment_method\": {},\n  \"status\": {}\n}",
+              "raw": "{\n  \"order_id\": \"{{order_id}}\",\n  \"amount\": 1,\n  \"currency\": \"string\",\n  \"payment_method\": \"string\",\n  \"status\": \"string\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2218,7 +2218,7 @@
             "url": "{{base_url}}/api/v1/quizzes/{{quiz_id}}/attempts/{{attempt_id}}/submit",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"answers\": {}\n}",
+              "raw": "{\n  \"answers\": [\n    {\n      \"question_id\": \"00000000-0000-0000-0000-000000000000\",\n      \"selected_option_id\": \"string\",\n      \"answer_text\": \"string\"\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2289,7 +2289,7 @@
             "url": "{{base_url}}/api/v1/users",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\",\n  \"full_name\": \"Demo User\",\n  \"role\": \"student\",\n  \"password\": \"StrongPass123\"\n}",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"full_name\": \"Demo User\",\n  \"role\": \"student\",\n  \"password\": \"StrongPass123!\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2360,7 +2360,7 @@
             "url": "{{base_url}}/api/v1/users/{{user_id}}",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"full_name\": \"Demo User\",\n  \"role\": \"student\",\n  \"password\": \"StrongPass123\",\n  \"is_active\": {}\n}",
+              "raw": "{\n  \"full_name\": \"Demo User\",\n  \"role\": \"student\",\n  \"password\": \"StrongPass123!\",\n  \"is_active\": false\n}",
               "options": {
                 "raw": {
                   "language": "json"

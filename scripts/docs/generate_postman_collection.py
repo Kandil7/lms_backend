@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 import re
 import sys
@@ -21,6 +22,39 @@ def _schema_by_ref(ref: str, components: dict[str, Any]) -> dict[str, Any]:
     return components.get(name, {})
 
 
+def _resolve_schema(
+    schema: dict[str, Any] | None,
+    components: dict[str, Any],
+    *,
+    depth: int = 0,
+    seen_refs: set[str] | None = None,
+) -> dict[str, Any]:
+    if not schema:
+        return {}
+
+    if seen_refs is None:
+        seen_refs = set()
+
+    if depth > 12:
+        return schema
+
+    if "$ref" not in schema:
+        return schema
+
+    ref = schema["$ref"]
+    if ref in seen_refs:
+        return {}
+
+    base = _schema_by_ref(ref, components)
+    merged = copy.deepcopy(base)
+    for key, value in schema.items():
+        if key != "$ref":
+            merged[key] = value
+
+    seen_refs.add(ref)
+    return _resolve_schema(merged, components, depth=depth + 1, seen_refs=seen_refs)
+
+
 def _example_for_schema(
     schema: dict[str, Any] | None,
     components: dict[str, Any],
@@ -28,7 +62,8 @@ def _example_for_schema(
     depth: int = 0,
     seen_refs: set[str] | None = None,
 ) -> Any:
-    if not schema:
+    resolved_schema = _resolve_schema(schema, components, depth=depth, seen_refs=seen_refs)
+    if not resolved_schema:
         return {}
 
     if seen_refs is None:
@@ -37,47 +72,41 @@ def _example_for_schema(
     if depth > 6:
         return {}
 
-    if "$ref" in schema:
-        ref = schema["$ref"]
-        if ref in seen_refs:
-            return {}
-        seen_refs.add(ref)
-        return _example_for_schema(
-            _schema_by_ref(ref, components),
-            components,
-            depth=depth + 1,
-            seen_refs=seen_refs,
-        )
+    if "default" in resolved_schema:
+        return copy.deepcopy(resolved_schema["default"])
 
-    if "example" in schema:
-        return schema["example"]
+    if "example" in resolved_schema:
+        return resolved_schema["example"]
 
-    if "anyOf" in schema:
-        non_null = [item for item in schema["anyOf"] if item.get("type") != "null"]
-        candidate = non_null[0] if non_null else schema["anyOf"][0]
+    if "anyOf" in resolved_schema:
+        non_null = [item for item in resolved_schema["anyOf"] if item.get("type") != "null"]
+        candidate = non_null[0] if non_null else resolved_schema["anyOf"][0]
         return _example_for_schema(candidate, components, depth=depth + 1, seen_refs=seen_refs)
 
-    if "oneOf" in schema:
-        return _example_for_schema(schema["oneOf"][0], components, depth=depth + 1, seen_refs=seen_refs)
+    if "oneOf" in resolved_schema:
+        return _example_for_schema(resolved_schema["oneOf"][0], components, depth=depth + 1, seen_refs=seen_refs)
 
-    schema_type = schema.get("type")
+    schema_type = resolved_schema.get("type")
 
-    if "enum" in schema and schema["enum"]:
-        return schema["enum"][0]
+    if "enum" in resolved_schema and resolved_schema["enum"]:
+        return resolved_schema["enum"][0]
 
-    if schema_type == "object" or "properties" in schema:
-        properties = schema.get("properties", {})
+    if schema_type == "object" or "properties" in resolved_schema:
+        properties = resolved_schema.get("properties", {})
         result: dict[str, Any] = {}
         for key, value in properties.items():
             result[key] = _example_for_schema(value, components, depth=depth + 1, seen_refs=seen_refs.copy())
         return result
 
     if schema_type == "array":
-        item_schema = schema.get("items", {})
-        return [_example_for_schema(item_schema, components, depth=depth + 1, seen_refs=seen_refs.copy())]
+        item_schema = resolved_schema.get("items", {})
+        example_item = _example_for_schema(item_schema, components, depth=depth + 1, seen_refs=seen_refs.copy())
+        min_items = resolved_schema.get("minItems", 0)
+        count = 1 if min_items < 1 else min(min_items, 2)
+        return [copy.deepcopy(example_item) for _ in range(count)]
 
     if schema_type == "string":
-        fmt = schema.get("format")
+        fmt = resolved_schema.get("format")
         if fmt == "email":
             return "user@example.com"
         if fmt == "uuid":
@@ -102,34 +131,65 @@ def _example_for_schema(
 
 def _example_for_field(field_name: str, field_schema: dict[str, Any], components: dict[str, Any]) -> Any:
     lowered = field_name.lower()
+    resolved_field_schema = _resolve_schema(field_schema, components)
+
+    if lowered == "role":
+        if "default" in resolved_field_schema:
+            return resolved_field_schema["default"]
+        return "student"
+
     if lowered == "email":
         return "user@example.com"
     if lowered == "password":
-        return "StrongPass123"
+        return "StrongPass123!"
     if lowered == "full_name":
         return "Demo User"
-    if lowered == "role":
-        return "student"
+    if lowered == "bio":
+        return "Experienced instructor focused on practical project-based teaching."
+    if lowered == "expertise":
+        return ["python", "fastapi"]
+    if lowered == "teaching_experience_years":
+        return 5
+    if lowered == "education_level":
+        return "Master's Degree"
+    if lowered == "institution":
+        return "Demo University"
+    if lowered == "phone":
+        return "+201000000000"
+    if lowered == "website":
+        return "https://example.com"
+    if lowered == "social_media":
+        return {"linkedin": "https://linkedin.com/in/demo-instructor"}
+    if lowered == "security_policy_accepted":
+        return True
+    if lowered == "ip_whitelist":
+        return ["127.0.0.1"]
+    if lowered == "time_restrictions":
+        return {"start_hour": 9, "end_hour": 17, "days": ["monday", "tuesday"]}
+    if lowered == "emergency_contacts":
+        return [{"name": "Security Officer", "email": "security@example.com"}]
     if lowered.endswith("_id"):
         return f"{{{{{field_name}}}}}"
     if lowered in {"course_id", "lesson_id", "quiz_id", "enrollment_id", "attempt_id", "question_id", "user_id"}:
         return f"{{{{{field_name}}}}}"
 
-    value = _example_for_schema(field_schema, components)
+    value = _example_for_schema(resolved_field_schema, components)
     if value == "string" and lowered in {"status"}:
-        if "enum" in field_schema and field_schema["enum"]:
-            return field_schema["enum"][0]
+        if "enum" in resolved_field_schema and resolved_field_schema["enum"]:
+            return resolved_field_schema["enum"][0]
     return value
 
 
 def _build_json_body(request_body: dict[str, Any], components: dict[str, Any]) -> str:
     content = request_body.get("content", {})
     json_schema = content.get("application/json", {}).get("schema")
+    resolved_schema = _resolve_schema(json_schema, components)
     payload = _example_for_schema(json_schema, components)
 
     if isinstance(payload, dict):
+        properties = resolved_schema.get("properties", {})
         for key in list(payload.keys()):
-            payload[key] = _example_for_field(key, json_schema.get("properties", {}).get(key, {}), components)
+            payload[key] = _example_for_field(key, properties.get(key, {}), components)
 
     return json.dumps(payload, ensure_ascii=False, indent=2)
 
