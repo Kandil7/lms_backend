@@ -28,7 +28,6 @@ class Admin(Base):
 
     # Relationships
     user = relationship("User", back_populates="admin")
-    permissions = relationship("AdminPermission", back_populates="admin")
 
     def __repr__(self):
         return f"<Admin(id={self.id}, user_id={self.user_id}, security_level={self.security_level})>"

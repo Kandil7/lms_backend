@@ -8,6 +8,7 @@ from sqlalchemy import Uuid
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
+from app.modules.courses.models.course import Course
 
 
 class Instructor(Base):
@@ -30,7 +31,6 @@ class Instructor(Base):
 
     # Relationships
     user = relationship("User", back_populates="instructor")
-    courses = relationship("Course", back_populates="instructor")
 
     def __repr__(self):
         return f"<Instructor(id={self.id}, user_id={self.user_id}, is_verified={self.is_verified})>"
